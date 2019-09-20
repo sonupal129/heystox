@@ -1,0 +1,9 @@
+local_settings.py
+db.sqlite3
+/.vscode
+/media
+/static
+__pycache__/
+*.log
+*.pot
+*.pyc
