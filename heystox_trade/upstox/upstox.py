@@ -103,3 +103,4 @@ def get_today_ohl_stock(qs, date):
       stock_date = datetime.datetime.strptime(date,'%d/%m/%Y').date()
       stocks = {}
       qs.filter(open_price=F("high_price"), date__date=stock_date, volume__gt=300000)
+      return None
