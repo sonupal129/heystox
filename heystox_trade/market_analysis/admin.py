@@ -10,6 +10,7 @@ class SymbolAdmin(admin.ModelAdmin):
 class CandleAdmin(admin.ModelAdmin):
       list_display = ["symbol", "exchange", "candle_type"]
       list_filter = ["candle_type"]
+      search_fields = ["symbol__symbol"]
 
       def exchange(self, obj):
             return obj.symbol.exchange

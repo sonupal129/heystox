@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.postgres.fields import JSONField
+from django.utils import timezone
 # Create your models here.
 
 # class TickerData(models.Model):
@@ -23,20 +24,6 @@ from django.contrib.postgres.fields import JSONField
 #       asks = JSONField()
 #       ltt = models.IntegerField("Last Traded Price", blank=True, null=True)
 
-class CandleQuerySet(models.QuerySet):
-      def get_by_candle_type(self, type_of_candle):
-            return self.filter(candle_type=type_of_candle)
-
-
-class CandleManager(models.Manager):
-      def get_queryset(self):
-            return CandleQuerySet(self.model, using=self._db).order_by("date")
-      
-      def get_candles(self, candle_type="M5", date=None):
-            if date:
-                  return self.get_queryset.get_by_candle_type(candle_type, date__gte=date)
-            return self.get_queryset().get_by_candle_type(candle_type)
-
 class MasterContract(models.Model):
       name = models.CharField(max_length=50)
 
@@ -55,6 +42,20 @@ class Symbol(models.Model):
 
       def __str__(self):
             return self.symbol
+
+class CandleQuerySet(models.QuerySet):
+      def get_by_candle_type(self, type_of_candle):
+            return self.filter(candle_type=type_of_candle)
+
+
+class CandleManager(models.Manager):
+      def get_queryset(self):
+            return CandleQuerySet(self.model, using=self._db).order_by("date")
+      
+      def get_candles(self, candle_type="M5", date=None):
+            if date:
+                  return self.get_queryset.get_by_candle_type(candle_type, date__gte=date)
+            return self.get_queryset().get_by_candle_type(candle_type)
 
 class Candle(models.Model):
       candle_type_choice = {
