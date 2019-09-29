@@ -2,39 +2,6 @@ from upstox_api.api import *
 from market_analysis.models import Symbol, MasterContract, Candle
 import datetime, time
 
-
-my_api_key = "VpcuCaUDK91y9JPy358T19nUWtq0UF6J8Yl3qVmr"
-my_secrect_key = "2oq0c08yce"
-my_redirect_url = "http://127.0.0.1:8000/"
-login_response_code = "331b480245e6533bb29affe3e2c010580c29fb56"
-my_access_token = '7f362ca2aa7306f8fbd11688391c102f0910807a'
-# Code Starts Below
-
-login_session = Session(my_api_key)
-
-
-def get_upstox_login_url(api_key, session, redirect_url):
-      session.set_redirect_uri(my_redirect_url)
-      session.set_api_secret(my_secrect_key)
-      return session.get_login_url()
-
-def get_access_token(login_response_code, session=login_session):
-      session.set_code(login_response_code)
-      return session.retrieve_access_token()
-
-def logged_in_user(api_key, access_token):
-      return Upstox(api_key, access_token)
-
-# Establish Connection
-
-
-# def event_handler_quote_update(message):
-#     print("Quote Update: %s" % str(message))
-
-# u.set_on_quote_update(event_handler_quote_update)
-# u.subscribe(u.get_instrument_by_symbol('NSE_EQ', 'TATASTEEL'), LiveFeedType.Full)
-# u.start_websocket(True)
-
 def update_index_data(user, index):
       stock_list = user.get_master_contract(index)
       bulk_symbol = []
@@ -99,8 +66,18 @@ def update_stock_data(user, symbol, interval, start_date, end_date):
 def get_stocks_for_trading(min_price:int, max_price:int):
       return Symbol.objects.filter(closing_price__range=(min_price, max_price))
 
-def get_today_ohl_stock(qs, date):
-      stock_date = datetime.datetime.strptime(date,'%d/%m/%Y').date()
-      stocks = {}
-      qs.filter(open_price=F("high_price"), date__date=stock_date, volume__gt=300000)
-      return None
+def is_stock_ohl(symbol, date, candle_type):
+    stock_date = datetime.datetime.strptime(date,'%d/%m/%Y').date()
+    stock = Symbol.objects.get(symbol=symbol)
+    todays_candles = Candle.objects.filter(symbol=stock, candle_type=candle_type, date__date=stock_date)
+    first_candle = todays_candles.first()
+    first_candle_open_price = first_candle.open_price
+    first_candle_low_price = first_candle.low_price
+    first_candle_high_price = first_candle.high_price
+    current_prices = todays_candles.aggregate(Max("high_price"), Min("low_price"))
+    if first_candle_open_price == current_prices.get("high_price__max"):
+          return "SELL"
+    elif first_candle_open_price == current_prices.get("low_price__min"):
+        return "BUY"
+    else:
+        return False

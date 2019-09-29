@@ -31,13 +31,14 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "market_analysis.apps.MarketAnalysisConfig",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "market_analysis.apps.MarketAnalysisConfig",
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -123,3 +124,10 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+# Upstox Api
+
+upstox_api_key = "VpcuCaUDK91y9JPy358T19nUWtq0UF6J8Yl3qVmr"
+upstox_secrect_key = "2oq0c08yce"
+redirect_url = "http://127.0.0.1:8000/"

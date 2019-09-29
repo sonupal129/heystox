@@ -22,5 +22,6 @@ admin.site.index_title = "Welcome to Heystox"
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include("market_analysis.urls"))
 ]
 

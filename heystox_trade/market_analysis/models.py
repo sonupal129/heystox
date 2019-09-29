@@ -91,6 +91,7 @@ class UserProfile(models.Model):
       client_id = models.IntegerField(blank=True, null=True)
       bank_name = models.CharField(max_length=100, blank=True, null=True)
       bank_account = models.CharField(max_length=100, blank=True, null=True)
+      updated = models.DateTimeField("Recently Updated", auto_now=True)
 
       def __str__(self):
             return self.email or self.client_id
