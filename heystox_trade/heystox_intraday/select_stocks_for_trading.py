@@ -18,5 +18,3 @@ def get_liquid_stocks(trade_volume=10000000):
 
 
 
-
-
