@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.postgres.fields import JSONField
 from django.utils import timezone
 from datetime import datetime, timedelta
+from django.db.models import Max, Min
+from django.contrib.auth.models import User
 # Create your models here.
 
 # class TickerData(models.Model):
@@ -49,12 +51,16 @@ class Symbol(models.Model):
       def __str__(self):
             return self.symbol
 
-      def is_stock_ohl(self, date=datetime.now(), candle_type="M5"):
+      def is_stock_ohl(self, date=None, candle_type="M5"):
             """Find Stock falls in open high low strategy"""
-            try:
-                  stock_date = datetime.strptime(date,'%d/%m/%Y').date()
-            except:
+            # try:
+            #       stock_date = datetime.strptime(date,'%d/%m/%Y').date()
+            # except:
+            #       stock_date = date.date()
+            if date:
                   stock_date = date.date()
+            else:
+                  date=datetime.now().date()
             todays_candles = Candle.objects.filter(symbol=self, candle_type=candle_type, date__date=stock_date)
             first_candle = todays_candles.first()
             first_candle_open_price = first_candle.open_price
@@ -66,7 +72,7 @@ class Symbol(models.Model):
             elif first_candle_open_price == current_prices.get("low_price__min"):
                   return "BUY"
             else:
-                  return False
+                  return ''
       
       def is_stock_pdhl(self, date=datetime.now(), candle_type="M5"):
             """Finds stocks is fall under previous day high low conditions"""
@@ -158,8 +164,8 @@ class Candle(models.Model):
       total_sell_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
       lower_circuit = models.IntegerField("Last Traded Price", blank=True, null=True)
       upper_circuit = models.IntegerField("Last Traded Price", blank=True, null=True)
-      bids = JSONField(default=dict())
-      asks = JSONField(default=dict())
+      bids = JSONField(default=dict)
+      asks = JSONField(default=dict)
       date = models.DateTimeField()
 
       objects = CandleManager()
@@ -169,6 +175,7 @@ class Candle(models.Model):
 
 
 class UserProfile(models.Model):
+      user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="user_profile")
       email = models.CharField(max_length=100)
       mobile = models.IntegerField(blank=True, null=True)
       api_key = models.CharField(max_length=100, null=True, blank=True)
@@ -182,5 +189,5 @@ class UserProfile(models.Model):
       updated = models.DateTimeField("Recently Updated", auto_now=True)
 
       def __str__(self):
-            return self.email or self.client_id
+            return self.user.email
 
