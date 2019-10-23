@@ -11,15 +11,16 @@ def update_symbols_data(user, index):
       for stock in stock_list:
             symbol = stock_list.get(stock)
             try:
-                  stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin).update(closing_price=symbol.closing_price)
+                  stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin)
+                  stock.last_day_closing_price = symbol.closing_price
+                  stock.save()
             except Symbol.DoesNotExist:
                   bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
-                        closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type,
-                        isin=symbol.isin))
+                        last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
       Symbol.objects.bulk_create(bulk_symbol)
-      return "All Stock Price Updated Sucessfully"
+      return "All Stocks Price Updated Sucessfully"
 
-def get_candles_data(user, symbol, interval="5 Minute", days=7, end_date=datetime.now()):
+def get_candles_data(user, symbol, interval="5 Minute", days=6, end_date=datetime.now().date()):
       interval_dic = {
             "5 Minute": OHLCInterval.Minute_5,
             "10 Minute": OHLCInterval.Minute_10,
@@ -31,7 +32,6 @@ def get_candles_data(user, symbol, interval="5 Minute", days=7, end_date=datetim
             "15 Minute": "M15",
       }
       candle_interval = interval_dic.get(interval, "5 Minute")
-      end_date = datetime.strptime(end_date,'%d/%m/%Y').date()
       start_date = end_date - timedelta(days)
       try:
             stock = Symbol.objects.get(symbol=symbol)
@@ -47,23 +47,25 @@ def get_candles_data(user, symbol, interval="5 Minute", days=7, end_date=datetim
             low_price = float(data.get("low"))
             volume = int(data.get("volume"))
             try:
-                  candle = Candle.objects.get(date=datetime.datetime.fromtimestamp(timestamp), symbol=stock).update(
-                        open_price = open_price, close_price = close_price, high_price = high_price, low_price = low_price,
-                        volume = volume
-                  )
+                  candle = Candle.objects.get(date=datetime.fromtimestamp(timestamp), symbol=stock)
+                  candle.open_price = open_price
+                  candle.close_price = close_price
+                  candle.high_price = high_price
+                  candle.low_price = low_price
+                  candle.volume = volume
+                  candle.save()
             except Candle.DoesNotExist:
                   bulk_candle_data.append(Candle(open_price=open_price, close_price=close_price, low_price=low_price,
-                                                high_price=high_price, volume=volume, date=datetime.datetime.fromtimestamp(timestamp),
+                                                high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),
                                                 symbol=stock, candle_type="M5"))
       Candle.objects.bulk_create(bulk_candle_data)
-      return "All Stocks Candle Data Imported Sucessfully"
+      return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 
-def update_all_symbol_candles(user, interval="5 Minute", days=7, end_date=datetime.now()):
-      print(update_symbols_data(user, "NSE_EQ"))
-      symbols = Symbol.objects.all()
+def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=datetime.now()):
+      """Takes symbols queryset and upstox user as input and update those symbols candle data"""
       not_updated_stocks = []
-      for symbol in symbols:
+      for symbol in qs:
             try:
                   print(get_candles_data(user, symbol, interval, days, end_date))
             except:

@@ -3,6 +3,7 @@ from django.contrib.postgres.fields import JSONField
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db.models import Max, Min
+import pandas as pd
 from django.contrib.auth.models import User
 # Create your models here.
 
@@ -43,59 +44,46 @@ class Symbol(models.Model):
       tick_size = models.FloatField(blank=True, null=True)
       instrument_type = models.CharField(max_length=20, blank=True, null=True)
       isin = models.CharField(max_length=50)
-      last_day_vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
-      vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
-      total_buy_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
-      total_sell_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
+      last_day_vtt = models.IntegerField("Last Day Traded Volume", blank=True, null=True)
+      vtt = models.IntegerField("Total Traded Volume", blank=True, null=True)
+      total_buy_quantity = models.IntegerField("Total Buy Quantity", blank=True, null=True)
+      total_sell_quantity = models.IntegerField("Total Sell Quantity", blank=True, null=True)
+      updated = models.DateTimeField("Recently Updated", auto_now=True)
 
       def __str__(self):
             return self.symbol
 
-      def is_stock_ohl(self, date=None, candle_type="M5"):
+      def is_stock_ohl(self, date=datetime.now().date(), candle_type="M5"):
             """Find Stock falls in open high low strategy"""
-            # try:
-            #       stock_date = datetime.strptime(date,'%d/%m/%Y').date()
-            # except:
-            #       stock_date = date.date()
-            if date:
-                  stock_date = date.date()
-            else:
-                  date=datetime.now().date()
-            todays_candles = Candle.objects.filter(symbol=self, candle_type=candle_type, date__date=stock_date)
-            first_candle = todays_candles.first()
-            first_candle_open_price = first_candle.open_price
-            first_candle_low_price = first_candle.low_price
-            first_candle_high_price = first_candle.high_price
-            current_prices = todays_candles.aggregate(Max("high_price"), Min("low_price"))
-            if first_candle_open_price == current_prices.get("high_price__max"):
+            candles = Candle.objects.filter(symbol=self, candle_type=candle_type, date__date=date).values()
+            df = pd.DataFrame(list(candles))
+            first_candle_price = df.loc[[0], ["open_price", "high_price", "low_price", "close_price", "date"]]
+            current_candle_price = df.loc[:, ["open_price", "high_price", "low_price", "close_price"]]
+            if float(first_candle_price.open_price) == float(max(current_candle_price.max().values)):
                   return "SELL"
-            elif first_candle_open_price == current_prices.get("low_price__min"):
+            elif float(first_candle_price.open_price) == float(min(current_candle_price.min().values)):
                   return "BUY"
             else:
-                  return ''
+                  return None
       
-      def is_stock_pdhl(self, date=datetime.now(), candle_type="M5"):
+      def is_stock_pdhl(self, date=datetime.now().date(), candle_type="M5"):
             """Finds stocks is fall under previous day high low conditions"""
-            today = datetime.strptime(date,'%d/%m/%Y').date()
-            yesterday = datetime.strptime(date,'%d/%m/%Y').date() - timedelta(1)
-            candles = Candle.objects.filter(symbol=self, candle_type=candle_type, date__range=[yesterday, today + timedelta(1)])
-            last_day_closing_price = candles.filter(date__date=yesterday).last().close_price
-            last_day_opening_price = candles.filter(date__date=yesterday).first().open_price
-            today_opening_price = candles.filter(date__date=today).first().open_price
-            if last_day_opening_price > last_day_closing_price > today_opening_price:
+            yesterday = date - timedelta(1)
+            candles = Candle.objects.filter(symbol=self, candle_type=candle_type, date__range=[yesterday, date + timedelta(1)]).values()
+            df = pd.DataFrame(list(candles))
+            last_day_candles = df[(df.date <= date)]
+            last_day_closing_price = float(last_day_candles.iloc[[-1]].close_price)
+            last_day_opening_price = float(last_day_candles.iloc[[0]].open_price)
+            today_open_price = float(df[(df.date >= date)].iloc[[0]].open_price)
+            if last_day_opening_price > last_day_closing_price > today_open_price:
                   return "SELL"
-            elif last_day_opening_price < last_day_closing_price < today_opening_price:
+            elif last_day_opening_price < last_day_closing_price < today_open_price:
                   return "BUY"
             else:
-                  return False
+                  return None
 
-      def get_days_high_low_price(self, start_date, end_date=datetime.now(), price_type="HIGH", candle_type="M5"):
-            try:
-                  start_date = datetime.strptime(start_date,'%d/%m/%Y').date()
-                  end_date = datetime.strptime(end_date,'%d/%m/%Y').date()
-            except:
-                  start_date = start_date.date()
-                  end_date = end_date.date()
+      def get_days_high_low_price(self, start_date=None, end_date=datetime.now().date(), price_type="HIGH", candle_type="M5"):
+            start_date = start_date or datetime.now().date()
             if start_date == end_date:
                   candles = Candle.objects.filter(symbol=self, candle_type=candle_type, date__date=start_date)
             else:
@@ -106,11 +94,8 @@ class Symbol(models.Model):
                   return candles.aggregate(Min("low_price"))
 
 
-      def has_entry_for_long_short(self, date=datetime.now(), candle_type="M5"):
-            try:
-                  stock_date = datetime.strptime(date,'%d/%m/%Y').date()
-            except:
-                  stock_date = date
+      def has_entry_for_long_short(self, date=datetime.now().date(), candle_type="M5"):
+            stock_date = date
             if self.is_stock_ohl(date=stock_date, candle_type=candle_type) == "BUY":
                   if get_days_high_low_price(start_date=stock_date - timedelta(1), price_type="HIGH", candle_type=candle_type)\
                         < get_days_high_low_price(start_date=stock_date, price_type="HIGH", candle_type=candle_type):
@@ -128,6 +113,14 @@ class Symbol(models.Model):
             """function will return last candle closing price"""
             closing_price = Candle.objects.filter(symbol=self, date__date=date.date()).last().close_price
             return closing_price
+
+      def get_stocks_data(self, days=None, end_date=datetime.now().date(), candle_type="M5"):
+            if days:
+                  start_date = end_date - timedelta(days)               
+                  candles = Candle.objects.filter(candle_type=candle_type, date__range=[start_date, end_date + timedelta(1)], symbol=self)
+            else:
+                 candles = Candle.objects.filter(candle_type=candle_type, date__date=end_date, symbol=self)
+            return candles
 
 class CandleQuerySet(models.QuerySet):
       def get_by_candle_type(self, type_of_candle):

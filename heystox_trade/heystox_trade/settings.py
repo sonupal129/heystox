@@ -125,24 +125,15 @@ USE_TZ = False
 
 STATIC_URL = '/static/'
 
-
-# Upstox Api
-
-upstox_api_key = "VpcuCaUDK91y9JPy358T19nUWtq0UF6J8Yl3qVmr"
-upstox_secrect_key = "2oq0c08yce"
-redirect_url = "http://127.0.0.1:8000/"
-
-
-
-# session serializer
-
-SESSION_SERIALIZER = 'django.contrib.sessions.serializers.PickleSerializer'
-
 # Cache
 
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
         'LOCATION': '/Users/sonu2/Desktop/Sonu',
+        'TIMEOUT': None,
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000
+        }
     }
 }
