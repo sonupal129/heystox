@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
+    'django_celery_beat',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -131,3 +133,12 @@ STATIC_URL = '/static/'
 upstox_api_key = "VpcuCaUDK91y9JPy358T19nUWtq0UF6J8Yl3qVmr"
 upstox_secrect_key = "2oq0c08yce"
 redirect_url = "http://127.0.0.1:8000/"
+
+# CELERY STUFF
+BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_RESULT_BACKEND = 'redis'
