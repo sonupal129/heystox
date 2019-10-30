@@ -106,12 +106,12 @@ class Migration(migrations.Migration):
             field=models.DateTimeField(auto_now_add=True, default=datetime.datetime(2019, 10, 25, 9, 18, 23, 338587)),
             preserve_default=False,
         ),
-        migrations.AddField(
-            model_name='userprofile',
-            name='user',
-            field=models.OneToOneField(default=1, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
-            preserve_default=False,
-        ),
+        # migrations.AddField(
+        #     model_name='userprofile',
+        #     name='user',
+        #     field=models.OneToOneField(default=1, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
+        #     preserve_default=False,
+        # ),
         migrations.AlterField(
             model_name='candle',
             name='candle_type',
