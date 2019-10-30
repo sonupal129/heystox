@@ -2,7 +2,14 @@ from django.db import models
 from django.contrib.postgres.fields import JSONField
 from django.utils import timezone
 from datetime import datetime, timedelta
+from django.contrib.auth.models import User
 # Create your models here.
+
+class BaseModel(models.Model):
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+
 
 # class TickerData(models.Model):
 #       timestamp = models.IntegerField(blank=True, null=True)
@@ -27,6 +34,8 @@ from datetime import datetime, timedelta
 
 class MasterContract(models.Model):
       name = models.CharField(max_length=50)
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
       def __str__(self):
             return self.name
@@ -45,6 +54,8 @@ class Symbol(models.Model):
       vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
       total_buy_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
       total_sell_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
       def __str__(self):
             return self.symbol
@@ -161,6 +172,8 @@ class Candle(models.Model):
       bids = JSONField(default=dict())
       asks = JSONField(default=dict())
       date = models.DateTimeField()
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
       objects = CandleManager()
 
@@ -169,18 +182,75 @@ class Candle(models.Model):
 
 
 class UserProfile(models.Model):
-      email = models.CharField(max_length=100)
+      # email = models.CharField(max_length=100)
+      user = models.OneToOneField(User, on_delete=models.CASCADE)
       mobile = models.IntegerField(blank=True, null=True)
-      api_key = models.CharField(max_length=100, null=True, blank=True)
-      secret_key = models.CharField(max_length=100, null=True, blank=True)
-      redirect_url = models.CharField(max_length=100, null=True, blank=True)
-      response_code = models.CharField(max_length=100, null=True, blank=True)
-      access_token = models.CharField(max_length=100, null=True, blank=True)
-      client_id = models.IntegerField(blank=True, null=True)
-      bank_name = models.CharField(max_length=100, blank=True, null=True)
-      bank_account = models.CharField(max_length=100, blank=True, null=True)
-      updated = models.DateTimeField("Recently Updated", auto_now=True)
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
       def __str__(self):
-            return self.email or self.client_id
+            return self.user.get_full_name() or self.user.email or self.user.username
 
+class BankDetail(models.Model):
+      user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
+      bank_name = models.CharField(max_length=200)
+      bank_account_number = models.CharField(max_length=50)
+      initial_balance = models.DecimalField(decimal_places=2, max_digits=10, help_text='Initial balance at the starting of month')
+      current_balance = models.DecimalField(decimal_places=2, max_digits=10)
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+      def __str__(self):
+            return "{} | {}".format(self.user_profile.__str__(), self.bank_name)
+
+class Credentials(models.Model):
+      api_key = models.CharField(max_length=150, null=True, blank=True)
+      secret_key = models.CharField(max_length=150, null=True, blank=True)
+      access_token = models.CharField(max_length=200, null=True, blank=True)
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+class Earning(models.Model):
+      account = models.OneToOneField(BankDetail, on_delete=models.PROTECT)
+      date = models.DateField()
+      opening_balance = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+      profit_loss = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Profit & Loss', null=True, blank=True)
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+      def __str__(self):
+            return "{} | {}".format(self.account.user_profile.user.get_full_name(), self.date)
+
+      def save(self, *args, **kwargs):
+            if self.account:
+                  if self.account.current_balance:
+                        self.opening_balance = self.account.current_balance
+            super().save(*args, **kwargs)
+
+class SortedStocksList(models.Model):
+      symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE)
+      entry_price = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+      def __str__(self):
+            return "{} | {}".format(self.symbol.__str__(), self.created_at.date())
+
+class Indicator(models.Model):
+      name = models.CharField(max_length=50)
+      description = models.TextField(null=True, blank=True)
+      value = models.IntegerField()
+      created_at = models.DateTimeField(auto_now=True, editable=False)
+      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+      def __str__(self):
+            return self.name
+
+
+class StrategyTimestamp(models.Model):
+      stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE)
+      indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE)
+      timestamp = models.DateTimeField()
+
+      def __str__(self):
+            return "{} | {}".format(self.stock.__str__(), self.timestamp.time())
