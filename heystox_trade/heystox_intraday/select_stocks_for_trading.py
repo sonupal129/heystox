@@ -6,11 +6,11 @@ from django.db.models import Max, Min
 
 # Codes Starts Below
 
-def get_stocks_for_trading(min_price:int, max_price:int):
+def select_stocks_for_trading(min_price:int, max_price:int):
       return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price))
 
 def get_liquid_stocks(trade_volume=10000000):
-    stocks = get_stocks_for_trading(3, 250)
+    stocks = select_stocks_for_trading(3, 250)
     return stocks.filter(last_day_vtt__gte=trade_volume)
 
 def get_nifty_movement(data=datetime.now()):
@@ -25,7 +25,15 @@ def get_nifty_movement(data=datetime.now()):
     else:
         return "SIDEWAYS" 
 
-#  Now Make Function for Feed Data
+def get_stocks_for_trading(date=datetime.now()):
+    nifty_50 = get_nifty_movement(date=date)
+    stocks = get_liquid_stocks()
+    if nifty_50 == "BUY":
+        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) >= 1.2 ]
+    elif nifty_50 == "SELL":
+        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) <= -1.2 ]
+    
+
 
 
 

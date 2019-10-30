@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from django.db.models import Sum
 from heystox_intraday.intraday_fetchdata import update_symbol_data, update_all_symbol_candles
 from django.core.cache import cache
+from celery import Celery
+from celery.decorators import task
 # Code Starts Below
 
 
@@ -32,7 +34,8 @@ def delete_stocks_candles():
 def clear_all_cache():
     cache.clear()
 
-    
-
-
-
+@task
+def add(x,y):
+    total = x + y
+    return total
+# app = Celery('tasks', broker='redis://localhost')
