@@ -122,6 +122,25 @@ class Symbol(models.Model):
                  candles = Candle.objects.filter(candle_type=candle_type, date__date=end_date, symbol=self)
             return candles
 
+      def get_stock_movement(self, date=datetime.now()):     
+            """Return Movement of stock in %"""
+            current_price = Candle.objects.filter(symbol=self, date__date=date.date()).last().close_price
+            variation = current_price - self.last_day_closing_price
+            return variation / self.last_day_closing_price * 100
+
+      def get_nifty_movement(self, data=datetime.now()):
+            if self.symbol == "nifty_50":
+                  current_price = Candle.objects.filter(symbol=self, date__date=date.date()).last().close_price
+                  diff = current_price - self.last_day_closing_price
+                  if diff >= 32:
+                        return "BUY"
+                  elif diff <= -32:
+                        return "SELL"
+                  else:
+                        return "SIDEWAYS" 
+            else:
+                  raise TypeError("This Function is limited to nifty 50 only")      
+
 class CandleQuerySet(models.QuerySet):
       def get_by_candle_type(self, type_of_candle):
             return self.filter(candle_type=type_of_candle)
