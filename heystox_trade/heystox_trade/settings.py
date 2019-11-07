@@ -132,7 +132,7 @@ STATIC_URL = '/static/'
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': '/Users/sonu2/Desktop/Sonu',
+        'LOCATION': os.path.dirname(os.getcwd()) + "/cache",
         'TIMEOUT': None,
         'OPTIONS': {
             'MAX_ENTRIES': 1000
@@ -154,3 +154,7 @@ CELERY_RESULT_BACKEND = 'redis'
 # LOGIN URL
 LOGIN_URL = "/admin/login/"
 
+try:
+    from .local_settings import *
+except ImportError:
+    pass
