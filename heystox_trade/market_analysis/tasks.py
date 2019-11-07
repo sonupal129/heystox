@@ -1,10 +1,12 @@
-from market_analysis.models import (Candle, Symbol)
+import slack
 from datetime import datetime, timedelta
 from django.db.models import Sum
-from heystox_intraday.intraday_fetchdata import update_symbol_data, update_all_symbol_candles
 from django.core.cache import cache
-from celery import Celery
+from django.conf import settings
+from celery import Celery, shared_task
 from celery.decorators import task
+from market_analysis.models import (Candle, Symbol)
+# from heystox_intraday.intraday_fetchdata import update_symbol_data, update_all_symbol_candles
 # Code Starts Below
 
 
@@ -33,6 +35,16 @@ def delete_stocks_candles():
 
 def clear_all_cache():
     cache.clear()
+
+def send_slack_message(channel='#heystox', text='Message', attachments=None):
+    client = slack.WebClient(token=settings.SLACK_TOKEN)
+    response = client.chat_postMessage(
+        channel=channel,
+        text=text,
+        attachments=attachments
+    )
+    return response.get('ok', False)
+
 
 @task
 def add(x,y):
