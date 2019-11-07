@@ -139,11 +139,8 @@ CACHES = {
         }
     }
 }
-# Upstox Api
-
-upstox_api_key = "VpcuCaUDK91y9JPy358T19nUWtq0UF6J8Yl3qVmr"
-upstox_secrect_key = "2oq0c08yce"
-redirect_url = "http://127.0.0.1:8000/"
+# UPSTOX API
+upstox_redirect_url = "http://127.0.0.1:8000/"
 
 # CELERY STUFF
 BROKER_URL = 'redis://localhost:6379/0'
@@ -155,3 +152,6 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_BACKEND = 'redis'
 
 SLACK_TOKEN = 'xoxp-792096669381-779313280690-793468872963-37b278cd3fab65d3d0b16de3c8747123'
+# LOGIN URL
+LOGIN_URL = "/admin/login/"
+

@@ -20,7 +20,7 @@ def update_symbols_data(user, index):
       Symbol.objects.bulk_create(bulk_symbol)
       return "All Stocks Price Updated Sucessfully"
 
-def get_candles_data(user, symbol, interval="5 Minute", days=6, end_date=datetime.now().date()):
+def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=datetime.now().date()):
       interval_dic = {
             "5 Minute": OHLCInterval.Minute_5,
             "10 Minute": OHLCInterval.Minute_10,

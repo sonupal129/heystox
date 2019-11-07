@@ -1,6 +1,6 @@
 from django.contrib import admin
 from market_analysis.models import (Candle, UserProfile, 
-    MasterContract, Symbol, BankDetail, Credentials, Earning, Indicator, SortedStocksList, StrategyTimestamp)
+    MasterContract, Symbol, BankDetail, Credentials, Earning, Indicator, SortedStocksList, StrategyTimestamp, TickerData)
 # Register your models here.
 
 class SymbolAdmin(admin.ModelAdmin):
@@ -22,6 +22,7 @@ class CandleAdmin(admin.ModelAdmin):
 class StrategyTimestampInline(admin.TabularInline):
   model = StrategyTimestamp
   fields = ('indicator', 'timestamp')
+  extra = 0
 
 class SortedStocksListAdmin(admin.ModelAdmin):
   date_hierarchy = 'created_at'
@@ -30,7 +31,7 @@ class SortedStocksListAdmin(admin.ModelAdmin):
 
 
 
-
+admin.site.register(TickerData)
 admin.site.register(Candle, CandleAdmin)
 admin.site.register(UserProfile)
 admin.site.register(Symbol, SymbolAdmin)

@@ -5,34 +5,33 @@ from datetime import datetime, timedelta
 from django.db.models import Max, Min
 import pandas as pd
 from django.contrib.auth.models import User
+from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
+from ta.momentum import stoch, stoch_signal
+
+
 # Create your models here.
 
-class BaseModel(models.Model):
-      created_at = models.DateTimeField(auto_now=True, editable=False)
-      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+class TickerData(models.Model):
+      timestamp = models.DateTimeField()
+      exchange = models.CharField(blank=True, null=True, max_length=50)
+      symbol = models.CharField(blank=True, null=True, max_length=100)
+      ltp = models.FloatField("Last Traded Price", blank=True, null=True)
+      close = models.FloatField("Last Traded Price", blank=True, null=True)
+      open = models.FloatField("Last Traded Price", blank=True, null=True)
+      high = models.FloatField("Last Traded Price", blank=True, null=True)
+      low = models.FloatField("Last Traded Price", blank=True, null=True)
+      vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
+      atp = models.FloatField("Last Traded Price", blank=True, null=True)
+      total_buy_qty = models.IntegerField("Last Traded Price", blank=True, null=True)
+      total_sell_qty = models.IntegerField("Last Traded Price", blank=True, null=True)
+      lower_circuit = models.FloatField("Last Traded Price", blank=True, null=True)
+      upper_circuit = models.FloatField("Last Traded Price", blank=True, null=True)
+      bids = JSONField()
+      asks = JSONField()
+      ltt = models.DateTimeField()
 
-
-
-# class TickerData(models.Model):
-#       timestamp = models.IntegerField(blank=True, null=True)
-#       exchange = models.CharField(blank=True, null=True)
-#       symbol = models.CharField(blank=True, null=True)
-#       ltp = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       open_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       high_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       low_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       close_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       atp = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       oi = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       spot_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       total_buy_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       total_sell_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       lower_circuit = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       upper_circuit = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       bids = JSONField()
-#       asks = JSONField()
-#       ltt = models.IntegerField("Last Traded Price", blank=True, null=True)
+      def __str__(self):
+            return self.symbol
 
 class MasterContract(models.Model):
       name = models.CharField(max_length=50)
@@ -123,7 +122,7 @@ class Symbol(models.Model):
             closing_price = Candle.objects.filter(symbol=self, date__date=date.date()).last().close_price
             return closing_price
 
-      def get_stocks_data(self, days=None, end_date=datetime.now().date(), candle_type="M5"):
+      def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5"):
             if days:
                   start_date = end_date - timedelta(days)               
                   candles = Candle.objects.filter(candle_type=candle_type, date__range=[start_date, end_date + timedelta(1)], symbol=self)
@@ -148,7 +147,14 @@ class Symbol(models.Model):
                   else:
                         return "SIDEWAYS" 
             else:
-                  raise TypeError("This Function is limited to nifty 50 only")      
+                  raise TypeError("This Function is limited to nifty 50 only")
+
+      def get_macd_crossover(self, date=datetime.now().date()):
+            obj = self.get_stock_data(days=1, end_date=date)
+            df = pd.DataFrame(list(obj.values()))
+            df["macd"] = macd(df.close_price)
+            df["macd_signal"] = macd_signal(df.close_price)
+            df["diff"] = macd_diff(df.close_price)
 
 class CandleQuerySet(models.QuerySet):
       def get_by_candle_type(self, type_of_candle):
@@ -199,16 +205,17 @@ class Candle(models.Model):
 
 class UserProfile(models.Model):
       # email = models.CharField(max_length=100)
-      user = models.OneToOneField(User, on_delete=models.CASCADE)
+      user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="user_profile")
       mobile = models.IntegerField(blank=True, null=True)
       created_at = models.DateTimeField(auto_now=True, editable=False)
       modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+      for_trade = models.BooleanField(default=False)
 
       def __str__(self):
             return self.user.get_full_name() or self.user.email or self.user.username
 
 class BankDetail(models.Model):
-      user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
+      user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name="bank")
       bank_name = models.CharField(max_length=200)
       bank_account_number = models.CharField(max_length=50)
       initial_balance = models.DecimalField(decimal_places=2, max_digits=10, help_text='Initial balance at the starting of month')
@@ -220,14 +227,21 @@ class BankDetail(models.Model):
             return "{} | {}".format(self.user_profile.__str__(), self.bank_name)
 
 class Credentials(models.Model):
+      user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name="credential", null=True)
       api_key = models.CharField(max_length=150, null=True, blank=True)
       secret_key = models.CharField(max_length=150, null=True, blank=True)
       access_token = models.CharField(max_length=200, null=True, blank=True)
       created_at = models.DateTimeField(auto_now=True, editable=False)
       modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
+      class Meta:
+            verbose_name_plural = "Credentials"
+
+      def __str__(self):
+            return str(self.user_profile)
+
 class Earning(models.Model):
-      account = models.OneToOneField(BankDetail, on_delete=models.PROTECT)
+      user = models.ForeignKey(UserProfile, on_delete=models.PROTECT, related_name="earnings", null=True)
       date = models.DateField()
       opening_balance = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
       profit_loss = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Profit & Loss', null=True, blank=True)
@@ -267,6 +281,7 @@ class StrategyTimestamp(models.Model):
       stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE)
       indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE)
       timestamp = models.DateTimeField()
+      diff = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
 
       def __str__(self):
             return "{} | {}".format(self.stock.__str__(), self.timestamp.time())
