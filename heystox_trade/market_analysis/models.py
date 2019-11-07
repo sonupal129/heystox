@@ -11,32 +11,27 @@ from ta.momentum import stoch, stoch_signal
 
 # Create your models here.
 
-class BaseModel(models.Model):
-      created_at = models.DateTimeField(auto_now=True, editable=False)
-      modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+class TickerData(models.Model):
+      timestamp = models.DateTimeField()
+      exchange = models.CharField(blank=True, null=True, max_length=50)
+      symbol = models.CharField(blank=True, null=True, max_length=100)
+      ltp = models.FloatField("Last Traded Price", blank=True, null=True)
+      close = models.FloatField("Last Traded Price", blank=True, null=True)
+      open = models.FloatField("Last Traded Price", blank=True, null=True)
+      high = models.FloatField("Last Traded Price", blank=True, null=True)
+      low = models.FloatField("Last Traded Price", blank=True, null=True)
+      vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
+      atp = models.FloatField("Last Traded Price", blank=True, null=True)
+      total_buy_qty = models.IntegerField("Last Traded Price", blank=True, null=True)
+      total_sell_qty = models.IntegerField("Last Traded Price", blank=True, null=True)
+      lower_circuit = models.FloatField("Last Traded Price", blank=True, null=True)
+      upper_circuit = models.FloatField("Last Traded Price", blank=True, null=True)
+      bids = JSONField()
+      asks = JSONField()
+      ltt = models.DateTimeField()
 
-
-
-# class TickerData(models.Model):
-#       timestamp = models.IntegerField(blank=True, null=True)
-#       exchange = models.CharField(blank=True, null=True)
-#       symbol = models.CharField(blank=True, null=True)
-#       ltp = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       open_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       high_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       low_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       close_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       atp = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       oi = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       spot_price = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       total_buy_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       total_sell_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       lower_circuit = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       upper_circuit = models.IntegerField("Last Traded Price", blank=True, null=True)
-#       bids = JSONField()
-#       asks = JSONField()
-#       ltt = models.IntegerField("Last Traded Price", blank=True, null=True)
+      def __str__(self):
+            return self.symbol
 
 class MasterContract(models.Model):
       name = models.CharField(max_length=50)

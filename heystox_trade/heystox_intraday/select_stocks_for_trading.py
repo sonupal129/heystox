@@ -25,7 +25,7 @@ def get_nifty_movement(data=datetime.now()):
     else:
         return "SIDEWAYS" 
 
-def get_stocks_for_trading(date=datetime.now(), stocks, movement_percent:int=1.2):
+def get_stocks_for_trading(stocks, date=datetime.now(), movement_percent:int=1.2):
     f"""Get stocks whose movement is greater or lower then {movement_percent}"""
     nifty_50 = get_nifty_movement(date=date)
     if nifty_50 == "BUY":
