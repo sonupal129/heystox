@@ -22,6 +22,7 @@ class CandleAdmin(admin.ModelAdmin):
 class StrategyTimestampInline(admin.TabularInline):
   model = StrategyTimestamp
   fields = ('indicator', 'timestamp')
+  extra = 0
 
 class SortedStocksListAdmin(admin.ModelAdmin):
   date_hierarchy = 'created_at'

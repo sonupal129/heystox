@@ -1,6 +1,6 @@
 from upstox_api.api import *
 from market_analysis.models import Symbol, MasterContract, Candle
-import datetime, time
+from datetime import datetime
 from django.db.models import Max, Min
 
 
@@ -25,13 +25,14 @@ def get_nifty_movement(data=datetime.now()):
     else:
         return "SIDEWAYS" 
 
-def get_stocks_for_trading(date=datetime.now()):
+def get_stocks_for_trading(date=datetime.now(), stocks, movement_percent:int=1.2):
+    f"""Get stocks whose movement is greater or lower then {movement_percent}"""
     nifty_50 = get_nifty_movement(date=date)
-    stocks = get_liquid_stocks()
     if nifty_50 == "BUY":
-        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) >= 1.2 ]
+        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) >= movement_percent ]
     elif nifty_50 == "SELL":
-        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) <= -1.2 ]
+        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) <= -movement_percent ]
+    return stocks_for_trade
     
 
 
