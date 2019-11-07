@@ -3,7 +3,10 @@ db.sqlite3
 /.vscode
 /media
 /static
+/cache
 __pycache__/
 *.log
 *.pot
 *.pyc
+*.md
+*.DS_Store
