@@ -6,11 +6,9 @@ from datetime import datetime
 # Code Below
 
 @receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    try:
+def save_user_profile(sender, instance, created, **kwargs):
+    if created:
         user_profile = UserProfile.objects.get_or_create(user=instance)
-    except:
-        pass
 
 @receiver(post_save, sender=BankDetail)
 def create_earning_object(sender, instance, **kwargs):

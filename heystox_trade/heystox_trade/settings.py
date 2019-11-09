@@ -126,7 +126,7 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
-
+STATIC_ROOT = os.path.join(os.path.dirname(os.getcwd()),'static/')
 # Cache
 
 CACHES = {
@@ -150,10 +150,13 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_BACKEND = 'redis'
+CELERY_IMPORTS = ('market_analysis.tasks')
 
 # LOGIN URL
 LOGIN_URL = "/admin/login/"
 
+
+# Imports Additional Settings File
 try:
     from .local_settings import *
 except ImportError:
