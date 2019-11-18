@@ -11,3 +11,4 @@ __pycache__/
 *.md
 *.DS_Store
 *.csv
+*.ipynb

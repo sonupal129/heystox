@@ -16,9 +16,9 @@ def update_stocks_data():
     update_symbols_data(upstox_user, "NSE_EQ")
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=22, minute=10)), name="update_all_stocks_candle_data")
-def update_stocks_candle_data(user_id=1):
+def update_stocks_candle_data():
     """Update all stocks candles data after trading day"""
-    user = User.objects.get(id=user_id)
+    user = User.objects.get(email="sonupal129@gmail.com")
     upstox_user = cache.get(user.email, "_upstox_login_user")
     qs = Symbol.objects.all()
     update_all_symbol_candles(upstox_user, qs)

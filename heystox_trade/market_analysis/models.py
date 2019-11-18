@@ -148,13 +148,8 @@ class Symbol(models.Model):
                         return "SIDEWAYS" 
             else:
                   raise TypeError("This Function is limited to nifty 50 only")
+            
 
-      def get_macd_crossover(self, date=datetime.now().date()):
-            obj = self.get_stock_data(days=1, end_date=date)
-            df = pd.DataFrame(list(obj.values()))
-            df["macd"] = macd(df.close_price)
-            df["macd_signal"] = macd_signal(df.close_price)
-            df["diff"] = macd_diff(df.close_price)
 
 class CandleQuerySet(models.QuerySet):
       def get_by_candle_type(self, type_of_candle):
@@ -258,8 +253,14 @@ class Earning(models.Model):
             super().save(*args, **kwargs)
 
 class SortedStocksList(models.Model):
+      entry_choices = {
+            ("BUY", "BUY"),
+            ("SELL", "SELL")
+      }
+
       symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE)
       entry_price = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+      entry_type = models.CharField(max_length=20, choices=entry_choices, default="BUY")
       created_at = models.DateTimeField(auto_now=True, editable=False)
       modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 

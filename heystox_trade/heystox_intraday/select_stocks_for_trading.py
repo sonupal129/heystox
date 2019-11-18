@@ -1,10 +1,15 @@
 from upstox_api.api import *
-from market_analysis.models import Symbol, MasterContract, Candle
+from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList
 from datetime import datetime
 from django.db.models import Max, Min
 
 
 # Codes Starts Below
+def get_cached_liquid_stocks():
+    try:
+        return cache.get(str(datetime.now().date()) + "_today_liquid_stocks")
+    except:
+        return None
 
 def select_stocks_for_trading(min_price:int, max_price:int):
       return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price))
@@ -34,6 +39,16 @@ def get_stocks_for_trading(stocks, date=datetime.now(), movement_percent:int=1.2
         stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) <= -movement_percent ]
     return stocks_for_trade
     
+def add_today_movement_stocks():
+    liquid_stocks = get_cached_liquid_stocks()
+    nifty_50 = get_nifty_movement(date=datetime.now())
+    stocks_for_trading = get_stocks_for_trading(qs=liquid_stocks)
+    for stock in stocks_for_trading:
+        if nifty_50 == "BUY":
+            SortedStocksList.objects.get_or_create(symbol=stock.symbol, stock_type="B")
+        elif nifty_50 == "SELL":
+            SortedStocksList.objects.get_or_create(symbol=stock.symbol, stock_type="S")
+
 
 
 

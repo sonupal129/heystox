@@ -1,4 +1,3 @@
-import slack
 from market_analysis.models import (Candle, Symbol)
 from django.conf import settings
 from datetime import datetime, timedelta
@@ -21,12 +20,3 @@ def delete_stocks_candles():
 def clear_all_cache():
     """Delete or clear all cache on daily basis"""
     cache.clear()
-
-def send_slack_message(channel='#heystox', text='Message', attachments=None):
-    client = slack.WebClient(token=settings.SLACK_TOKEN)
-    response = client.chat_postMessage(
-        channel=channel,
-        text=text,
-        attachments=attachments
-    )
-    return response.get('ok', False)

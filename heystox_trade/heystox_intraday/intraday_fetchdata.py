@@ -2,6 +2,7 @@ from market_analysis.models import Symbol, MasterContract, Candle
 import time
 from datetime import datetime, timedelta
 from upstox_api.api import *
+import os
 # Code Starts Below
 
 def update_symbols_data(user, index):
@@ -71,3 +72,20 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
             except:
                   not_updated_stocks.append(symbol.name)
       return "All Stocks Data has been imported except these {0} ".format(not_updated_stocks)
+
+# def add_tickerdata_to_csv(data):
+#     dirpath = os.path.join(os.path.dirname(os.getcwd()),'ticketdata_csv')
+#     df = pd.DataFrame(data)
+#     filepath = os.path.join(dirpath, "tickerdata.csv")
+#     if not os.path.exists(dirpath):
+#         os.mkdir(dirpath)
+#         df.to_csv(filepath)
+#     else:
+#         df.to_csv(filepath, mode="a", header=False)
+
+def parse_stock_response_data(data:dict):
+    """Return only required data by tickerdata model from upstox websocket response"""
+    if "instrument" in data:
+        del data["instrument"]
+    return add_tickerdata_to_csv([data])
+
