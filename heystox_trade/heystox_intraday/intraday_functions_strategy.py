@@ -1,5 +1,6 @@
 from  market_analysis.models import SortedStocksList, Indicator, StrategyTimestamp, Symbol
 from datetime import datetime, timedelta
+from heystox_intraday.intraday_fetchdata import get_stock_live_data
 # Start code below
 
 def is_stocks_ohl():
@@ -33,3 +34,12 @@ def entry_for_long_short():
             StrategyTimestamp.objects.create(indicator=long_short_entry, stock=stock, timestamp=datetime.now())
         else:
             StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp=datetime.now().date()).delete()
+
+def get_macd_crossover(stock_name:str): # Need to Work more to find final crossover
+    """This function find crossover between macd and macd signal and return signal as buy or sell"""
+    data = get_stock_live_data(stock_name)
+    return ""
+
+
+def get_stochastic_crossover(stock_name:str): # Find Stochastic crossover signals
+    return ""

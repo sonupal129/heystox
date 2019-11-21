@@ -180,12 +180,11 @@ class Candle(models.Model):
       low_price = models.FloatField("Candle Low Price", blank=True, null=True)
       close_price = models.FloatField("Candle Close Price", blank=True, null=True)
       volume = models.IntegerField("Volume", blank=True, null=True)
-      vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
-      atp = models.IntegerField("Last Traded Price", blank=True, null=True)
-      total_buy_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
-      total_sell_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
-      lower_circuit = models.IntegerField("Last Traded Price", blank=True, null=True)
-      upper_circuit = models.IntegerField("Last Traded Price", blank=True, null=True)
+      atp = models.IntegerField("Average Traded Price", blank=True, null=True)
+      total_buy_quantity = models.IntegerField("Total Buy Quantity", blank=True, null=True)
+      total_sell_quantity = models.IntegerField("Total Sell Quantity", blank=True, null=True)
+      lower_circuit = models.IntegerField("Lower Circuit Price", blank=True, null=True)
+      upper_circuit = models.IntegerField("Upper Circuit Price", blank=True, null=True)
       bids = JSONField(default=dict)
       asks = JSONField(default=dict)
       date = models.DateTimeField()
@@ -279,7 +278,7 @@ class Indicator(models.Model):
 
 
 class StrategyTimestamp(models.Model):
-      stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE)
+      stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE, related_name="timestamps")
       indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE)
       timestamp = models.DateTimeField()
       diff = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)

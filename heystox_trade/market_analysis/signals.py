@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
-from market_analysis.models import UserProfile, BankDetail, Earning
+from market_analysis.models import UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp
 from django.dispatch import receiver
 from datetime import datetime
 # Code Below

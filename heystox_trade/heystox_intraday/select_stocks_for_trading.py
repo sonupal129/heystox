@@ -25,7 +25,7 @@ def get_nifty_movement(data=datetime.now()):
     diff = current_price - self.last_day_closing_price
     if diff >= 32:
         return "BUY"
-    elif diff <= -32:
+    elif diff <= -22:
         return "SELL"
     else:
         return "SIDEWAYS" 
@@ -37,7 +37,8 @@ def get_stocks_for_trading(stocks, date=datetime.now(), movement_percent:int=1.2
         stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) >= movement_percent ]
     elif nifty_50 == "SELL":
         stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) <= -movement_percent ]
-    return stocks_for_trade
+    else:
+        return stocks_for_trade
     
 def add_today_movement_stocks():
     liquid_stocks = get_cached_liquid_stocks()

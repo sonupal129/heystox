@@ -2,12 +2,14 @@ from datetime import datetime
 from heystox_intraday.select_stocks_for_trading import (get_liquid_stocks, get_stocks_for_trading, 
                                                         get_cached_liquid_stocks, add_today_movement_stocks)
 from heystox_intraday.intraday_functions_strategy import (is_stocks_ohl, is_stocks_pdhl, entry_for_long_short)
-from django.core.cache import cache
+from heystox_intraday.intraday_fetchdata import (get_stock_current_candle)
+from django.core.cache import cache, caches
 from upstox_api.api import *
 from django.contrib.auth.models import User
 from celery.task import periodic_task
 from celery.schedules import crontab
 from heystox_intraday.intraday_fetchdata import parse_stock_response_data
+from market_analysis.models import Candle
 # CODE STARTS BELOW
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=13)), name="cache_liquid_stocks_for_today")
@@ -50,6 +52,19 @@ def find_pdhl_stocks():
 def take_entry_for_long_short():
     entry_for_long_short()
 
+
+def delete_cached_tickerdata_and_create_candle():
+    """This function will delete all stocks cached tickerdata and create candle on every 4:59 minute """
+    liquid_stocks = get_cached_liquid_stocks()
+    redis_cache = caches["redis"]
+    candle_to_create = []
+    for stock in liquid_stocks:
+        try:
+            candle_to_create.append(Candle(**get_stock_current_candle(stock.symbol)))
+            redis_cache.delete(stock.symbol)
+        except:
+            continue
+    Candle.objects.bulk_create(candle_to_create)
 
 @periodic_task(run_every=(crontab(minute='*/1')), name="testing_function_one")
 def test_name_chutiya():

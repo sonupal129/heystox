@@ -3,6 +3,7 @@ import time
 from datetime import datetime, timedelta
 from upstox_api.api import *
 import os
+from django.core.cache import cache, caches
 # Code Starts Below
 
 def update_symbols_data(user, index):
@@ -83,9 +84,51 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
 #     else:
 #         df.to_csv(filepath, mode="a", header=False)
 
+def cache_ticker_data(data:dict):
+    redis_cache = caches["redis"]
+    try:
+        cache_data = redis_cache.get(data.get("symbol"))
+        cache_data.append(data)
+    except:
+        redis_cache.set(str(data.get("symbol")), [data])
+    else:
+        redis_cache.set(str(data.get("symbol")), cache_data)
+
 def parse_stock_response_data(data:dict):
     """Return only required data by tickerdata model from upstox websocket response"""
     if "instrument" in data:
         del data["instrument"]
-    return add_tickerdata_to_csv([data])
+    return cache_ticker_data(data)
 
+def get_stock_current_candle(stock_name:str): # Need to refine this function more
+    redis_cache = caches["redis"]
+    cached_data = redis_cache.get(stock_name)
+    first_ticker = cached_data[0]
+    current_ticker = cached_data[-1]
+    df_ticker = {
+        "symbol": first_ticker.get("symbol").lower(),
+        "candle_type": "M5",
+        "open_price": first_ticker.get("open"),
+        "high_price": max(first_ticker.get("high"), current_ticker.get("high")),
+        "close_price": current_ticker.get("low"),
+        "low_price": min(first_ticker.get("low"), current_ticker.get("low")),
+        "volume": current_ticker.get("vtt"),
+        "atp": current_ticker.get("atp"),
+        "total_buy_quantity": current_ticker.get("total_buy_quantity"),
+        "total_sell_quantity": current_ticker.get("total_sell_quantity"),
+        "lower_circuit": current_ticker.get("lower_circuit"),
+        "upper_circuit": current_ticker.get("upper_circuit"),
+        "bids": {},
+        "asks": {},
+        "date": datetime.fromtimestamp(int(current_ticker.get("timestamp")[:10]))
+    }
+    return df_ticker
+
+def get_stock_live_data(stock_name:str):
+    symbol = Symbol.objects.get(symbol=stock_name)
+    stock_data = symbol.get_stock_data()
+    current_candle_data = get_stock_current_candle(stock_name)
+    df1 = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
+    df2 = pd.DataFrame(current_candle_data, index=[0])
+    df = pd.concat([df1, df2], ignore_index=True)
+    return df
