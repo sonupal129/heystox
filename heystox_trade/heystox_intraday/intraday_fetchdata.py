@@ -4,7 +4,13 @@ from datetime import datetime, timedelta
 from upstox_api.api import *
 import os
 from django.core.cache import cache, caches
+from market_analysis.slack import send_slack_message
 # Code Starts Below
+
+def get_upstox_user(user_email:str):
+    """Returns upstox logged in user object"""
+    user = cache.get(user_email + "_upstox_login_user")
+    return user
 
 def update_symbols_data(user, index):
       stock_list = user.get_master_contract(index)
@@ -13,9 +19,7 @@ def update_symbols_data(user, index):
       for stock in stock_list:
             symbol = stock_list.get(stock)
             try:
-                  stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin)
-                  stock.last_day_closing_price = symbol.closing_price
-                  stock.save()
+                  stock, is_created = Symbol.objects.update_or_create(token=symbol.token, isin=symbol.isin, defaults={"last_day_closing_price": symbol.closing_price})
             except Symbol.DoesNotExist:
                   bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
                         last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
@@ -72,6 +76,8 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
                   print(get_candles_data(user, symbol, interval, days, end_date))
             except:
                   not_updated_stocks.append(symbol.name)
+      message = ", ".join(not_updated_stocks)
+      send_slack_message(text=f"Stocks Data Not Updated {message}")
       return "All Stocks Data has been imported except these {0} ".format(not_updated_stocks)
 
 # def add_tickerdata_to_csv(data):

@@ -3,7 +3,7 @@ from django.conf import settings
 from datetime import datetime, timedelta
 from django.db.models import Sum
 from heystox_intraday.intraday_fetchdata import update_symbols_data, update_all_symbol_candles
-from django.core.cache import cache
+from django.core.cache import cache, caches
 from celery import Celery
 from celery.task import periodic_task
 from celery.schedules import crontab
@@ -19,4 +19,5 @@ def delete_stocks_candles():
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=5, minute=55)), name="clear_all_cache")    
 def clear_all_cache():
     """Delete or clear all cache on daily basis"""
+    caches["redis"].clear()
     cache.clear()

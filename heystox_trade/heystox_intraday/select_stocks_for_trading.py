@@ -9,7 +9,8 @@ def get_cached_liquid_stocks():
     try:
         return cache.get(str(datetime.now().date()) + "_today_liquid_stocks")
     except:
-        return None
+        cache.set(str(datetime.now().date()) + "_today_liquid_stocks", get_liquid_stocks())
+        return get_liquid_stocks()
 
 def select_stocks_for_trading(min_price:int, max_price:int):
       return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price))
@@ -38,17 +39,20 @@ def get_stocks_for_trading(stocks, date=datetime.now(), movement_percent:int=1.2
     elif nifty_50 == "SELL":
         stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) <= -movement_percent ]
     else:
-        return stocks_for_trade
+        return None
     
 def add_today_movement_stocks():
     liquid_stocks = get_cached_liquid_stocks()
     nifty_50 = get_nifty_movement(date=datetime.now())
     stocks_for_trading = get_stocks_for_trading(qs=liquid_stocks)
+    sorted_stocks_id = []
     for stock in stocks_for_trading:
-        if nifty_50 == "BUY":
-            SortedStocksList.objects.get_or_create(symbol=stock.symbol, stock_type="B")
-        elif nifty_50 == "SELL":
-            SortedStocksList.objects.get_or_create(symbol=stock.symbol, stock_type="S")
+        try:
+            sorted_stock = SortedStocksList.objects.get_or_create(symbol=stock.symbol, stock_type=nifty_50)
+            sorted_stocks_id.append(sorted_stock.id)
+        except:
+            continue
+    SortedStocksList.objects.exclude(id__in=sorted_stocks_id).delete()
 
 
 

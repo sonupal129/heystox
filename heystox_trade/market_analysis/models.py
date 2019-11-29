@@ -266,6 +266,15 @@ class SortedStocksList(models.Model):
       def __str__(self):
             return "{} | {}".format(self.symbol.__str__(), self.created_at.date())
 
+      def get_first_timestamp(self):
+            return self.timestamps.first()
+
+      def get_last_timestamp(self):
+            return self.timestamps.last()
+
+      def get_second_last_timestamp(self):
+            return self.timestamps.order_by("timestamp").reverse()[1]
+
 class Indicator(models.Model):
       name = models.CharField(max_length=50)
       description = models.TextField(null=True, blank=True)
@@ -285,3 +294,15 @@ class StrategyTimestamp(models.Model):
 
       def __str__(self):
             return "{} | {}".format(self.stock.__str__(), self.timestamp.time())
+
+      def is_last_timestamp(self):
+            if self == stock.timestamps.last():
+                  return True
+            return False
+
+      def is_first_timestamp(self):
+            if self == stock.timestamps.first():
+                  return True
+            return False
+
+      

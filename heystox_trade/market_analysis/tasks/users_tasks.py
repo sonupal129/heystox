@@ -8,19 +8,15 @@ from datetime import timedelta, datetime
 from heystox_trade.settings import upstox_redirect_url
 import time
 from market_analysis.slack import send_slack_message
+from heystox_intraday.intraday_fetchdata import get_upstox_user
 # START CODE BELOW
-
-def get_upstox_user(user):
-    """Returns upstox logged in user object"""
-    user = cache.get(user.email + "_upstox_login_user")
-    return user
 
 @periodic_task(run_every=(crontab(day_of_month=1, hour=7, minute=30)), name="update_all_users_starting_fund")
 def update_initial_balance():
     """This function will run on 1st of every month and update balance of user"""
     user_profiles = UserProfile.objects.filter(for_trade=True).prefetch_related("bank")
     for user_profile in user_profiles:
-        upstox_user = get_upstox_user(user_profile.user)
+        upstox_user = get_upstox_user(user_profile.user.email)
         balance = upstox_user.get_balance()
         current_balance = balance.get("equity").get("available_margin")
         user_profile.bank.initial_balance = current_balance
@@ -31,7 +27,7 @@ def update_current_earning_balance():
     """This function will update daily earnings and current balance of user"""
     user_profiles = UserProfile.objects.filter(for_trade=True).prefetch_related("bank")
     for user_profile in user_profiles:
-        upstox_user = get_upstox_user(user_profile.user)
+        upstox_user = get_upstox_user(user_profile.user.email)
         balance = upstox_user.get_balance()
         current_balance = balance.get("equity").get("available_margin")
         if user.bank.current_balance != current_balance:
@@ -58,7 +54,7 @@ def stop_trading_on_profit_loss():
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=8, minute=0)), name="create_new_authentication_daily")
 def authenticate_users_in_morning():
-    user_profiles = User.objects.filter(for_trade=True)
+    user_profiles = UserProfile.objects.filter(for_trade=True)
     for user_profile in user_profiles:
         session = Session(user_profile.credential.api_key)
         session.set_redirect_uri(upstox_redirect_url)

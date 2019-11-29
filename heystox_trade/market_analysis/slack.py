@@ -1,5 +1,5 @@
 import slack
-
+from heystox_trade import settings
 # CODE STARTS BELOW
 
 def send_slack_message(channel='#heystox', text='Message', attachments=None):
