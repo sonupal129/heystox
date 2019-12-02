@@ -13,3 +13,4 @@ __pycache__/
 *.csv
 *.ipynb
 *.pid
+*.rdb

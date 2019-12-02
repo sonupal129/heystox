@@ -8,6 +8,7 @@ from celery import Celery
 from celery.task import periodic_task
 from celery.schedules import crontab
 from celery.utils.log import get_task_logger
+from celery.decorators import task
 # Code Starts Below
 
 @periodic_task(run_every=(crontab(day_of_month=1, hour=1, minute=7)), name="delete_old_candles_upto_30_days")    

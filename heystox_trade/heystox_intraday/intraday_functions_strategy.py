@@ -6,10 +6,10 @@ from ta.momentum import stoch, stoch_signal
 # Start code below
 
 def is_stocks_ohl():
-    sorted_stocks = SortedStocksList.objects.filter(created_at=datetime.now().date())
+    sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     ohl_indicator = Indicator.objects.get(name="OHL")
     for stock in sorted_stocks:
-        indi = StrategyTimestamp.objects.filter(indicator__name="OHL", created_at=datetime.now().date(), stock=stock)
+        indi = StrategyTimestamp.objects.filter(indicator__name="OHL", created_at__date=datetime.now().date(), stock=stock)
         if stock.symbol.is_stock_ohl() == stock.entry_type:
             if indi.count() == 0:
                 StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
@@ -21,7 +21,7 @@ def is_stocks_ohl():
 
 
 def is_stocks_pdhl():
-    sorted_stocks = SortedStocksList.objects.filter(created_at=datetime.now().date())
+    sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     pdhl_indicator = Indicator.objects.get(name="PDHL")
     for stock in sorted_stocks:
         if stock.symbol.is_stock_pdhl() == stock.entry_type:
@@ -31,7 +31,7 @@ def is_stocks_pdhl():
 
 
 def entry_for_long_short():
-    sorted_stocks = SortedStocksList.objects.filter(created_at=datetime.now().date())
+    sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     long_short_entry = Indicator.objects.get(name="LONGSHORT")
     for stock in sorted_stocks:
         if stock.symbol.has_entry_for_long_short() == stock.entry_type:
@@ -39,7 +39,7 @@ def entry_for_long_short():
             long_short.timestamp = datetime.now()
             long_short.save()
         else:
-            StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp=datetime.now().date()).delete()
+            StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp__date=datetime.now().date()).delete()
 
 
 def get_macd_crossover(sorted_stock): # Need to Work more to find final crossover

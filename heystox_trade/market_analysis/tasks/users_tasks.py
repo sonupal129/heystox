@@ -7,7 +7,7 @@ from market_analysis.models import Earning, UserProfile
 from datetime import timedelta, datetime
 from heystox_trade.settings import upstox_redirect_url
 import time
-from market_analysis.slack import send_slack_message
+from market_analysis.tasks.tasks import slack_message_sender
 from heystox_intraday.intraday_fetchdata import get_upstox_user
 # START CODE BELOW
 
@@ -30,9 +30,13 @@ def update_current_earning_balance():
         upstox_user = get_upstox_user(user_profile.user.email)
         balance = upstox_user.get_balance()
         current_balance = balance.get("equity").get("available_margin")
-        if user.bank.current_balance != current_balance:
-            pl = Earning.objects.get(user=user_profile, date=datetime.now().date() - timedelta(1))
-            pl.profit_loss = current_balance - pl.opening_balance
+        if user_profile.bank.current_balance != current_balance:
+            pl = None
+            try:
+                pl = Earning.objects.get(user=user_profile, date=datetime.now().date() - timedelta(1))
+            except:
+                pl = Earning.objects.create(user=user_profile, date=datetime.now().date() - timedelta(1), opening_balance=user_profile.bank.current_balance)
+            pl.profit_loss = float(current_balance) - float(pl.opening_balance)
             pl.save()
             user_profile.bank.current_balance = current_balance
             user_profile.bank.save(update_fields=["current_balance"])
@@ -40,7 +44,7 @@ def update_current_earning_balance():
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=2, minute=5)), name="stop_trading_on_profit_loss")    
 def stop_trading_on_profit_loss():
     """This Function will run in every morning to check if user is in loss or in profit then stop trading accordingly"""
-    user_profiles = UserProfile.objects.filter(for_trade=False).prefetch_related("bank")
+    user_profiles = UserProfile.objects.filter(for_trade=True).prefetch_related("bank")
     for user_profile in user_profiles:
         current_balance = user_profile.bank.current_balance
         initial_balance = user_profile.bank.initial_balance
@@ -62,6 +66,6 @@ def authenticate_users_in_morning():
         cache_key = user_profile.user.email + "_upstox_user_session"
         cache.set(cache_key, session)
         login_url = session.get_login_url()
-        message = login_url +  "for" + user_profile.user.email
-        send_slack_message(text=message)
+        message = "Login URL for " + user_profile.user.get_full_name() + ": " + login_url
+        slack_message_sender.delay(text=message)
 

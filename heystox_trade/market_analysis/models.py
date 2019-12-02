@@ -51,10 +51,10 @@ class Symbol(models.Model):
       tick_size = models.FloatField(blank=True, null=True)
       instrument_type = models.CharField(max_length=20, blank=True, null=True)
       isin = models.CharField(max_length=50)
-      last_day_vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
-      vtt = models.IntegerField("Last Traded Price", blank=True, null=True)
-      total_buy_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
-      total_sell_quantity = models.IntegerField("Last Traded Price", blank=True, null=True)
+      last_day_vtt = models.IntegerField("Last Day Traded Volume", blank=True, null=True)
+      vtt = models.IntegerField("Total Traded Volume", blank=True, null=True)
+      total_buy_quantity = models.IntegerField("Total Buy Quantity", blank=True, null=True)
+      total_sell_quantity = models.IntegerField("Total Sell Quantity", blank=True, null=True)
       created_at = models.DateTimeField(auto_now=True, editable=False)
       modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
@@ -133,8 +133,12 @@ class Symbol(models.Model):
       def get_stock_movement(self, date=datetime.now()):     
             """Return Movement of stock in %"""
             current_price = Candle.objects.filter(symbol=self, date__date=date.date()).last().close_price
-            variation = current_price - self.last_day_closing_price
-            return variation / self.last_day_closing_price * 100
+            try:
+                  variation = current_price - self.last_day_closing_price
+                  return variation
+            except:
+                  return None
+
 
       def get_nifty_movement(self, data=datetime.now()):
             if self.symbol == "nifty_50":
@@ -243,12 +247,12 @@ class Earning(models.Model):
       modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
       def __str__(self):
-            return "{} | {}".format(self.account.user_profile.user.get_full_name(), self.date)
+            return "{} | {}".format(self.user.user.get_full_name(), self.date)
 
       def save(self, *args, **kwargs):
-            if self.account:
-                  if self.account.current_balance:
-                        self.opening_balance = self.account.current_balance
+            if self.user.bank:
+                  if self.user.bank.current_balance:
+                        self.opening_balance = self.user.bank.current_balance
             super().save(*args, **kwargs)
 
 class SortedStocksList(models.Model):

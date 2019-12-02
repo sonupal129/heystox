@@ -11,7 +11,7 @@ from celery.task import periodic_task
 from celery.schedules import crontab
 from heystox_intraday.intraday_fetchdata import parse_stock_response_data
 from market_analysis.models import Candle
-from market_analysis.slack import send_slack_message
+
 from celery.decorators import task
 from market_analysis.models import (StrategyTimestamp, SortedStocksList)
 import time
@@ -28,9 +28,12 @@ def subscribe_today_trading_stocks():
     """Fetch todays liquid stocks from cache then register those stock for live feed"""
     liquid_stocks = get_cached_liquid_stocks()
     upstox_user = get_upstox_user("sonupal129@gmail.com")
-    upstox_user.set_on_quote_update(parse_stock_response_data) # Should Send a slack message instead of this
+    upstox_user.set_on_quote_update(parse_stock_response_data)
+    upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
         upstox_user.subscribe(upstox_user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), LiveFeedType.Full)
+    upstox_user.get_master_contract("NSE_INDEX")
+    upstox_user.subscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
     upstox_user.start_websocket(True)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=15, minute=45)), name="unsubscribe_today_trading_stocks")
@@ -39,6 +42,7 @@ def unsubscribe_today_trading_stocks():
     upstox_user = get_upstox_user("sonupal129@gmail.com")
     for stock in liquid_stocks:
         upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), LiveFeedType.Full)
+    upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour='9-16', minute='*/3')), name="add_today_movement_stocks") #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
@@ -47,7 +51,6 @@ def todays_movement_stocks_add():
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour='9-16', minute='*/6')), name="find_update_ohl_stocks")
 def find_ohl_stocks():
     function_caller(9,30,15,30, is_stocks_ohl)
-    is_stocks_ohl()
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=45)), name="find_update_pdhl_stocks")
 def find_pdhl_stocks():
