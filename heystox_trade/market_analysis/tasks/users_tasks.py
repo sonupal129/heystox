@@ -54,7 +54,7 @@ def stop_trading_on_profit_loss():
             user_profile.for_trade = False
         elif current_balance > expected_profit:
             user_profile.for_trade = False
-        user_profile.save() 
+        user_profile.save()
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=8, minute=0)), name="create_new_authentication_daily")
 def authenticate_users_in_morning():

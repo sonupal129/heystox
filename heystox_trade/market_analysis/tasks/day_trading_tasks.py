@@ -123,7 +123,7 @@ def find_update_stochastic_crossover_in_stocks():
                 get_stochastic_crossover(stock)
 
 @periodic_task(run_every=timedelta(seconds=25), name="stochastic_crossover_finder")
-def find_macd_crossovers():
+def find_stochastic_crossovers():
     function_caller(9,30,15,30,find_update_stochastic_crossover_in_stocks)
 
 # @periodic_task(run_every=(crontab(minute="*/1")), name="testing_function_one")
