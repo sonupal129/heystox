@@ -9,7 +9,7 @@ def is_stocks_ohl():
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     ohl_indicator = Indicator.objects.get(name="OHL")
     for stock in sorted_stocks:
-        indi = StrategyTimestamp.objects.filter(indicator__name="OHL", created_at__date=datetime.now().date(), stock=stock)
+        indi = StrategyTimestamp.objects.filter(indicator__name="OHL", timestamp__date=datetime.now().date(), stock=stock)
         if stock.symbol.is_stock_ohl() == stock.entry_type:
             if indi.count() == 0:
                 StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())

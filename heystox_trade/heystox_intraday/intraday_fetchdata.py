@@ -12,11 +12,12 @@ def get_upstox_user(user_email:str):
     user = cache.get(user_email + "_upstox_login_user")
     return user
 
-def update_symbols_data(user:object, index:str):
+def update_symbols_data(user:object, index:str, max_share_price:int=300):
       stock_list = user.get_master_contract(index)
       bulk_symbol = []
+      stocks = [stock for stock in stock_list if stock_list.get(stock).closing_price is not None and stock_list.get(stock).closing_price <= max_share_price]
       index_obj = MasterContract.objects.get(name=index)
-      for stock in stock_list:
+      for stock in stocks:
             symbol = stock_list.get(stock)
             try:
                   stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin)
@@ -26,6 +27,7 @@ def update_symbols_data(user:object, index:str):
                   bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
                         last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
       Symbol.objects.bulk_create(bulk_symbol)
+      Symbol.objects.exclude(modified_at__date=datetime.now().date()).delete()
       return "All Stocks Price Updated Sucessfully"
 
 def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=datetime.now().date()):
@@ -83,10 +85,10 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
             except:
                   not_updated_stocks.append(symbol.name)
       if not_updated_stocks:
-            message = ", ".join(not_updated_stocks)
+            message = ",\n".join(not_updated_stocks)
             slack_message_sender.delay(text=f"Stocks Data Not Updated For: {message}")
       if update_stocks:
-            message = ", ".join(update_stocks)
+            message = ",\n".join(update_stocks)
             slack_message_sender.delay(text=f"Stocks Data Updated For: {message}")
       return "All Stocks Data has been imported except these {0} ".format(not_updated_stocks)
 
