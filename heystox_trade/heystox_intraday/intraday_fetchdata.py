@@ -85,10 +85,10 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
             except:
                   not_updated_stocks.append(symbol.name)
       if not_updated_stocks:
-            message = ",\n".join(not_updated_stocks)
+            message = " | ".join(not_updated_stocks)
             slack_message_sender.delay(text=f"Stocks Data Not Updated For: {message}")
       if update_stocks:
-            message = ",\n".join(update_stocks)
+            message = " | ".join(update_stocks)
             slack_message_sender.delay(text=f"Stocks Data Updated For: {message}")
       return "All Stocks Data has been imported except these {0} ".format(not_updated_stocks)
 

@@ -300,12 +300,12 @@ class StrategyTimestamp(models.Model):
             return "{} | {}".format(self.stock.__str__(), self.timestamp.time())
 
       def is_last_timestamp(self):
-            if self == stock.timestamps.last():
+            if self == self.stock.timestamps.last():
                   return True
             return False
 
       def is_first_timestamp(self):
-            if self == stock.timestamps.first():
+            if self == self.stock.timestamps.first():
                   return True
             return False
 

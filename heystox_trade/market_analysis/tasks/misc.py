@@ -17,7 +17,7 @@ def delete_stocks_candles():
     Candle.objects.filter(date__lte=datetime.now().date() - timedelta(32)).delete()
     return "Deleted Successfully"
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=5, minute=55)), name="clear_all_cache")    
+@periodic_task(run_every=(crontab(day_of_week="2-6", hour=5, minute=55)), name="clear_all_cache")    
 def clear_all_cache():
     """Delete or clear all cache on daily basis"""
     caches["redis"].clear()

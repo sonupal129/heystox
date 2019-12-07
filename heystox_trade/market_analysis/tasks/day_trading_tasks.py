@@ -50,11 +50,11 @@ def unsubscribe_today_trading_stocks():
     upstox_user.get_master_contract("NSE_INDEX")
     upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour='9-16', minute='*/3')), name="add_today_movement_stocks") #Check more for minute how to start-stop after specific time
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/3")), name="add_today_movement_stocks") #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
     function_caller(9,30,15,30, add_today_movement_stocks)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour='9-16', minute='*/6')), name="find_update_ohl_stocks")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/6")), name="find_update_ohl_stocks")
 def find_ohl_stocks():
     function_caller(9,30,15,30, is_stocks_ohl)
 
@@ -80,7 +80,7 @@ def delete_cached_tickerdata_and_create_candle():
             continue
     Candle.objects.bulk_create(candle_to_create)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-16", minute="*/5")), name="create_candles_and_delete_ticker")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/5")), name="create_candles_and_delete_ticker")
 def create_candles_and_delete_ticker():
     function_caller(9,20,15,35,delete_cached_tickerdata_and_create_candle)
 
@@ -92,7 +92,7 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
         entry_price = get_stock_current_candle(macd.stock.symbol.name).open_price
         macd.stock.entry_price = entry_price
         macd.stock.save()
-        send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type}")
+        send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}")
 
 @task(name="macd_finder")
 def find_update_macd_crossover_in_stocks():
@@ -109,7 +109,7 @@ def find_update_macd_crossover_in_stocks():
             elif stock.entry_type == "SELL" and stock.get_stock_movement() <= -1.2:
                 get_macd_crossover(stock)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-16", minute="*/1")), name="macd_crossover_finder")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), name="macd_crossover_finder")
 def find_macd_crossovers():
     function_caller(9,30,15,30,find_update_macd_crossover_in_stocks)
 
@@ -128,7 +128,7 @@ def find_update_stochastic_crossover_in_stocks():
             elif stock.entry_type == "SELL" and stock.get_stock_movement() <= -1.2:
                 get_stochastic_crossover(stock)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-16", minute="*/1")), name="stochastic_crossover_finder")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), name="stochastic_crossover_finder")
 def find_stochastic_crossovers():
     function_caller(9,30,15,30,find_update_stochastic_crossover_in_stocks)
 
@@ -142,6 +142,7 @@ def find_stochastic_crossovers():
 #         print(users)
 #         print(f"{datetime.now()}")    
 
-# @periodic_task(run_every=(crontab(hour=9, minute=33)), name="testing_function_one")
+# @periodic_task(run_every=(crontab(hour="17-18", minute="15-19/1")), name="testing_function_one")
 # def call_function_raju(run=True, run_every=5):
-#     raju_mera_name.delay(run_every, run)
+#         users = User.objects.all()
+#         print(users)

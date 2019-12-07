@@ -20,5 +20,5 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 def verify_macd_signal(instance, **kwargs):
     if instance.indicator.name == "MACD":
         stock = instance.stock
-        if instance.is_last_timestamp and stock.get_second_last_timestamp().indicator.name == "STOCHASTIC":
+        if instance.is_last_timestamp() and stock.get_second_last_timestamp().indicator.name == "STOCHASTIC":
             order_on_macd_verification.delay(instance.id, stock.get_second_last_timestamp().id)
