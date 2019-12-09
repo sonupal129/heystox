@@ -11,7 +11,7 @@ class SymbolAdmin(admin.ModelAdmin):
 
 class CandleAdmin(admin.ModelAdmin):
       list_display = ["symbol", "exchange", "candle_type"]
-      list_filter = ["candle_type"]
+      list_filter = ["candle_type", "created_at"]
       search_fields = ["symbol__symbol"]
       date_hierarchy = 'created_at'
 

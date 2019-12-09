@@ -2,7 +2,6 @@ from market_analysis.models import (Candle, Symbol)
 from django.conf import settings
 from datetime import datetime, timedelta
 from django.db.models import Sum
-from heystox_intraday.intraday_fetchdata import update_symbols_data, update_all_symbol_candles
 from django.core.cache import cache, caches
 from celery import Celery
 from celery.task import periodic_task

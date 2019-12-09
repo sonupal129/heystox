@@ -74,8 +74,8 @@ def delete_cached_tickerdata_and_create_candle():
     candle_to_create = []
     for stock in liquid_stocks:
         try:
-            candle_to_create.append(Candle(**get_stock_current_candle(stock.symbol)))
-            redis_cache.delete(stock.symbol)
+            candle_to_create.append(Candle(**get_stock_current_candle(stock.symbol.upper())))
+            redis_cache.delete(stock.symbol.upper())
         except:
             continue
     Candle.objects.bulk_create(candle_to_create)
@@ -89,7 +89,7 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
     macd = StrategyTimestamp.objects.get(pk=macd_stamp_id)
     stoch = StrategyTimestamp.objects.get(pk=stochastic_stamp_id)
     if macd.timestamp - stoch.timestamp < timedelta(minutes=20):
-        entry_price = get_stock_current_candle(macd.stock.symbol.name).open_price
+        entry_price = get_stock_current_candle(macd.stock.symbol.symbol.upper()).open_price
         macd.stock.entry_price = entry_price
         macd.stock.save()
         send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}")

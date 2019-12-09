@@ -10,10 +10,10 @@ def get_cached_liquid_stocks(cached=True):
         if cache.get(str(datetime.now().date()) + "_today_liquid_stocks"):
             return cache.get(str(datetime.now().date()) + "_today_liquid_stocks")
         else:
-            cache.set(str(datetime.now().date()) + "_today_liquid_stocks", get_liquid_stocks())
-            return get_liquid_stocks()
+            cache.set(str(datetime.now().date()) + "_today_liquid_stocks", get_liquid_stocks(trade_volume=5000000, max_price=300))
+            return get_liquid_stocks(trade_volume=5000000, max_price=300)
     else:
-        return get_liquid_stocks()
+        return get_liquid_stocks(trade_volume=5000000, max_price=300)
 
 def select_stocks_for_trading(min_price:int, max_price:int):
       return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price)).exclude(exchange__name="NSE_INDEX")
@@ -50,8 +50,6 @@ def add_today_movement_stocks():
     liquid_stocks = get_cached_liquid_stocks()
     nifty_50 = get_nifty_movement(date=datetime.now())
     stocks_for_trading = get_stocks_for_trading(stocks=liquid_stocks)
-    print(nifty_50)
-    print(stocks_for_trading)
     sorted_stocks_id = []
     if stocks_for_trading:
         for stock in stocks_for_trading:

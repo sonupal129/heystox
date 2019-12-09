@@ -12,22 +12,18 @@ def get_upstox_user(user_email:str):
     user = cache.get(user_email + "_upstox_login_user")
     return user
 
-def update_symbols_data(user:object, index:str, max_share_price:int=300):
+def create_symbols_data(user:object, index:str, max_share_price:int=300):
       stock_list = user.get_master_contract(index)
       bulk_symbol = []
-      stocks = [stock for stock in stock_list if stock_list.get(stock).closing_price is not None and stock_list.get(stock).closing_price <= max_share_price]
       index_obj = MasterContract.objects.get(name=index)
-      for stock in stocks:
+      for stock in stock_list:
             symbol = stock_list.get(stock)
             try:
                   stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin)
-                  stock.last_day_closing_price = symbol.closing_price
-                  stock.save()
             except Symbol.DoesNotExist:
                   bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
                         last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
       Symbol.objects.bulk_create(bulk_symbol)
-      Symbol.objects.exclude(modified_at__date=datetime.now().date()).delete()
       return "All Stocks Price Updated Sucessfully"
 
 def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=datetime.now().date()):
@@ -127,9 +123,9 @@ def get_stock_current_candle(stock_name:str): # Need to refine this function mor
         "symbol": first_ticker.get("symbol").lower(),
         "candle_type": "M5",
         "open_price": first_ticker.get("open"),
-        "high_price": max(first_ticker.get("high"), current_ticker.get("high")),
-        "close_price": current_ticker.get("low"),
-        "low_price": min(first_ticker.get("low"), current_ticker.get("low")),
+        "high_price": max(data.get("high") for data in cached_data),
+        "close_price": current_ticker.get("close"),
+        "low_price": min(data.get("low") for data in cached_data),
         "volume": current_ticker.get("vtt"),
         "atp": current_ticker.get("atp"),
         "total_buy_quantity": current_ticker.get("total_buy_quantity"),
@@ -145,7 +141,7 @@ def get_stock_current_candle(stock_name:str): # Need to refine this function mor
 def get_stock_live_data(stock_name:str):
     symbol = Symbol.objects.get(symbol=stock_name)
     stock_data = symbol.get_stock_data()
-    current_candle_data = get_stock_current_candle(stock_name)
+    current_candle_data = get_stock_current_candle(stock_name.upper())
     df1 = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
     df2 = pd.DataFrame(current_candle_data, index=[0])
     df = pd.concat([df1, df2], ignore_index=True)
