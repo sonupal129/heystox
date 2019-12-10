@@ -198,7 +198,7 @@ class Candle(models.Model):
       objects = CandleManager()
 
       def __str__(self):
-            return self.symbol.symbol
+            return self.symbol
 
 
 class UserProfile(models.Model):

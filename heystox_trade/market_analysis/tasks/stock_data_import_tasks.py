@@ -45,7 +45,7 @@ def update_nifty_50_data():
     stock.last_day_closing_price = data.closing_price
     stock.save()
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=23, minute=57)), name="update_symbols_closing_opening_price")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=10)), name="update_symbols_closing_opening_price")
 def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
     symbols = Symbol.objects.exclude(exchange__name="NSE_INDEX")

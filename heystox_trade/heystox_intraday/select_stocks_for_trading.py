@@ -5,15 +5,15 @@ from django.db.models import Max, Min
 from django.core.cache import cache
 
 # Codes Starts Below
-def get_cached_liquid_stocks(cached=True):
+def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
     if cached:
         if cache.get(str(datetime.now().date()) + "_today_liquid_stocks"):
             return cache.get(str(datetime.now().date()) + "_today_liquid_stocks")
         else:
-            cache.set(str(datetime.now().date()) + "_today_liquid_stocks", get_liquid_stocks(trade_volume=5000000, max_price=300))
-            return get_liquid_stocks(trade_volume=5000000, max_price=300)
+            cache.set(str(datetime.now().date()) + "_today_liquid_stocks", get_liquid_stocks(trade_volume=trade_volume, max_price=max_price))
+            return get_liquid_stocks(trade_volume=trade_volume, max_price=max_price)
     else:
-        return get_liquid_stocks(trade_volume=5000000, max_price=300)
+        return get_liquid_stocks(trade_volume=trade_volume, max_price=max_price)
 
 def select_stocks_for_trading(min_price:int, max_price:int):
       return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price)).exclude(exchange__name="NSE_INDEX")

@@ -20,6 +20,7 @@ def update_initial_balance():
         balance = upstox_user.get_balance()
         current_balance = balance.get("equity").get("available_margin")
         user_profile.bank.initial_balance = current_balance
+        user_profile.bank.current_balance = current_balance
         user_profile.bank.save()
 
 @periodic_task(run_every=(crontab(day_of_week="2-6", hour=2, minute=2)), name="update_daily_earning_of_user")

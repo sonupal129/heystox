@@ -11,9 +11,9 @@ class SymbolAdmin(admin.ModelAdmin):
 
 class CandleAdmin(admin.ModelAdmin):
       list_display = ["symbol", "exchange", "candle_type"]
-      list_filter = ["candle_type", "created_at"]
+      list_filter = ["candle_type", "date"]
       search_fields = ["symbol__symbol"]
-      date_hierarchy = 'created_at'
+      date_hierarchy = 'date'
 
       def exchange(self, obj):
             return obj.symbol.exchange
