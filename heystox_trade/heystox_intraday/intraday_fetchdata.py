@@ -69,23 +69,23 @@ def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=dat
 
 
 def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=datetime.now()):
-      """Takes symbols queryset and upstox user as input and update those symbols candle data"""
+    """Takes symbols queryset and upstox user as input and update those symbols candle data"""
     not_updated_stocks = []
-    update_stocks = []
+    updated_stocks = []
     for symbol in qs:
         if not cache.get(symbol.exchange.name + "_master_contracts_cache"):
             cache.set(symbol.exchange.name + "_master_contracts_cache", user.get_master_contract(symbol.exchange.name))
         try:
             print(get_candles_data(user, symbol, interval, days, end_date))
-            update_stocks.append(symbol.name)
+            updated_stocks.append(symbol.name)
         except:
             not_updated_stocks.append(symbol.name)
     if not_updated_stocks:
         message = " | ".join(not_updated_stocks)
-        slack_message_sender.delay(text=f"Stocks Data Not Updated For: {message}")
-    if update_stocks:
-        message = " | ".join(update_stocks)
-        slack_message_sender.delay(text=f"Stocks Data Updated For: {message}")
+        slack_message_sender.delay(text=f"Stocks Data Not Updated For: {message}")
+    if updated_stocks:
+        message = " | ".join(updated_stocks)
+        slack_message_sender.delay(text=f"Stocks Data Updated For: {message}")
     return "All Stocks Data has been imported except these {0} ".format(not_updated_stocks)
 
 # def add_tickerdata_to_csv(data):
