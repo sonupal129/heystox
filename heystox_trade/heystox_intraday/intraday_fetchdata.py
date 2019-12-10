@@ -119,9 +119,7 @@ def get_stock_current_candle(stock_name:str): # Need to refine this function mor
     cached_data = redis_cache.get(stock_name)
     first_ticker = cached_data[0]
     current_ticker = cached_data[-1]
-    symbol = Symbol.objects.get(symbol=first_ticker.get("symbol").lower())
     df_ticker = {
-        "symbol_id": symbol.id,
         "candle_type": "M5",
         "open_price": first_ticker.get("open"),
         "high_price": max(data.get("high") for data in cached_data),
