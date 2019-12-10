@@ -74,9 +74,9 @@ def delete_cached_tickerdata_and_create_candle():
     candle_to_create = []
     for stock in liquid_stocks:
         try:
-            data = get_stock_current_candle(stock.symbol.upper()))
+            data = get_stock_current_candle(stock.symbol.upper())
             data["symbol_id"] = stock.id
-            candle_to_create.append(Candle(**data)
+            candle_to_create.append(Candle(**data))
             redis_cache.delete(stock.symbol.upper())
         except:
             continue
