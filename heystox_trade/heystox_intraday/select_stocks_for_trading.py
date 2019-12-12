@@ -25,7 +25,7 @@ def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
 def get_nifty_movement(date=datetime.now()):
     "Function Returns Nifty 50 Movement Only"
     nifty_50 = Symbol.objects.get(symbol="nifty_50")
-    current_price = Candle.objects.filter(symbol=nifty_50, date__date=date.date()).last().close_price
+    current_price = nifty_50.get_stock_data().last().close_price
     diff = current_price - nifty_50.last_day_closing_price
     if diff >= 32:
         return "BUY"

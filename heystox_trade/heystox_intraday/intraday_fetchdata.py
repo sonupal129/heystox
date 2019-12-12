@@ -12,6 +12,17 @@ def get_upstox_user(user_email:str):
     user = cache.get(user_email + "_upstox_login_user")
     return user
 
+def load_master_contract_data(contract:str=None):
+    user = get_upstox_user("sonupal129@gmail.com")
+    if contract:
+        try:
+            user.get_master_contract(contract.upper())
+        except:
+            raise TypeError ("Obj is not Type of Master Contract")
+    else:
+        for obj in MasterContract.objects.values():
+            user.get_master_contract(obj.get("name"))
+
 def create_symbols_data(user:object, index:str, max_share_price:int=300):
     stock_list = user.get_master_contract(index)
     bulk_symbol = []
@@ -24,7 +35,7 @@ def create_symbols_data(user:object, index:str, max_share_price:int=300):
             bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
                 last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
     Symbol.objects.bulk_create(bulk_symbol)
-    return "All Stocks Price Updated Sucessfully"
+    return "All Stocks Data Updated Sucessfully"
 
 def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=datetime.now().date()):
     interval_dic = {
@@ -54,12 +65,12 @@ def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=dat
         volume = int(data.get("volume"))
         try:
             candle = Candle.objects.get(date=datetime.fromtimestamp(timestamp), symbol=stock)
-            candle.open_price = open_price
-            candle.close_price = close_price
-            candle.high_price = high_price
-            candle.low_price = low_price
-            candle.volume = volume
-            candle.save()
+            # candle.open_price = open_price
+            # candle.close_price = close_price
+            # candle.high_price = high_price
+            # candle.low_price = low_price
+            # candle.volume = volume
+            # candle.save()
         except Candle.DoesNotExist:
             bulk_candle_data.append(Candle(open_price=open_price, close_price=close_price, low_price=low_price,
                                         high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),
@@ -68,18 +79,16 @@ def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=dat
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 
-def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=datetime.now()):
+def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=datetime.now().date()):
     """Takes symbols queryset and upstox user as input and update those symbols candle data"""
     not_updated_stocks = []
     updated_stocks = []
     for symbol in qs:
-        if not cache.get(symbol.exchange.name + "_master_contracts_cache"):
-            cache.set(symbol.exchange.name + "_master_contracts_cache", user.get_master_contract(symbol.exchange.name))
-        try:
-            print(get_candles_data(user, symbol, interval, days, end_date))
-            updated_stocks.append(symbol.name)
-        except:
-            not_updated_stocks.append(symbol.name)
+            try:
+                print(get_candles_data(user, symbol, interval, days, end_date))
+                updated_stocks.append(symbol.name)
+            except:
+                not_updated_stocks.append(symbol.name)
     if not_updated_stocks:
         message = " | ".join(not_updated_stocks)
         slack_message_sender.delay(text=f"Stocks Data Not Updated For: {message}")
@@ -98,27 +107,39 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
 #     else:
 #         df.to_csv(filepath, mode="a", header=False)
 
-def cache_ticker_data(data:dict):
-    redis_cache = caches["redis"]
-    try:
-        cache_data = redis_cache.get(data.get("symbol"))
-        cache_data.append(data)
-    except:
-        redis_cache.set(str(data.get("symbol")), [data])
-    else:
-        redis_cache.set(str(data.get("symbol")), cache_data)
+# def cache_ticker_data(data:dict):
+#     redis_cache = caches["redis"]
+#     try:
+#         cache_data = redis_cache.get(data.get("symbol"))
+#         cache_data.append(data)
+#     except:
+#         redis_cache.set(str(data.get("symbol")), [data])
+#     else:
+#         redis_cache.set(str(data.get("symbol")), cache_data)
 
-def parse_stock_response_data(data:dict):
-    """Return only required data by tickerdata model from upstox websocket response"""
-    if "instrument" in data:
-        del data["instrument"]
-    return cache_ticker_data(data)
+# def parse_stock_response_data(data:dict):
+#     """Return only required data by tickerdata model from upstox websocket response"""
+#     if "instrument" in data:
+#         del data["instrument"]
+#     return cache_ticker_data(data)
+
+def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start_day:int=0, end_date=datetime.now().date()):
+    interval_dic = {
+        "1 Minute": OHLCInterval.Minute_1,
+        "5 Minute": OHLCInterval.Minute_5,
+        "10 Minute": OHLCInterval.Minute_10,
+        "15 Minute": OHLCInterval.Minute_15,
+        }
+    redis_cache = caches["redis"]
+    start_date = end_date - timedelta(start_day)
+    stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), start_date, end_date)
+    *rest_candles, second_last_candle, last_candle = stock_data
+    redis_cache.set(stock.symbol, [second_last_candle, last_candle])
 
 def get_stock_current_candle(stock_name:str): # Need to refine this function more
     redis_cache = caches["redis"]
     cached_data = redis_cache.get(stock_name)
-    first_ticker = cached_data[0]
-    current_ticker = cached_data[-1]
+    first_ticker, current_ticker = cached_data
     df_ticker = {
         "candle_type": "M5",
         "open_price": first_ticker.get("open"),
@@ -140,7 +161,7 @@ def get_stock_current_candle(stock_name:str): # Need to refine this function mor
 def get_stock_live_data(stock_name:str):
     symbol = Symbol.objects.get(symbol=stock_name)
     stock_data = symbol.get_stock_data()
-    current_candle_data = get_stock_current_candle(stock_name.upper())
+    current_candle_data = get_stock_current_candle(stock_name)
     df1 = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
     df2 = pd.DataFrame(current_candle_data, index=[0])
     df = pd.concat([df1, df2], ignore_index=True)

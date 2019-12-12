@@ -9,11 +9,11 @@ from upstox_api.api import *
 from django.contrib.auth.models import User
 from celery.task import periodic_task
 from celery.schedules import crontab
-from heystox_intraday.intraday_fetchdata import parse_stock_response_data
+from heystox_intraday.intraday_fetchdata import update_all_symbol_candles, cache_candles_data
 from market_analysis.models import Candle
 from market_analysis.tasks.tasks import slack_message_sender
 from celery.decorators import task
-from market_analysis.models import (StrategyTimestamp, SortedStocksList)
+from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol)
 import time
 # CODE STARTS BELOW
 
@@ -29,26 +29,26 @@ def subscribe_today_trading_stocks():
     liquid_stocks = get_cached_liquid_stocks()
     message = "Today's Subscribed Stocks:\n" + "| ".join(stock.symbol.upper() for stock in liquid_stocks)
     slack_message_sender.delay(text=message)
-    upstox_user = get_upstox_user("sonupal129@gmail.com")
-    upstox_user.set_on_quote_update(parse_stock_response_data)
-    upstox_user.get_master_contract("NSE_EQ")
-    for stock in liquid_stocks:
-        upstox_user.subscribe(upstox_user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), LiveFeedType.Full)
-    upstox_user.get_master_contract("NSE_INDEX")
-    upstox_user.subscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
-    upstox_user.start_websocket(True)
+    # upstox_user = get_upstox_user("sonupal129@gmail.com")
+    # upstox_user.set_on_quote_update(parse_stock_response_data)
+    # upstox_user.get_master_contract("NSE_EQ")
+    # for stock in liquid_stocks:
+    #     upstox_user.subscribe(upstox_user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), LiveFeedType.Full)
+    # upstox_user.get_master_contract("NSE_INDEX")
+    # upstox_user.subscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
+    # upstox_user.start_websocket(True)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=15, minute=45)), name="unsubscribe_today_trading_stocks")
 def unsubscribe_today_trading_stocks():
     liquid_stocks = get_cached_liquid_stocks()
     message = "Stocks Unsubscribed for Today:\n" + "| ".join(stock.symbol.upper() for stock in liquid_stocks)
     slack_message_sender.delay(text=message)
-    upstox_user = get_upstox_user("sonupal129@gmail.com")
-    upstox_user.get_master_contract("NSE_EQ")
-    for stock in liquid_stocks:
-        upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), LiveFeedType.Full)
-    upstox_user.get_master_contract("NSE_INDEX")
-    upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
+    # upstox_user = get_upstox_user("sonupal129@gmail.com")
+    # upstox_user.get_master_contract("NSE_EQ")
+    # for stock in liquid_stocks:
+    #     upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), LiveFeedType.Full)
+    # upstox_user.get_master_contract("NSE_INDEX")
+    # upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/3")), name="add_today_movement_stocks") #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
@@ -66,25 +66,58 @@ def find_pdhl_stocks():
 def take_entry_for_long_short():
     entry_for_long_short()
 
-@task(name="delete_cached_ticker_and_create_candle")
-def delete_cached_tickerdata_and_create_candle():
-    """This function will delete all stocks cached tickerdata and create candle on every 4:59 minute """
+@periodic_task(run_every=(crontab(hour="9-15", minute="1-59/5")), name="create_market_hour_candles")
+def create_market_hour_candles():
+    upstox_user = get_upstox_user("sonupal129@gmail.com")
     liquid_stocks = get_cached_liquid_stocks()
-    redis_cache = caches["redis"]
-    candle_to_create = []
-    for stock in liquid_stocks:
-        try:
-            data = get_stock_current_candle(stock.symbol.upper())
-            data["symbol_id"] = stock.id
-            candle_to_create.append(Candle(**data))
-            redis_cache.delete(stock.symbol.upper())
-        except:
-            continue
-    Candle.objects.bulk_create(candle_to_create)
+    upstox_user.get_master_contract("NSE_EQ")
+    update_all_symbol_candles(user=upstox_user, qs=liquid_stocks, days=0, end_date=datetime.now().date()) # By Defautl Fetching 5 Minute Candle
+    # Now Create Nifty 50 Candle 
+    nifty_50 = Symbol.objects.get(symbol="nifty_50", exchange__name="NSE_INDEX")
+    upstox_user.get_master_contract("NSE_INDEX")
+    update_all_symbol_candles(user=upstox_user, qs=nifty_50, days=0, end_date=datetime.now().date())
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/5")), name="create_candles_and_delete_ticker")
-def create_candles_and_delete_ticker():
-    function_caller(9,20,15,35,delete_cached_tickerdata_and_create_candle)
+@task(name="create_stocks_realtime_candle")
+def create_stocks_realtime_candle():
+    upstox_user = get_upstox_user("sonupal129@gmail.com")
+    liquid_stocks = get_cached_liquid_stocks()
+    upstox_user.get_master_contract("NSE_EQ")
+    for stock in liquid_stocks:
+        cache_candles_data(upstox_user, stock)
+
+@task(name="create_nifty_50_realtime_candle")
+def create_nifty_50_realtime_candle():
+    upstox_user = get_upstox_user("sonupal129@gmail.com")
+    nifty_50 = Symbol.objects.get(symbol="nifty_50")
+    upstox_user.get_master_contract("NSE_INDEX")
+    cache_candles_data(upstox_user, nifty_50)
+
+@periodic_task(run_every=(crontab(hour="9-15", minute="*/1")), name="create_stocks_realtime_candle")
+def create_stocks_realtime_candle_fuction_caller():
+    function_caller(9,18,15,40, create_stocks_realtime_candle)
+    # Now Call Nifty 50 Function to Create Candle
+    function_caller(9,18,15,40, create_nifty_50_realtime_candle)
+    
+
+# @task(name="delete_cached_ticker_and_create_candle")
+# def delete_cached_tickerdata_and_create_candle():
+#     """This function will delete all stocks cached tickerdata and create candle on every 4:59 minute """
+#     liquid_stocks = get_cached_liquid_stocks()
+#     redis_cache = caches["redis"]
+#     candle_to_create = []
+#     for stock in liquid_stocks:
+#         try:
+#             data = get_stock_current_candle(stock.symbol.upper())
+#             data["symbol_id"] = stock.id
+#             candle_to_create.append(Candle(**data))
+#             redis_cache.delete(stock.symbol.upper())
+#         except:
+#             continue
+#     Candle.objects.bulk_create(candle_to_create)
+
+# @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/5")), name="create_candles_and_delete_ticker")
+# def create_candles_and_delete_ticker():
+#     function_caller(9,20,15,35,delete_cached_tickerdata_and_create_candle)
 
 @task(name="place_order_on_macd_verification")
 def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to work more on current entry price
@@ -144,7 +177,7 @@ def find_stochastic_crossovers():
 #         print(users)
 #         print(f"{datetime.now()}")    
 
-# @periodic_task(run_every=(crontab(hour="17-18", minute="15-19/1")), name="testing_function_one")
+# @periodic_task(run_every=(crontab(hour="23-2", minute="1-59/5")), name="testing_function_one")
 # def call_function_raju(run=True, run_every=5):
 #         users = User.objects.all()
 #         print(users)
