@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from heystox_intraday.select_stocks_for_trading import (get_liquid_stocks, get_stocks_for_trading, get_nifty_movement,
                                                         get_cached_liquid_stocks, add_today_movement_stocks)
 from heystox_intraday.intraday_functions_strategy import (is_stocks_ohl, is_stocks_pdhl, entry_for_long_short, get_macd_crossover,
@@ -14,14 +14,13 @@ from market_analysis.models import Candle
 from market_analysis.tasks.tasks import slack_message_sender
 from celery.decorators import task
 from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol)
-import time
 # CODE STARTS BELOW
 
-def function_caller(start_hour, start_minute, end_hour, end_minute, func, *args, **kwargs):
+def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
     """Call function on custom time with interval functionality using celery periodic task"""
-    current_time = datetime.now()
-    if current_time.hour >= start_hour and current_time.minute >= start_minute and current_time.hour <= end_hour and current_time.minute <= end_minute:
-        func.delay(*args, **kwargs)
+    current_time = datetime.now().time()
+    if start_time < current_time < end_time:
+        function()
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=14)), name="subscribe_for_todays_trading_stocks")
 def subscribe_today_trading_stocks():
@@ -52,11 +51,11 @@ def unsubscribe_today_trading_stocks():
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/3")), name="add_today_movement_stocks") #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
-    function_caller(9,30,15,30, add_today_movement_stocks)
+    function_caller(function=add_today_movement_stocks)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/6")), name="find_update_ohl_stocks")
 def find_ohl_stocks():
-    function_caller(9,30,15,30, is_stocks_ohl)
+    function_caller(function=is_stocks_ohl)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=45)), name="find_update_pdhl_stocks")
 def find_pdhl_stocks():
@@ -79,7 +78,8 @@ def create_market_hour_candles():
 @task(name="create_stocks_realtime_candle")
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user("sonupal129@gmail.com")
-    liquid_stocks = get_cached_liquid_stocks()
+    # liquid_stocks = get_cached_liquid_stocks()
+    liquid_stocks = Symbol.objects.filter(last_day_closing_price__range=[200, 205])
     upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
         cache_candles_data(upstox_user, stock)
@@ -93,9 +93,11 @@ def create_nifty_50_realtime_candle():
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), name="create_stocks_realtime_candle_fuction_caller")
 def create_stocks_realtime_candle_fuction_caller():
-    function_caller(9,18,15,40, create_stocks_realtime_candle)
+    start_time = time(9,15)
+    end_time = time(15,35)
+    function_caller(create_stocks_realtime_candle, start_time, end_time)
     # Now Call Nifty 50 Function to Create Candle
-    function_caller(9,18,15,40, create_nifty_50_realtime_candle)
+    function_caller(create_nifty_50_realtime_candle, start_time, end_time)
     
 
 # @task(name="delete_cached_ticker_and_create_candle")
@@ -145,7 +147,7 @@ def find_update_macd_crossover_in_stocks():
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), name="macd_crossover_finder")
 def find_macd_crossovers():
-    function_caller(9,30,15,30,find_update_macd_crossover_in_stocks)
+    function_caller(function=find_update_macd_crossover_in_stocks)
 
 @task(name="stochastic_finder")
 def find_update_stochastic_crossover_in_stocks():
@@ -164,7 +166,7 @@ def find_update_stochastic_crossover_in_stocks():
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), name="stochastic_crossover_finder")
 def find_stochastic_crossovers():
-    function_caller(9,30,15,30,find_update_stochastic_crossover_in_stocks)
+    function_caller(function=find_update_stochastic_crossover_in_stocks)
 
 
 

@@ -124,7 +124,7 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
 #         del data["instrument"]
 #     return cache_ticker_data(data)
 
-def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start_day:int=0, end_date=datetime.now().date()):
+def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start_day:int=0, end_date=datetime.now().date()): #Need to work more on this function bc correct candle nahi aa rhi hai 
     interval_dic = {
         "1 Minute": OHLCInterval.Minute_1,
         "5 Minute": OHLCInterval.Minute_5,
