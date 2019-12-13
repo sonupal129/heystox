@@ -5,6 +5,7 @@ from upstox_api.api import *
 import os
 from django.core.cache import cache, caches
 from market_analysis.tasks.tasks import slack_message_sender
+import pandas as pd
 # Code Starts Below
 
 def get_upstox_user(user_email:str):
@@ -134,7 +135,8 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
     start_date = end_date - timedelta(start_day)
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), start_date, end_date)
     *rest_candles, second_last_candle, last_candle = stock_data
-    redis_cache.set(stock.symbol, [second_last_candle, last_candle])
+    data = [second_last_candle, last_candle]
+    redis_cache.set(stock.symbol, data)
 
 def get_stock_current_candle(stock_name:str): # Need to refine this function more
     redis_cache = caches["redis"]

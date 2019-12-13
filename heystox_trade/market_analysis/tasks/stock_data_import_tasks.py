@@ -13,7 +13,6 @@ from django.db.models import Sum
 def update_stocks_data():
     """Update all stocks data after trading day"""
     upstox_user = get_upstox_user("sonupal129@gmail.com")
-    upstox_user.get_master_contract("NSE_EQ")
     create_symbols_data(upstox_user, "NSE_EQ")
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=17, minute=10)), name="update_all_stocks_candle_data")
@@ -51,11 +50,11 @@ def update_nifty_50_data(days=0):
 def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
     symbols = Symbol.objects.exclude(exchange__name="NSE_INDEX")
-    not_updated_stocks = []
+    updated_stocks = []
     for symbol in symbols:
         if symbol.get_stock_data():
             symbol.last_day_closing_price = symbol.get_day_closing_price()
             symbol.last_day_opening_price = symbol.get_day_opening_price()
             symbol.save()
-            not_updated_stocks.append(symbol.id)
-    symbols.exclude(id__in=not_updated_stocks).delete()
+            updated_stocks.append(symbol.id)
+    symbols.exclude(id__in=updated_stocks).delete()

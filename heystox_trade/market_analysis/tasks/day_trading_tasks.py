@@ -3,13 +3,13 @@ from heystox_intraday.select_stocks_for_trading import (get_liquid_stocks, get_s
                                                         get_cached_liquid_stocks, add_today_movement_stocks)
 from heystox_intraday.intraday_functions_strategy import (is_stocks_ohl, is_stocks_pdhl, entry_for_long_short, get_macd_crossover,
                                                             get_stochastic_crossover)
-from heystox_intraday.intraday_fetchdata import (get_stock_current_candle, get_upstox_user)
+from heystox_intraday.intraday_fetchdata import (get_stock_current_candle, get_upstox_user, update_all_symbol_candles, cache_candles_data,
+                                                get_candles_data)
 from django.core.cache import cache, caches
 from upstox_api.api import *
 from django.contrib.auth.models import User
 from celery.task import periodic_task
 from celery.schedules import crontab
-from heystox_intraday.intraday_fetchdata import update_all_symbol_candles, cache_candles_data
 from market_analysis.models import Candle
 from market_analysis.tasks.tasks import slack_message_sender
 from celery.decorators import task
@@ -66,16 +66,15 @@ def find_pdhl_stocks():
 def take_entry_for_long_short():
     entry_for_long_short()
 
-@periodic_task(run_every=(crontab(hour="9-15", minute="1-59/5")), name="create_market_hour_candles")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")), name="create_market_hour_candles")
 def create_market_hour_candles():
     upstox_user = get_upstox_user("sonupal129@gmail.com")
     liquid_stocks = get_cached_liquid_stocks()
     upstox_user.get_master_contract("NSE_EQ")
     update_all_symbol_candles(user=upstox_user, qs=liquid_stocks, days=0, end_date=datetime.now().date()) # By Defautl Fetching 5 Minute Candle
     # Now Create Nifty 50 Candle 
-    nifty_50 = Symbol.objects.get(symbol="nifty_50", exchange__name="NSE_INDEX")
     upstox_user.get_master_contract("NSE_INDEX")
-    update_all_symbol_candles(user=upstox_user, qs=nifty_50, days=0, end_date=datetime.now().date())
+    get_candles_data(user=upstox_user, symbol="nifty_50", days=0, end_date=datetime.now().date())
 
 @task(name="create_stocks_realtime_candle")
 def create_stocks_realtime_candle():
@@ -92,7 +91,7 @@ def create_nifty_50_realtime_candle():
     upstox_user.get_master_contract("NSE_INDEX")
     cache_candles_data(upstox_user, nifty_50)
 
-@periodic_task(run_every=(crontab(hour="9-15", minute="*/1")), name="create_stocks_realtime_candle")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), name="create_stocks_realtime_candle_fuction_caller")
 def create_stocks_realtime_candle_fuction_caller():
     function_caller(9,18,15,40, create_stocks_realtime_candle)
     # Now Call Nifty 50 Function to Create Candle

@@ -91,14 +91,9 @@ class Symbol(models.Model):
                         < get_days_high_low_price(start_date=stock_date, price_type="LOW", candle_type=candle_type):
                         return "SELL"
 
-      def get_day_opening_price(self, date=datetime.now()):
-            opening_price = Candle.objects.filter(symbol=self, date__date=date.date()).first().open_price
+      def get_day_opening_price(self, date=datetime.now().date()):
+            opening_price = self.get_stock_data(end_date=date).first().open_price
             return opening_price
-
-      def get_day_closing_price(self, date=datetime.now()):
-            """function will return last candle closing price"""
-            closing_price = Candle.objects.filter(symbol=self, date__date=date.date()).last().close_price
-            return closing_price
 
       def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5"):
             if days:
@@ -107,6 +102,11 @@ class Symbol(models.Model):
             else:
                  candles = Candle.objects.filter(candle_type=candle_type, date__date=end_date, symbol=self)
             return candles
+
+      def get_day_closing_price(self, date=datetime.now().date()):
+            """function will return last candle closing price"""
+            closing_price = self.get_stock_data(end_date=date).last().close_price
+            return closing_price
 
       def get_stock_movement(self, date=datetime.now()):     
             """Return Movement of stock in %"""
