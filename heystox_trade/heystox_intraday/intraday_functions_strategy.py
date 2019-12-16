@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from heystox_intraday.intraday_fetchdata import get_stock_live_data
 from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
 from ta.momentum import stoch, stoch_signal
+import numpy as np
 # Start code below
 
 def is_stocks_ohl():

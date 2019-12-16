@@ -78,8 +78,7 @@ def create_market_hour_candles():
 @task(name="create_stocks_realtime_candle")
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user("sonupal129@gmail.com")
-    # liquid_stocks = get_cached_liquid_stocks()
-    liquid_stocks = Symbol.objects.filter(last_day_closing_price__range=[200, 205])
+    liquid_stocks = get_cached_liquid_stocks()
     upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
         cache_candles_data(upstox_user, stock)
