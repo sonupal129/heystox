@@ -22,7 +22,8 @@ def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
     if start_time < current_time < end_time:
         function()
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=14)), name="subscribe_for_todays_trading_stocks")
+
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=14)), queue = "default", name="subscribe_for_todays_trading_stocks", option={"queue": "default"})
 def subscribe_today_trading_stocks():
     """Fetch todays liquid stocks from cache then register those stock for live feed"""
     liquid_stocks = get_cached_liquid_stocks()
@@ -37,7 +38,8 @@ def subscribe_today_trading_stocks():
     # upstox_user.subscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
     # upstox_user.start_websocket(True)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=15, minute=45)), name="unsubscribe_today_trading_stocks")
+
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=15, minute=45)), queue="default", option={"queue": "default"}, name="unsubscribe_today_trading_stocks")
 def unsubscribe_today_trading_stocks():
     liquid_stocks = get_cached_liquid_stocks()
     message = "Stocks Unsubscribed for Today:\n" + "| ".join(stock.symbol.upper() for stock in liquid_stocks)
@@ -49,23 +51,24 @@ def unsubscribe_today_trading_stocks():
     # upstox_user.get_master_contract("NSE_INDEX")
     # upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/3")), name="add_today_movement_stocks") #Check more for minute how to start-stop after specific time
+
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/3")),queue="medium", options={"queue": "medium"}, name="add_today_movement_stocks") #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
     function_caller(function=add_today_movement_stocks)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/6")), name="find_update_ohl_stocks")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/6")),queue="medium", options={"queue": "medium"}, name="find_update_ohl_stocks")
 def find_ohl_stocks():
     function_caller(function=is_stocks_ohl)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=45)), name="find_update_pdhl_stocks")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=45)),queue="default", options={"queue": "default"}, name="find_update_pdhl_stocks")
 def find_pdhl_stocks():
     is_stocks_pdhl()
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=46)), name="take_long_short_entry")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=46)),queue="default", options={"queue": "default"}, name="take_long_short_entry")
 def take_entry_for_long_short():
     entry_for_long_short()
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")), name="create_market_hour_candles")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="medium", options={"queue": "medium"}, name="create_market_hour_candles")
 def create_market_hour_candles():
     upstox_user = get_upstox_user("sonupal129@gmail.com")
     liquid_stocks = get_cached_liquid_stocks()
@@ -75,7 +78,13 @@ def create_market_hour_candles():
     upstox_user.get_master_contract("NSE_INDEX")
     get_candles_data(user=upstox_user, symbol="nifty_50", days=0, end_date=datetime.now().date())
 
-@task(name="create_stocks_realtime_candle")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="high", options={"queue": "high"}, name="delete_last_cached_candles_data")
+def delete_last_cached_candles_data():
+    liquid_stocks = get_cached_liquid_stocks()
+    redis_cache = caches["redis"]
+    for stock in liquid_stocks:
+        redis_cache.delete(stock.symbol)
+
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user("sonupal129@gmail.com")
     liquid_stocks = get_cached_liquid_stocks()
@@ -83,21 +92,21 @@ def create_stocks_realtime_candle():
     for stock in liquid_stocks:
         cache_candles_data(upstox_user, stock)
 
-@task(name="create_nifty_50_realtime_candle")
 def create_nifty_50_realtime_candle():
     upstox_user = get_upstox_user("sonupal129@gmail.com")
     nifty_50 = Symbol.objects.get(symbol="nifty_50")
     upstox_user.get_master_contract("NSE_INDEX")
     cache_candles_data(upstox_user, nifty_50)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), name="create_stocks_realtime_candle_fuction_caller")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="high", options={"queue": "high"}, name="create_stocks_realtime_candle_fuction_caller")
 def create_stocks_realtime_candle_fuction_caller():
     start_time = time(9,15)
     end_time = time(15,35)
-    function_caller(create_stocks_realtime_candle, start_time, end_time)
     # Now Call Nifty 50 Function to Create Candle
     function_caller(create_nifty_50_realtime_candle, start_time, end_time)
-    
+    # Now Call Rest of Stocks Function to Create Candle
+    function_caller(create_stocks_realtime_candle, start_time, end_time)
+
 
 # @task(name="delete_cached_ticker_and_create_candle")
 # def delete_cached_tickerdata_and_create_candle():
@@ -129,7 +138,6 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
         macd.stock.save()
         send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}")
 
-@task(name="macd_finder")
 def find_update_macd_crossover_in_stocks():
     nifty_50 = get_nifty_movement(date=datetime.now())
     stocks  = None
@@ -144,11 +152,10 @@ def find_update_macd_crossover_in_stocks():
             elif stock.entry_type == "SELL" and stock.get_stock_movement() <= -1.2:
                 get_macd_crossover(stock)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), name="macd_crossover_finder")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"medium": "default"}, name="macd_crossover_finder")
 def find_macd_crossovers():
     function_caller(function=find_update_macd_crossover_in_stocks)
 
-@task(name="stochastic_finder")
 def find_update_stochastic_crossover_in_stocks():
     nifty_50 = get_nifty_movement(date=datetime.now())
     stocks  = None
@@ -163,7 +170,7 @@ def find_update_stochastic_crossover_in_stocks():
             elif stock.entry_type == "SELL" and stock.get_stock_movement() <= -1.2:
                 get_stochastic_crossover(stock)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), name="stochastic_crossover_finder")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "medium"}, name="stochastic_crossover_finder")
 def find_stochastic_crossovers():
     function_caller(function=find_update_stochastic_crossover_in_stocks)
 

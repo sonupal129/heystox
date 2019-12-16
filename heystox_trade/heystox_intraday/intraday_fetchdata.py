@@ -134,14 +134,19 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
     redis_cache = caches["redis"]
     start_date = end_date - timedelta(start_day)
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), start_date, end_date)
-    *rest_candles, second_last_candle, last_candle = stock_data
-    data = [second_last_candle, last_candle]
-    redis_cache.set(stock.symbol, data)
+    *rest_candles, last_candle = stock_data
+    data = redis_cache.get(stock.symbol)
+    if not data:
+        data = [last_candle]
+        redis_cache.set(stock.symbol, data)
+    else:
+        data.append(last_candle)
+        redis_cache.set(stock.symbol, data)
 
 def get_stock_current_candle(stock_name:str): # Need to refine this function more
     redis_cache = caches["redis"]
     cached_data = redis_cache.get(stock_name)
-    first_ticker, current_ticker = cached_data
+    first_ticker, *rest_ticker, current_ticker = cached_data
     df_ticker = {
         "candle_type": "M5",
         "open_price": first_ticker.get("open"),
@@ -162,7 +167,11 @@ def get_stock_current_candle(stock_name:str): # Need to refine this function mor
 
 def get_stock_live_data(stock_name:str):
     symbol = Symbol.objects.get(symbol=stock_name)
-    stock_data = symbol.get_stock_data()
+    today = datetime.today().date()
+    if today.weekday() == 0:
+        stock_data = symbol.get_stock_data(days=3)
+    else:
+        stock_data = symbol.get_stock_data(days=1)
     current_candle_data = get_stock_current_candle(stock_name)
     df1 = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
     df2 = pd.DataFrame(current_candle_data, index=[0])

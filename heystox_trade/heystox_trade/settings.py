@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
-
+from kombu import Queue
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -158,6 +158,12 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_BACKEND = 'redis'
 CELERY_IMPORTS = ('market_analysis.tasks')
+CELERY_DEFAULT_QUEUE = "default"
+CELERY_QUEUES = (
+    Queue("default"),
+    Queue("medium"),
+    Queue("high"),
+)
 
 SLACK_TOKEN = 'xoxp-792096669381-779313280690-793468872963-37b278cd3fab65d3d0b16de3c8747123dflkdsjkfjsdfhsdjhfjhsjkhfjkh'
 # LOGIN URL
