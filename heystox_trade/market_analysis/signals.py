@@ -3,7 +3,7 @@ from django.db.models.signals import post_save
 from market_analysis.models import UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp
 from django.dispatch import receiver
 from datetime import datetime
-from market_analysis.tasks.day_trading_tasks import order_on_macd_verification
+from market_analysis.tasks.day_trading_tasks import order_on_macd_verification, find_pdhl_stocks, take_entry_for_long_short
 # Code Below
 
 @receiver(post_save, sender=User)
@@ -22,3 +22,10 @@ def verify_macd_signal(instance, **kwargs):
         stock = instance.stock
         if instance.is_last_timestamp() and stock.get_second_last_timestamp().indicator.name == "STOCHASTIC":
             order_on_macd_verification.delay(instance.id, stock.get_second_last_timestamp().id)
+
+@receiver(post_save, sender=SortedStocksList)
+def verify_stock_pdhl_longshort(sender, instance, **kwargs):
+    if instance:
+        find_pdhl_stocks.delay(instance.id)
+        take_entry_for_long_short.delay(instance.id)
+

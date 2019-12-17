@@ -48,17 +48,14 @@ def get_stocks_for_trading(stocks, date=datetime.now(), movement_percent:float=1
     
 def add_today_movement_stocks():
     liquid_stocks = get_cached_liquid_stocks()
-    nifty_50 = get_nifty_movement(date=datetime.now())
+    nifty_50 = get_nifty_movement()
     stocks_for_trading = get_stocks_for_trading(stocks=liquid_stocks)
     sorted_stocks_id = []
     if stocks_for_trading:
         for stock in stocks_for_trading:
-            try:
-                sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50)
-                sorted_stocks_id.append(sorted_stock.id)
-            except:
-                continue
-    SortedStocksList.objects.filter(created_at__date=datetime.now().date()).exclude(id__in=sorted_stocks_id).delete()
+            sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50)
+            sorted_stocks_id.append(sorted_stock.id)
+        SortedStocksList.objects.filter(created_at__date=datetime.now().date()).exclude(id__in=sorted_stocks_id)
 
 
 

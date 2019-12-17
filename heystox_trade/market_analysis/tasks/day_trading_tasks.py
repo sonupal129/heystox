@@ -60,13 +60,13 @@ def todays_movement_stocks_add():
 def find_ohl_stocks():
     function_caller(function=is_stocks_ohl)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=45)),queue="default", options={"queue": "default"}, name="find_update_pdhl_stocks")
-def find_pdhl_stocks():
-    is_stocks_pdhl()
+@task(queue="default", name="find_update_pdhl_stocks")
+def find_pdhl_stocks(obj_id):
+    is_stocks_pdhl(obj_id)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=46)),queue="default", options={"queue": "default"}, name="take_long_short_entry")
-def take_entry_for_long_short():
-    entry_for_long_short()
+@task(queue="default", name="take_long_short_entry")
+def take_entry_for_long_short(obj_id):
+    entry_for_long_short(obj_id)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="medium", options={"queue": "medium"}, name="create_market_hour_candles")
 def create_market_hour_candles():
@@ -84,6 +84,7 @@ def delete_last_cached_candles_data():
     redis_cache = caches["redis"]
     for stock in liquid_stocks:
         redis_cache.delete(stock.symbol)
+    redis_cache.delete("nifty_50")
 
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user("sonupal129@gmail.com")

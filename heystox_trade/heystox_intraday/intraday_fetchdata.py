@@ -143,10 +143,16 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
         data.append(last_candle)
         redis_cache.set(stock.symbol, data)
 
-def get_stock_current_candle(stock_name:str): # Need to refine this function more
+def get_stock_current_candle(stock_name:str): # Now this function will work and handle issue normally
     redis_cache = caches["redis"]
     cached_data = redis_cache.get(stock_name)
-    first_ticker, *rest_ticker, current_ticker = cached_data
+    if len(cached_data) == 1:
+        first_ticker = cached_data
+        current_ticker = cached_data
+    elif len(cached_data) == 2:
+        first_ticker, current_ticker = cached_data
+    elif len(cached_data) > 2:
+        first_ticker, *rest_ticker, current_ticker = cached_data
     df_ticker = {
         "candle_type": "M5",
         "open_price": first_ticker.get("open"),

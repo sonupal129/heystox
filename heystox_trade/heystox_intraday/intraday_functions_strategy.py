@@ -21,26 +21,24 @@ def is_stocks_ohl():
                 indi.delete()
 
 
-def is_stocks_pdhl():
-    sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+def is_stocks_pdhl(obj_id):
+    stock = SortedStocksList.objects.get(created_at__date=datetime.now().date(), id=obj_id)
     pdhl_indicator = Indicator.objects.get(name="PDHL")
-    for stock in sorted_stocks:
-        if stock.symbol.is_stock_pdhl() == stock.entry_type:
-            pdhl, is_created = StrategyTimestamp.objects.get_or_create(indicator=pdhl_indicator, stock=stock)
-            pdhl.timestamp = datetime.now()
-            pdhl.save()
+    if stock.symbol.is_stock_pdhl() == stock.entry_type:
+        pdhl, is_created = StrategyTimestamp.objects.get_or_create(indicator=pdhl_indicator, stock=stock)
+        pdhl.timestamp = datetime.now()
+        pdhl.save()
 
 
-def entry_for_long_short():
-    sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+def entry_for_long_short(obj_id):
+    stock = SortedStocksList.objects.get(created_at__date=datetime.now().date(), id=obj_id)
     long_short_entry = Indicator.objects.get(name="LONGSHORT")
-    for stock in sorted_stocks:
-        if stock.symbol.has_entry_for_long_short() == stock.entry_type:
-            long_short, is_created = StrategyTimestamp.objects.get_or_create(indicator=long_short_entry, stock=stock)
-            long_short.timestamp = datetime.now()
-            long_short.save()
-        else:
-            StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp__date=datetime.now().date()).delete()
+    if stock.symbol.has_entry_for_long_short() == stock.entry_type:
+        long_short, is_created = StrategyTimestamp.objects.get_or_create(indicator=long_short_entry, stock=stock)
+        long_short.timestamp = datetime.now()
+        long_short.save()
+    else:
+        StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp__date=datetime.now().date()).delete()
 
 
 def get_macd_crossover(sorted_stock): # Need to Work more to find final crossover
