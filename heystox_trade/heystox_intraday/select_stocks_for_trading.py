@@ -38,10 +38,10 @@ def get_stocks_for_trading(stocks, date=datetime.now(), movement_percent:float=1
     f"""Get stocks whose movement is greater or lower then {movement_percent}"""
     nifty_50 = get_nifty_movement(date=date)
     if nifty_50 == "BUY":
-        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) and stock.get_stock_movement(date) >= movement_percent]
+        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) and stock.get_stock_movement(date) >= (stock.get_last_day_closing_price() * movement_percent / 100)]
         return stocks_for_trade
     elif nifty_50 == "SELL":
-        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) and stock.get_stock_movement(date) <= -movement_percent]
+        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) and stock.get_stock_movement(date) <= -(stock.get_last_day_closing_price() * movement_percent / 100)]
         return stocks_for_trade
     else:
         return None

@@ -117,6 +117,11 @@ class Symbol(models.Model):
             except:
                   return None
 
+      def get_last_day_closing_price(self):
+            return self.last_day_closing_price or None
+
+      def get_last_day_opening_price(self):
+            return self.last_day_opening_price or None
 
       def get_nifty_movement(self, data=datetime.now().date()):
             if self.symbol == "nifty_50":
