@@ -53,9 +53,9 @@ def add_today_movement_stocks():
     sorted_stocks_id = []
     if stocks_for_trading:
         for stock in stocks_for_trading:
-            sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50)
+            sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50,created_at__date=datetime.now().date())
             sorted_stocks_id.append(sorted_stock.id)
-        SortedStocksList.objects.filter(created_at__date=datetime.now().date()).exclude(id__in=sorted_stocks_id)
+        # SortedStocksList.objects.filter(created_at__date=datetime.now().date()).exclude(id__in=sorted_stocks_id)
 
 
 

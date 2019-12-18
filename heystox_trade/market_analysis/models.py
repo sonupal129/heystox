@@ -108,9 +108,9 @@ class Symbol(models.Model):
             closing_price = self.get_stock_data(end_date=date).last().close_price
             return closing_price
 
-      def get_stock_movement(self, date=datetime.now()):     
+      def get_stock_movement(self, date=datetime.now().date()):     
             """Return Movement of stock in %"""
-            current_price = Candle.objects.filter(symbol=self, date__date=date.date()).last().close_price
+            current_price = self.get_stock_data(end_date=date).last().close_price
             try:
                   variation = current_price - self.last_day_closing_price
                   return variation
@@ -118,9 +118,9 @@ class Symbol(models.Model):
                   return None
 
 
-      def get_nifty_movement(self, data=datetime.now()):
+      def get_nifty_movement(self, data=datetime.now().date()):
             if self.symbol == "nifty_50":
-                  current_price = Candle.objects.filter(symbol=self, date__date=date.date()).last().close_price
+                  current_price = self.get_stock_data(end_date=date).last().close_price
                   diff = current_price - self.last_day_closing_price
                   if diff >= 32:
                         return "BUY"
