@@ -9,6 +9,7 @@ class SymbolAdmin(admin.ModelAdmin):
     search_fields = ["symbol", "name"]
     date_hierarchy = 'created_at'
 
+
 class CandleAdmin(admin.ModelAdmin):
     list_display = ["symbol", "exchange", "candle_type"]
     list_filter = ["candle_type", "date"]
@@ -28,11 +29,16 @@ class SortedStocksListAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     inlines = [StrategyTimestampInline]
 
+class UserProfileAdmin(admin.ModelAdmin):
+    list_dispaly = ["get_user_email"]
+    actions = ["get_upstox_login_url"]
 
-
+    def get_upstox_login_url(self, request, obj):
+        user_obj = obj.first()
+        return self.message_user(request, user_obj.get_authentication_url())
 
 admin.site.register(Candle, CandleAdmin)
-admin.site.register(UserProfile)
+admin.site.register(UserProfile, UserProfileAdmin)
 admin.site.register(Symbol, SymbolAdmin)
 admin.site.register(MasterContract)
 admin.site.register(BankDetail)

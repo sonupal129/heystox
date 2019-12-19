@@ -1,9 +1,6 @@
-from  market_analysis.models import SortedStocksList, Indicator, StrategyTimestamp, Symbol
+from market_analysis.models import SortedStocksList, Indicator, StrategyTimestamp, Symbol
 from datetime import datetime, timedelta
-from heystox_intraday.intraday_fetchdata import get_stock_live_data
-from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
-from ta.momentum import stoch, stoch_signal
-import numpy as np
+from heystox_intraday.trading_indicator import get_macd_data, get_stochastic_data
 # Start code below
 
 def is_stocks_ohl():
@@ -41,15 +38,10 @@ def entry_for_long_short(obj_id):
         StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp__date=datetime.now().date()).delete()
 
 
-def get_macd_crossover(sorted_stock): # Need to Work more to find final crossover
+def get_macd_crossover(sorted_stock): # Macd Crossover Strategy
     """This function find crossover between macd and macd signal and return signal as buy or sell"""
     macd_indicator = Indicator.objects.get(name="MACD")
-    df = get_stock_live_data(sorted_stock.symbol.symbol)
-    df["macd"] = macd(df.close_price)
-    df["macd_signal"] = macd_signal(df.close_price)
-    df["macd_diff"] = macd_diff(df.close_price)
-    df["percentage"] = df.macd * df.macd_diff /100
-    df["signal"] = np.where(df.macd < df.macd_signal, "SELL", "BUY")
+    df = get_macd_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     last_crossover = df[df.signal.str.endswith("CROSSOVER")].iloc[-1]
@@ -59,13 +51,9 @@ def get_macd_crossover(sorted_stock): # Need to Work more to find final crossove
         stamp, is_created = StrategyTimestamp.objects.update_or_create(stock=sorted_stock, indicator=macd_indicator, defaults={"timestamp": df.iloc[-1].date, "diff":df.iloc[-1].macd_diff})
 
 
-def get_stochastic_crossover(sorted_stock): # Find Stochastic crossover signals
+def get_stochastic_crossover(sorted_stock): # Stochastic crossover strategy
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")
-    df = get_stock_live_data(sorted_stock.symbol.symbol)
-    df["stoch"] = stoch(high=df.high_price, close=df.close_price, low=df.low_price)
-    df["stoch_signal"] = stoch_signal(high=df.high_price, close=df.close_price, low=df.low_price)
-    df["percentage"] = df.stoch * (df.stoch - df.stoch_signal) /100
-    df["signal"] = np.where(df.stoch < df.stoch_signal, "SELL", "BUY")
+    df = get_stochastic_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     last_crossover = df[df.signal.str.endswith("CROSSOVER")].iloc[-1]

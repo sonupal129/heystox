@@ -22,21 +22,9 @@ def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
     stocks = select_stocks_for_trading(min_price, max_price)
     return stocks.filter(last_day_vtt__gte=trade_volume)
 
-def get_nifty_movement(date=datetime.now()):
-    "Function Returns Nifty 50 Movement Only"
-    nifty_50 = Symbol.objects.get(symbol="nifty_50")
-    current_price = nifty_50.get_stock_data().last().close_price
-    diff = current_price - nifty_50.last_day_closing_price
-    if diff >= 32:
-        return "BUY"
-    elif diff <= -22:
-        return "SELL"
-    else:
-        return "SIDEWAYS" 
-
 def get_stocks_for_trading(stocks, date=datetime.now(), movement_percent:float=1.2):
     f"""Get stocks whose movement is greater or lower then {movement_percent}"""
-    nifty_50 = get_nifty_movement(date=date)
+    nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     if nifty_50 == "BUY":
         stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) and stock.get_stock_movement(date) >= (stock.get_last_day_closing_price() * movement_percent / 100)]
         return stocks_for_trade
@@ -48,7 +36,7 @@ def get_stocks_for_trading(stocks, date=datetime.now(), movement_percent:float=1
     
 def add_today_movement_stocks():
     liquid_stocks = get_cached_liquid_stocks()
-    nifty_50 = get_nifty_movement()
+    nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     stocks_for_trading = get_stocks_for_trading(stocks=liquid_stocks)
     sorted_stocks_id = []
     if stocks_for_trading:

@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta, time
-from heystox_intraday.select_stocks_for_trading import (get_liquid_stocks, get_stocks_for_trading, get_nifty_movement,
+from heystox_intraday.select_stocks_for_trading import (get_liquid_stocks, get_stocks_for_trading,
                                                         get_cached_liquid_stocks, add_today_movement_stocks)
 from heystox_intraday.intraday_functions_strategy import (is_stocks_ohl, is_stocks_pdhl, entry_for_long_short, get_macd_crossover,
                                                             get_stochastic_crossover)
-from heystox_intraday.intraday_fetchdata import (get_stock_current_candle, get_upstox_user, update_all_symbol_candles, cache_candles_data,
-                                                get_candles_data)
+from heystox_intraday.intraday_fetchdata import (update_all_symbol_candles, cache_candles_data, get_candles_data)
 from django.core.cache import cache, caches
 from upstox_api.api import *
 from django.contrib.auth.models import User
@@ -13,7 +12,7 @@ from celery.schedules import crontab
 from market_analysis.models import Candle
 from market_analysis.tasks.tasks import slack_message_sender
 from celery.decorators import task
-from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol)
+from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile)
 # CODE STARTS BELOW
 
 def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
@@ -21,7 +20,6 @@ def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
     current_time = datetime.now().time()
     if start_time < current_time < end_time:
         function()
-
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=14)), queue = "default", name="subscribe_for_todays_trading_stocks", option={"queue": "default"})
 def subscribe_today_trading_stocks():
@@ -70,7 +68,8 @@ def take_entry_for_long_short(obj_id):
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="medium", options={"queue": "medium"}, name="create_market_hour_candles")
 def create_market_hour_candles():
-    upstox_user = get_upstox_user("sonupal129@gmail.com")
+    user = UserProfile.objects.get(user__email="sonupal129@gmail.com")
+    upstox_user = user.get_upstox_user()
     liquid_stocks = get_cached_liquid_stocks()
     upstox_user.get_master_contract("NSE_EQ")
     update_all_symbol_candles(user=upstox_user, qs=liquid_stocks, days=0, end_date=datetime.now().date()) # By Defautl Fetching 5 Minute Candle
@@ -87,14 +86,16 @@ def delete_last_cached_candles_data():
     redis_cache.delete("nifty_50")
 
 def create_stocks_realtime_candle():
-    upstox_user = get_upstox_user("sonupal129@gmail.com")
+    user = UserProfile.objects.get(user__email="sonupal129@gmail.com")
+    upstox_user = user.get_upstox_user()
     liquid_stocks = get_cached_liquid_stocks()
     upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
         cache_candles_data(upstox_user, stock)
 
 def create_nifty_50_realtime_candle():
-    upstox_user = get_upstox_user("sonupal129@gmail.com")
+    user = UserProfile.objects.get(user__email="sonupal129@gmail.com")
+    upstox_user = user.get_upstox_user()
     nifty_50 = Symbol.objects.get(symbol="nifty_50")
     upstox_user.get_master_contract("NSE_INDEX")
     cache_candles_data(upstox_user, nifty_50)
@@ -140,7 +141,7 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
         send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}")
 
 def find_update_macd_crossover_in_stocks():
-    nifty_50 = get_nifty_movement(date=datetime.now())
+    nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     stocks  = None
     if nifty_50 == "BUY":
         stocks = SortedStocksList.objects.filter(entry_type="BUY", created_at=datetime.now().date())
@@ -158,7 +159,7 @@ def find_macd_crossovers():
     function_caller(function=find_update_macd_crossover_in_stocks)
 
 def find_update_stochastic_crossover_in_stocks():
-    nifty_50 = get_nifty_movement(date=datetime.now())
+    nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     stocks  = None
     if nifty_50 == "BUY":
         stocks = SortedStocksList.objects.filter(entry_type="BUY", created_at=datetime.now().date())

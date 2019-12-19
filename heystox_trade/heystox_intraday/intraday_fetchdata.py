@@ -1,4 +1,4 @@
-from market_analysis.models import Symbol, MasterContract, Candle
+from market_analysis.models import Symbol, MasterContract, Candle, UserProfile
 import time
 from datetime import datetime, timedelta
 from upstox_api.api import *
@@ -8,13 +8,8 @@ from market_analysis.tasks.tasks import slack_message_sender
 import pandas as pd
 # Code Starts Below
 
-def get_upstox_user(user_email:str):
-    """Returns upstox logged in user object"""
-    user = cache.get(user_email + "_upstox_login_user")
-    return user
-
 def load_master_contract_data(contract:str=None):
-    user = get_upstox_user("sonupal129@gmail.com")
+    user = get_upstox_user(email="sonupal129@gmail.com")
     if contract:
         try:
             user.get_master_contract(contract.upper())
@@ -142,44 +137,3 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
     else:
         data.append(last_candle)
         redis_cache.set(stock.symbol, data)
-
-def get_stock_current_candle(stock_name:str): # Now this function will work and handle issue normally
-    redis_cache = caches["redis"]
-    cached_data = redis_cache.get(stock_name)
-    if len(cached_data) == 1:
-        first_ticker = cached_data
-        current_ticker = cached_data
-    elif len(cached_data) == 2:
-        first_ticker, current_ticker = cached_data
-    elif len(cached_data) > 2:
-        first_ticker, *rest_ticker, current_ticker = cached_data
-    df_ticker = {
-        "candle_type": "M5",
-        "open_price": first_ticker.get("open"),
-        "high_price": max(data.get("high") for data in cached_data),
-        "close_price": current_ticker.get("close"),
-        "low_price": min(data.get("low") for data in cached_data),
-        "volume": current_ticker.get("vtt"),
-        "atp": current_ticker.get("atp"),
-        "total_buy_quantity": current_ticker.get("total_buy_quantity"),
-        "total_sell_quantity": current_ticker.get("total_sell_quantity"),
-        "lower_circuit": current_ticker.get("lower_circuit"),
-        "upper_circuit": current_ticker.get("upper_circuit"),
-        "bids": {},
-        "asks": {},
-        "date": datetime.fromtimestamp(int(current_ticker.get("timestamp")[:10]))
-    }
-    return df_ticker
-
-def get_stock_live_data(stock_name:str):
-    symbol = Symbol.objects.get(symbol=stock_name)
-    today = datetime.today().date()
-    if today.weekday() == 0:
-        stock_data = symbol.get_stock_data(days=3)
-    else:
-        stock_data = symbol.get_stock_data(days=1)
-    current_candle_data = get_stock_current_candle(stock_name)
-    df1 = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
-    df2 = pd.DataFrame(current_candle_data, index=[0])
-    df = pd.concat([df1, df2], ignore_index=True)
-    return df
