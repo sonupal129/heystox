@@ -12,7 +12,7 @@ def is_stocks_ohl():
             if indi.count() == 0:
                 StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
             elif indi.count() >= 1:
-                indi.exclude(pk=indi.order_by("created_at").first().pk).delete()
+                indi.exclude(pk=indi.order_by("timestamp").first().pk).delete() 
         else:
             if indi.count() >= 0:
                 indi.delete()
