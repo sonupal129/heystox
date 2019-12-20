@@ -5,22 +5,22 @@ from django.http import HttpResponse
 from market_analysis.models import UserProfile, MasterContract
 import datetime
 from upstox_api.api import *
-from heystox_trade.settings import upstox_redirect_url
+from heystox_trade import settings
 from django.contrib.auth.decorators import login_required
 # Create your views here.
 
 @login_required
 def upstox_login(request):
-      try:
-            user_profile = request.user.user_profile
-      except:
-            redirect(HttpResponse("User Not Found Please Login to heystox first"))
-      session = Session(user_profile.credential.api_key)
-      session.set_redirect_uri(upstox_redirect_url)
-      session.set_api_secret(user_profile.credential.secret_key)
-      cache_key = request.user.email + "_upstox_user_session"
-      cache.set(cache_key, session)
-      return redirect(session.get_login_url())
+      if request.user:
+            user_profile= request.user.user_profile
+      else:
+            return redirect("market_analysis:upstox-login")
+      if user_profile and user_profile.for_trade and user_profile.subscribed_historical_api or user_profile.subscribed_live_api:
+            login_url = user_profile.get_authentication_url()
+            return redirect(login_url)
+      else:
+            return(HttpResponse("Requested User UserProfile Not Created or Not Subscribed for Api's"))
+      
 
 @login_required
 def get_access_token_from_upstox(request):

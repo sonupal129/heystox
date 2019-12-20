@@ -147,7 +147,7 @@ CACHES = {
     }
 }
 # UPSTOX API
-upstox_redirect_url = "http://127.0.0.1:8000/"
+UPSTOX_REDIRECT_URL = "http://127.0.0.1:8000/"
 
 # CELERY STUFF
 BROKER_URL = 'redis://localhost:6379/0'

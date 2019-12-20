@@ -42,6 +42,6 @@ def stop_trading_on_profit_loss():
 def authenticate_users_in_morning():
     user_profiles = UserProfile.objects.filter(for_trade=True)
     for user_profile in user_profiles:
-        message = user_profile.get_authentication_url()
+        message = "Login URL for " + user_profile.user.get_full_name() + ": " + user_profile.get_authentication_url()
         slack_message_sender.delay(text=message)
 

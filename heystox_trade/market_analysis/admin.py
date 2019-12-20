@@ -34,8 +34,9 @@ class UserProfileAdmin(admin.ModelAdmin):
     actions = ["get_upstox_login_url"]
 
     def get_upstox_login_url(self, request, obj):
-        user_obj = obj.first()
-        return self.message_user(request, user_obj.get_authentication_url())
+        user_profile = obj.first()
+        message = "Login URL for " + user_profile.user.get_full_name() + ": " + user_profile.get_authentication_url()
+        return self.message_user(request, message)
 
 admin.site.register(Candle, CandleAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)

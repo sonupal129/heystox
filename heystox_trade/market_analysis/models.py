@@ -9,7 +9,7 @@ from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
 from ta.momentum import stoch, stoch_signal
 from django.core.cache import cache, caches
 from upstox_api.api import *
-from heystox_trade.settings import upstox_redirect_url
+from heystox_trade import settings
 # Create your models here.
 
 class MasterContract(models.Model):
@@ -121,7 +121,7 @@ class Symbol(models.Model):
     def get_nifty_movement(self):
         if self.symbol == "nifty_50":
             current_price = self.get_stock_live_data().iloc[-1].close_price
-            diff = current_price - self.last_day_closing_price
+            diff = int(current_price) - self.last_day_closing_price
             if diff >= 32:
                 return "BUY"
             elif diff <= -22:
@@ -180,7 +180,7 @@ class Symbol(models.Model):
         """Return Movement of stock in %"""
         current_price = self.get_stock_live_data().iloc[-1].close_price
         try:
-            variation = current_price - self.last_day_closing_price
+            variation = int(current_price) - self.last_day_closing_price
             return variation
         except:
             return None
@@ -284,13 +284,12 @@ class UserProfile(models.Model):
     def get_authentication_url(self):
         if self.for_trade and self.subscribed_live_api or self.subscribed_historical_api:
             session = Session(self.credential.api_key)
-            session.set_redirect_uri(upstox_redirect_url)
+            session.set_redirect_uri(settings.UPSTOX_REDIRECT_URL)
             session.set_api_secret(self.credential.secret_key)
             cache_key = self.get_user_email() + "_upstox_user_session"
             cache.set(cache_key, session)
             login_url = session.get_login_url()
-            message = "Login URL for " + self.user.get_full_name() + ": " + login_url
-            return message
+            return login_url
 
 class BankDetail(models.Model):
     user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name="bank")
