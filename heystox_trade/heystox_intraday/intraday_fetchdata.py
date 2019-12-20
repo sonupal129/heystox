@@ -130,6 +130,12 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
     start_date = end_date - timedelta(start_day)
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), start_date, end_date)
     *rest_candles, last_candle = stock_data
+    last_candle["timestamp"] = int(last_candle.get("timestamp"))
+    last_candle["open"] = float(last_candle.get("open"))
+    last_candle["close"] = float(last_candle.get("close"))
+    last_candle["high"] = float(last_candle.get("high"))
+    last_candle["low"] = float(last_candle.get("low"))
+    last_candle["volume"] = int(last_candle.get("volume"))
     data = redis_cache.get(stock.symbol)
     if not data:
         data = [last_candle]
