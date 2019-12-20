@@ -121,7 +121,7 @@ class Symbol(models.Model):
     def get_nifty_movement(self):
         if self.symbol == "nifty_50":
             current_price = self.get_stock_live_data().iloc[-1].close_price
-            diff = int(current_price) - self.last_day_closing_price
+            diff = float(current_price) - self.last_day_closing_price
             if diff >= 32:
                 return "BUY"
             elif diff <= -22:
@@ -180,7 +180,7 @@ class Symbol(models.Model):
         """Return Movement of stock in %"""
         current_price = self.get_stock_live_data().iloc[-1].close_price
         try:
-            variation = int(current_price) - self.last_day_closing_price
+            variation = float(current_price) - self.last_day_closing_price
             return variation
         except:
             return None
