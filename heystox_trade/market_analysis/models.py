@@ -118,16 +118,15 @@ class Symbol(models.Model):
     def get_last_day_opening_price(self):
         return self.last_day_opening_price or None
 
-    def get_nifty_movement(self):
+    def get_nifty_movement(self, bull_point=32, bear_point=-22 ):
         if self.symbol == "nifty_50":
-            current_price = self.get_stock_live_data().iloc[-1].close_price
-            diff = float(current_price) - self.last_day_closing_price
-            if diff >= 32:
+            movement = self.get_stock_movement()
+            if movement >= bull_point:
                 return "BUY"
-            elif diff <= -22:
+            elif movement <= bear_point:
                 return "SELL"
             else:
-                return "SIDEWAYS" 
+                return "SIDEWAYS"
         else:
             raise TypeError("This Function is limited to nifty 50 only")
 
