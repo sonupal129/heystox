@@ -1,6 +1,6 @@
 from django.contrib import admin
 from market_analysis.models import (Candle, UserProfile, 
-    MasterContract, Symbol, BankDetail, Credentials, Earning, Indicator, SortedStocksList, StrategyTimestamp)
+    MasterContract, Symbol, BankDetail, Credentials, Earning, Indicator, SortedStocksList, StrategyTimestamp, MarketHoliday)
 # Register your models here.
 
 class SymbolAdmin(admin.ModelAdmin):
@@ -38,6 +38,13 @@ class UserProfileAdmin(admin.ModelAdmin):
         message = "Login URL for " + user_profile.user.get_full_name() + ": " + user_profile.get_authentication_url()
         return self.message_user(request, message)
 
+class MarketHolidayAdmin(admin.ModelAdmin):
+    list_display = ["date", "get_day_from_date"]
+
+    def get_day_from_date(self, obj):
+        return obj.date.strftime("%A")
+
+admin.site.register(MarketHoliday, MarketHolidayAdmin)
 admin.site.register(Candle, CandleAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)
 admin.site.register(Symbol, SymbolAdmin)

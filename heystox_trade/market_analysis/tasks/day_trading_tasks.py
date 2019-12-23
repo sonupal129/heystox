@@ -18,7 +18,7 @@ from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol,
 def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
     """Call function on custom time with interval functionality using celery periodic task"""
     current_time = datetime.now().time()
-    if start_time < current_time < end_time:
+    if current_time >= start_time and current_time <= end_time:
         function()
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=14)), queue = "default", name="subscribe_for_todays_trading_stocks", option={"queue": "default"})
@@ -35,6 +35,7 @@ def subscribe_today_trading_stocks():
     # upstox_user.get_master_contract("NSE_INDEX")
     # upstox_user.subscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
     # upstox_user.start_websocket(True)
+    return message
 
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=15, minute=45)), queue="default", option={"queue": "default"}, name="unsubscribe_today_trading_stocks")
@@ -48,7 +49,7 @@ def unsubscribe_today_trading_stocks():
     #     upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), LiveFeedType.Full)
     # upstox_user.get_master_contract("NSE_INDEX")
     # upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
-
+    return message
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/3")),queue="medium", options={"queue": "medium"}, name="add_today_movement_stocks") #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():

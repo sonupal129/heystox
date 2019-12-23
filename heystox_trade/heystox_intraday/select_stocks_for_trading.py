@@ -22,7 +22,7 @@ def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
     stocks = select_stocks_for_trading(min_price, max_price)
     return stocks.filter(last_day_vtt__gte=trade_volume)
 
-def get_stocks_for_trading(stocks, date=datetime.now(), movement_percent:float=1.2):
+def get_stocks_for_trading(stocks, date=datetime.now().date(), movement_percent:float=1.2):
     f"""Get stocks whose movement is greater or lower then {movement_percent}"""
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     if nifty_50 == "BUY":

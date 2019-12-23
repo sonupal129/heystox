@@ -14,7 +14,7 @@ def upstox_login(request):
       if request.user:
             user_profile= request.user.user_profile
       else:
-            return redirect("market_analysis:upstox-login")
+            return redirect("market_analysis_urls:upstox-login")
       if user_profile and user_profile.for_trade and user_profile.subscribed_historical_api or user_profile.subscribed_live_api:
             login_url = user_profile.get_authentication_url()
             return redirect(login_url)
@@ -40,5 +40,5 @@ def get_access_token_from_upstox(request):
                   master_contracts = MasterContract.objects.values()
                   return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
             except SystemError:
-                  return redirect("market_analysis:upstox-login")
-      return redirect("market_analysis:upstox-login")
+                  return redirect("market_analysis_urls:upstox-login")
+      return redirect("market_analysis_urls:upstox-login")

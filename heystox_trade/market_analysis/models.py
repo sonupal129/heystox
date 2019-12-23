@@ -40,6 +40,23 @@ class Symbol(models.Model):
     def __str__(self):
         return self.symbol
 
+    def get_last_trading_day_count(self, today=datetime.today().date()):
+        yesterday = today - timedelta(1)
+        weekend = ["Sunday", "Saturday"]
+        holiday = MarketHoliday.objects.filter(date__lte=today).last().date
+        last_holiday = holiday
+        previous_day = yesterday
+        while previous_day.strftime("%A") in weekend or previous_day == holiday:
+            previous_day = previous_day - timedelta(1)
+            try:
+                holiday = MarketHoliday.objects.get(date=previous_day).date
+                last_holiday = holiday
+            except:
+                holiday = last_holiday
+        if yesterday == previous_day:
+            return  1
+        return (today - previous_day).days
+
     def is_stock_ohl(self, date=datetime.now().date(), candle_type="M5"):
         """Find Stock falls in open high low strategy"""
         candles = self.get_stock_data().values()
@@ -100,6 +117,7 @@ class Symbol(models.Model):
         return opening_price
 
     def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5"):
+        days = days or self.get_last_trading_day_count(end_date)
         if days:
             start_date = end_date - timedelta(days)               
             candles = Candle.objects.filter(candle_type=candle_type, date__range=[start_date, end_date + timedelta(1)], symbol=self)
@@ -159,11 +177,7 @@ class Symbol(models.Model):
         return df_ticker
       
     def get_stock_live_data(self):
-        today = datetime.today().date()
-        if today.weekday() == 0:
-            stock_data = self.get_stock_data(days=3)
-        else:
-            stock_data = self.get_stock_data(days=1)
+        stock_data = self.get_stock_data()
         try:
             current_candle_data = self.get_stock_current_candle()
         except:
@@ -387,4 +401,25 @@ class StrategyTimestamp(models.Model):
             return True
         return False
 
-      
+class MarketHolidayManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().order_by("date")
+
+class MarketHoliday(models.Model):
+    type_of_holiday = {
+        ("PU", "Public Holiday"),
+    }
+
+    date = models.DateField()
+    holiday_type = models.CharField(choices=type_of_holiday, default="PU", max_length=15)
+
+    objects = MarketHolidayManager()
+    
+    def __str__(self):
+        return str(date)
+
+    # def is_today_holiday(self):
+    #     today = datetime.today().date()
+    #     if self.date == today:
+    #         return True
+    #     return False
