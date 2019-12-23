@@ -2,7 +2,7 @@ from django.urls import path
 from market_analysis import views
 
 # Code Starts Below
-app_name = 'market_analysis'
+app_name = 'market_analysis_urls'
 
 urlpatterns = [
     path('heystox/login', views.upstox_login, name="upstox-login"),
