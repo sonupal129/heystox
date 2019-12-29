@@ -3,7 +3,7 @@ from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksL
 from datetime import datetime
 from django.db.models import Max, Min
 from django.core.cache import cache
-
+from market_analysis.tasks.tasks import slack_message_sender
 # Codes Starts Below
 def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
     if cached:
@@ -42,10 +42,11 @@ def add_today_movement_stocks():
     if stocks_for_trading:
         for stock in stocks_for_trading:
             try:
-                sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50,created_at__date=datetime.now().date())
-                sorted_stocks_id.append(sorted_stock.id)
+                obj, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50,created_at__date=datetime.now().date())
+                sorted_stocks_id.append(obj.id)
             except:
                 continue
+        slack_message_sender(text=f"{sorted_stocks_id} for Selected Stocks")
         SortedStocksList.objects.filter(created_at__date=datetime.now().date()).exclude(id__in=sorted_stocks_id).delete()
 
 
