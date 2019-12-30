@@ -1,0 +1,6 @@
+<html>
+    <body>
+        <h1>Live Stock Data for {{ obj.name }} ({{ obj }})</h1>
+            {{ obj.get_stock_live_data.to_html|safe }}
+    </body>
+</html>

@@ -10,6 +10,7 @@ from ta.momentum import stoch, stoch_signal
 from django.core.cache import cache, caches
 from upstox_api.api import *
 from heystox_trade import settings
+from django.core.cache import caches, cache
 # Create your models here.
 
 class MasterContract(models.Model):
@@ -113,8 +114,9 @@ class Symbol(models.Model):
                 return "SELL"
 
     def get_day_opening_price(self, date=datetime.now().date()):
-        opening_price = self.get_stock_data(end_date=date).first().open_price
-        return opening_price
+        stock_data = self.get_stock_data(end_date=date)
+        if stock_data:
+            return stock_data.first().open_price or None
 
     def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5"):
         days = days or self.get_last_trading_day_count(end_date)
@@ -127,8 +129,9 @@ class Symbol(models.Model):
 
     def get_day_closing_price(self, date=datetime.now().date()):
         """function will return last candle closing price"""
-        closing_price = self.get_stock_data(end_date=date).last().close_price
-        return closing_price
+        stock_data = self.get_stock_data(end_date=date)
+        if stock_data:
+            return stock_data.last().close_price or None
 
     def get_last_day_closing_price(self):
         return self.last_day_closing_price or None
@@ -191,8 +194,8 @@ class Symbol(models.Model):
 
     def get_stock_movement(self, date=datetime.now().date()):     
         """Return Movement of stock in %"""
-        current_price = self.get_stock_live_data().iloc[-1].close_price
         try:
+            current_price = self.get_stock_live_data().iloc[-1].close_price
             variation = float(current_price) - self.last_day_closing_price
             return variation
         except:
