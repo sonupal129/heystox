@@ -61,12 +61,12 @@ def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=dat
         volume = int(data.get("volume"))
         try:
             candle = Candle.objects.get(date=datetime.fromtimestamp(timestamp), symbol=stock)
-            # candle.open_price = open_price
-            # candle.close_price = close_price
-            # candle.high_price = high_price
-            # candle.low_price = low_price
-            # candle.volume = volume
-            # candle.save()
+            candle.open_price = open_price
+            candle.close_price = close_price
+            candle.high_price = high_price
+            candle.low_price = low_price
+            candle.volume = volume
+            candle.save()
         except Candle.DoesNotExist:
             bulk_candle_data.append(Candle(open_price=open_price, close_price=close_price, low_price=low_price,
                                         high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),

@@ -1,0 +1,74 @@
+<!-- {% load custom_tags %} -->
+
+<html>
+<head>
+    <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        td,
+        th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Heystox Dashboard</h1>
+    </header>
+    <form action="" method="get">
+        {{ symbols.form.as_p }}
+        <input type="submit" />
+    </form>
+    <ul>
+        <li>Total Number of Stocks <span><strong>{{ symbols.qs.count }}</strong></span></li>
+        <!-- <li>Kaju</li> -->
+    </ul>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Today Closing Price</th>
+            <th>Today Opening Price</th>
+            <th>Today Movement</th>
+            <th>Day High</th>
+            <th>Day Low</th>
+            <th>OHL</th>
+            <th>Live Data</th>
+        </tr>
+        {% for symbol in symbols.qs %}
+            <tr>
+                <td>{{ symbol }}</td>
+                {% if symbol.get_day_closing_price %}
+                    <td>{{ symbol.get_day_closing_price }}</td>
+                {% else %}
+                    <td>Data Not Found</td>
+                {% endif %}
+                {% if symbol.get_day_opening_price %}
+                    <td>{{ symbol.get_day_opening_price }}</td>
+                {% else %}
+                    <td>Data Not Found</td>
+                {% endif %}
+                {% if symbol.get_stock_movement %}
+                    <td>{{ symbol.get_stock_movement }}</td>
+                {% else %}
+                    <td>Data Not Found</td>
+                {% endif %}
+                <td>{% get_day_high_low symbol "HIGH" %}</td>
+                <td>{% get_day_high_low symbol "LOW" %}</td>
+                <td>{{ symbol.is_stock_ohl }}</td>
+                <td><a href={% url 'market_analysis_urls:live-data' symbol.id %}>Data</a></td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>

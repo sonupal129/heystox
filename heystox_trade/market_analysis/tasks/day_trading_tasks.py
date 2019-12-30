@@ -103,12 +103,10 @@ def create_nifty_50_realtime_candle():
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="high", options={"queue": "high"}, name="create_stocks_realtime_candle_fuction_caller")
 def create_stocks_realtime_candle_fuction_caller():
-    start_time = time(9,15)
-    end_time = time(15,35)
     # Now Call Nifty 50 Function to Create Candle
-    function_caller(create_nifty_50_realtime_candle, start_time, end_time)
+    function_caller(create_nifty_50_realtime_candle)
     # Now Call Rest of Stocks Function to Create Candle
-    function_caller(create_stocks_realtime_candle, start_time, end_time)
+    function_caller(create_stocks_realtime_candle)
 
 
 # @task(name="delete_cached_ticker_and_create_candle")
