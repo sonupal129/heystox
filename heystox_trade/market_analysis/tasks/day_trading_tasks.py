@@ -9,10 +9,10 @@ from upstox_api.api import *
 from django.contrib.auth.models import User
 from celery.task import periodic_task
 from celery.schedules import crontab
-from market_analysis.models import Candle
+
 from market_analysis.tasks.tasks import slack_message_sender
 from celery.decorators import task
-from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile)
+from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle)
 # CODE STARTS BELOW
 
 def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
@@ -24,7 +24,7 @@ def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=14)), queue = "default", name="subscribe_for_todays_trading_stocks", option={"queue": "default"})
 def subscribe_today_trading_stocks():
     """Fetch todays liquid stocks from cache then register those stock for live feed"""
-    liquid_stocks = get_cached_liquid_stocks()
+    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     message = "Today's Subscribed Stocks:\n" + "| ".join(stock.symbol.upper() for stock in liquid_stocks)
     slack_message_sender.delay(text=message)
     # upstox_user = get_upstox_user("sonupal129@gmail.com")
@@ -40,7 +40,7 @@ def subscribe_today_trading_stocks():
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=15, minute=45)), queue="default", option={"queue": "default"}, name="unsubscribe_today_trading_stocks")
 def unsubscribe_today_trading_stocks():
-    liquid_stocks = get_cached_liquid_stocks()
+    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     message = "Stocks Unsubscribed for Today:\n" + "| ".join(stock.symbol.upper() for stock in liquid_stocks)
     slack_message_sender.delay(text=message)
     # upstox_user = get_upstox_user("sonupal129@gmail.com")
@@ -71,7 +71,7 @@ def take_entry_for_long_short(obj_id):
 def create_market_hour_candles():
     user = UserProfile.objects.get(user__email="sonupal129@gmail.com")
     upstox_user = user.get_upstox_user()
-    liquid_stocks = get_cached_liquid_stocks()
+    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     upstox_user.get_master_contract("NSE_EQ")
     update_all_symbol_candles(user=upstox_user, qs=liquid_stocks, days=0, end_date=datetime.now().date()) # By Defautl Fetching 5 Minute Candle
     # Now Create Nifty 50 Candle 
@@ -80,7 +80,7 @@ def create_market_hour_candles():
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="high", options={"queue": "high"}, name="delete_last_cached_candles_data")
 def delete_last_cached_candles_data():
-    liquid_stocks = get_cached_liquid_stocks()
+    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     redis_cache = caches["redis"]
     for stock in liquid_stocks:
         redis_cache.delete(stock.symbol)
@@ -89,7 +89,7 @@ def delete_last_cached_candles_data():
 def create_stocks_realtime_candle():
     user = UserProfile.objects.get(user__email="sonupal129@gmail.com")
     upstox_user = user.get_upstox_user()
-    liquid_stocks = get_cached_liquid_stocks()
+    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
         cache_candles_data(upstox_user, stock)

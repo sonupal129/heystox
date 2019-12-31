@@ -2,14 +2,14 @@ from django.shortcuts import render
 from django.core.cache import cache, caches
 from django.shortcuts import redirect, render, get_object_or_404
 from django.http import HttpResponse
-from market_analysis.models import UserProfile, MasterContract
-import datetime
+from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol
+from datetime import datetime, timedelta
 from upstox_api.api import *
 from heystox_trade import settings
 from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView
-from market_analysis.models import Symbol
-from market_analysis.filters import SymbolFilters
+
+from market_analysis.filters import SymbolFilters, SortedStocksFilter
 from heystox_intraday.select_stocks_for_trading import get_cached_liquid_stocks
 from django.views.generic import View
 from django.core.exceptions import ImproperlyConfigured
@@ -55,7 +55,7 @@ class StockDashboardView(ListView):
     context_object_name = "symbols"
 
     def get_queryset(self):
-        filters = SymbolFilters(self.request.GET, queryset=get_cached_liquid_stocks())
+        filters = SymbolFilters(self.request.GET, queryset=Symbol.objects.filter(id__in=get_cached_liquid_stocks()))
         return filters
 
 class LiveStockDataView(View):
@@ -72,3 +72,11 @@ class LiveStockDataView(View):
         context["obj"] = obj
         template = self.get_template()
         return render(request, template, context)
+
+class SortedStocksDashBoardView(ListView):
+    template_name = "sorted_stocks_dashboard.html"
+    context_object_name = "symbols"
+
+    def get_queryset(self):
+        filters = SortedStocksFilter(self.request.GET, queryset=SortedStocksList.objects.filter(created_at__gte=datetime.now().date()- timedelta(30)))
+        return filters
