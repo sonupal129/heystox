@@ -1,0 +1,55 @@
+{% load custom_tags %}
+<html>
+    <h1>Heystox Sorted Stocks</h1>
+<head>
+    <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        td,
+        th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+    </style>
+</head>
+
+<body>
+    <form action="" method="get">
+        {{ symbols.form }}
+        <input type="submit" />
+    </form>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Date</th>
+            <th>Today Movement</th>
+            <th>OHL</th>
+            <th>MACD</th>
+            <th>STOCHASTIC</th>
+        </tr>
+        {% for symbol in symbols.qs %}
+        <tr>
+            <td>{{ symbol.symbol }}</td>
+            <td>{{ symbol.created_at.date }}</td>
+            {% if symbol.symbol.get_stock_movement %}
+            <td>{{ symbol.symbol.get_stock_movement }}</td>
+            {% else %}
+            <td>Data Not Found</td>
+            {% endif %}
+            <td>{{ symbol.symbol.is_stock_ohl }}</td>
+            <td></td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>

@@ -353,7 +353,8 @@ class Earning(models.Model):
 class SortedStocksList(models.Model):
     entry_choices = {
         ("BUY", "BUY"),
-        ("SELL", "SELL")
+        ("SELL", "SELL"),
+        ("SIDEWAYS", "SIDEWAYS")
     }
 
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE)
