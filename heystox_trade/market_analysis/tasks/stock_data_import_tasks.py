@@ -33,7 +33,7 @@ def update_stocks_volume():
     """Update total traded volume in stock"""
     stocks = Symbol.objects.exclude(exchange__name="NSE_INDEX")
     for stock in stocks:
-        volume = stock.get_stock_data().aggregate(Sum("volume"))
+        volume = stock.get_stock_data(days=0).aggregate(Sum("volume"))
         if volume is not None:
             stock.last_day_vtt = volume.get("volume__sum")
             stock.save(update_fields=["last_day_vtt"])
@@ -47,7 +47,7 @@ def update_nifty_50_data(days=0):
     upstox_user = user.get_upstox_user()
     upstox_user.get_master_contract("NSE_INDEX")
     get_candles_data(user=upstox_user, symbol="nifty_50", days=days)
-    todays_candles = stock.get_stock_data()
+    todays_candles = stock.get_stock_data(days=0)
     if todays_candles:
         stock.last_day_closing_price = todays_candles.last().close_price
         stock.last_day_opening_price = todays_candles.last().open_price
@@ -60,7 +60,7 @@ def update_symbols_closing_opening_price():
     symbols = Symbol.objects.exclude(exchange__name="NSE_INDEX")
     updated_stocks = []
     for symbol in symbols:
-        if symbol.get_stock_data():
+        if symbol.get_stock_data(days=0):
             symbol.last_day_closing_price = symbol.get_day_closing_price()
             symbol.last_day_opening_price = symbol.get_day_opening_price()
             symbol.save()

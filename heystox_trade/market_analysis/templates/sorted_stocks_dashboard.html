@@ -35,6 +35,7 @@
             <th>OHL</th>
             <th>MACD</th>
             <th>STOCHASTIC</th>
+            <th>Current Price</th>
         </tr>
         {% for symbol in symbols.qs %}
         <tr>
@@ -45,8 +46,14 @@
             {% else %}
             <td>Data Not Found</td>
             {% endif %}
-            <td>{{ symbol.symbol.is_stock_ohl }}</td>
-            <td></td>
+            <td>{% get_timestamp_by_indicator symbol "OHL" %}</td>
+            <td>{% get_timestamp_by_indicator symbol "MACD" %}</td>
+            <td>{% get_timestamp_by_indicator symbol "STOCHASTIC" %}</td>
+            {% if symbol.get_day_closing_price %}
+                <td>{{ symbol.get_day_closing_price }}</td>
+            {% else %}
+                <td>No Data</td>
+            {% endif %}
         </tr>
         {% endfor %}
     </table>

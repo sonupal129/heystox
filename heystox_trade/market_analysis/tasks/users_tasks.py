@@ -9,7 +9,7 @@ import time
 from market_analysis.tasks.tasks import slack_message_sender
 # START CODE BELOW
 
-@periodic_task(run_every=(crontab(day_of_month=1, hour=1, minute=32)),queue="default", options={"queue": "default"}, name="update_all_users_starting_fund")
+@periodic_task(run_every=(crontab(day_of_month=1, hour=8, minute=40)),queue="default", options={"queue": "default"}, name="update_all_users_starting_fund")
 def update_initial_balance():
     """This function will run on 1st of every month and update balance of user"""
     user_profiles = UserProfile.objects.filter(for_trade=True).prefetch_related("bank")
