@@ -6,3 +6,7 @@ register = template.Library()
 @register.simple_tag
 def get_day_high_low(symbol, price_type):
     return symbol.get_days_high_low_price(price_type=price_type)
+
+@register.simple_tag
+def get_timestamp_by_indicator(sorted_stock, indicator_name):
+    return sorted_stock.get_indicator_timestamp(indicator_name=indicator_name)

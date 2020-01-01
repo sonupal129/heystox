@@ -60,7 +60,7 @@ class Symbol(models.Model):
 
     def is_stock_ohl(self, date=datetime.now().date(), candle_type="M5"):
         """Find Stock falls in open high low strategy"""
-        candles = self.get_stock_data().values()
+        candles = self.get_stock_data(days=0, end_date=date).values()
         if candles:
             df = pd.DataFrame(list(candles))
             first_candle_price = df.loc[[0], ["open_price", "high_price", "low_price", "close_price"]]
@@ -75,9 +75,7 @@ class Symbol(models.Model):
     
     def is_stock_pdhl(self, date=datetime.now().date(), candle_type="M5"):
         """Finds stocks is fall under previous day high low conditions"""
-        yesterday = date - timedelta(1)
         candles = self.get_stock_data(days=1).values()
-        
         df = pd.DataFrame(list(candles))
         last_day_candles = df[(df.date <= date)]
         last_day_closing_price = float(last_day_candles.iloc[[-1]].close_price)
@@ -91,7 +89,7 @@ class Symbol(models.Model):
             return None
 
     def get_days_high_low_price(self, start_date=None, end_date=datetime.now().date(), price_type="HIGH", candle_type="M5"):
-        start_date = start_date or datetime.now().date()
+        start_date = start_date or end_date
         if start_date == end_date:
             candles = Candle.objects.filter(symbol=self, candle_type=candle_type, date__date=start_date)
         else:
@@ -114,13 +112,17 @@ class Symbol(models.Model):
                 return "SELL"
 
     def get_day_opening_price(self, date=datetime.now().date()):
-        stock_data = self.get_stock_data(end_date=date)
+        stock_data = self.get_stock_data(end_date=date, days=0)
         if stock_data:
             return stock_data.first().open_price or None
 
     def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5"):
-        days = days or self.get_last_trading_day_count(end_date)
-        if days:
+        day_count = None
+        if days or days == 0:
+            day_count = days
+        else:
+            day_count = self.get_last_trading_day_count(end_date)
+        if day_count > 0:
             start_date = end_date - timedelta(days)               
             candles = Candle.objects.filter(candle_type=candle_type, date__range=[start_date, end_date + timedelta(1)], symbol=self)
         else:
@@ -129,7 +131,7 @@ class Symbol(models.Model):
 
     def get_day_closing_price(self, date=datetime.now().date()):
         """function will return last candle closing price"""
-        stock_data = self.get_stock_data(end_date=date)
+        stock_data = self.get_stock_data(end_date=date, days=0)
         if stock_data:
             return stock_data.last().close_price or None
 
@@ -374,6 +376,9 @@ class SortedStocksList(models.Model):
 
     def get_second_last_timestamp(self):
         return self.timestamps.order_by("timestamp").reverse()[1]
+
+    def get_indicator_timestamp(self, indicator_name=None):
+        return self.timestamps.filter(indicator__name=indicator_name).first()
 
 class Indicator(models.Model):
     name = models.CharField(max_length=50)

@@ -53,9 +53,12 @@ def add_today_movement_stocks():
 
 # Market Sideways Functions
 
-def find_sideways_direction(nifty_50:object, direction:str):
-    if direction == "SIDEWAYS":
-        print("CAHCHA")
+# def find_sideways_direction(nifty_50:object, direction:str):
+#     if direction == "SIDEWAYS":
+#         liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
+#         stocks = []
+#         for stock in liquid_stocks:
+#             pass
 
 
 

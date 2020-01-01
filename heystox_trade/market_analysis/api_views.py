@@ -1,6 +1,6 @@
 from market_analysis.serializers import UserSerializer
 from django.contrib.auth.models import User
-
+from rest_framework.permissions import IsAuthenticated
 
 from rest_framework.response import Response
 from rest_framework.parsers import JSONParser
@@ -11,6 +11,7 @@ from django.http import JsonResponse
 # Code Starts Below
 
 class UsersListView(APIView):
+    permission_classes = [IsAuthenticated]
     
     def get(self, request):
         users = User.objects.all()
@@ -23,8 +24,6 @@ class UsersListView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 @csrf_exempt
 def users_view(request):
