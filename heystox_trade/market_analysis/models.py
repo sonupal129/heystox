@@ -123,7 +123,7 @@ class Symbol(models.Model):
         else:
             day_count = self.get_last_trading_day_count(end_date)
         if day_count > 0:
-            start_date = end_date - timedelta(days)               
+            start_date = end_date - timedelta(day_count)               
             candles = Candle.objects.filter(candle_type=candle_type, date__range=[start_date, end_date + timedelta(1)], symbol=self)
         else:
             candles = Candle.objects.filter(candle_type=candle_type, date__date=end_date, symbol=self)
