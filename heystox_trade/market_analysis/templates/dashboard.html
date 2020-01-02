@@ -36,8 +36,8 @@
     <table>
         <tr>
             <th>Name</th>
-            <th>Today Current/Closing Price</th>
-            <th>Today Opening Price</th>
+            <th>Today Current/Close Price</th>
+            <th>Today Open Price</th>
             <th>Today Movement</th>
             <th>Day High</th>
             <th>Day Low</th>
@@ -58,7 +58,7 @@
                     <td>Data Not Found</td>
                 {% endif %}
                 {% if symbol.get_stock_movement %}
-                    <td>{{ symbol.get_stock_movement }}</td>
+                    <td>{{ symbol.get_stock_movement|floatformat }}</td>
                 {% else %}
                     <td>Data Not Found</td>
                 {% endif %}

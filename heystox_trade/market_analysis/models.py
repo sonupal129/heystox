@@ -75,12 +75,13 @@ class Symbol(models.Model):
     
     def is_stock_pdhl(self, date=datetime.now().date(), candle_type="M5"):
         """Finds stocks is fall under previous day high low conditions"""
-        candles = self.get_stock_data(days=1).values()
+        candles = self.get_stock_data(end_date=date).values()
         df = pd.DataFrame(list(candles))
-        last_day_candles = df[(df.date <= date)]
+        previous_trading_day = date - timedelta(self.get_last_trading_day_count(date))
+        last_day_candles = df[(df["date"].dt.date.astype(str) == previous_trading_day.strftime("%Y-%m-%d"))]
         last_day_closing_price = float(last_day_candles.iloc[[-1]].close_price)
         last_day_opening_price = float(last_day_candles.iloc[[0]].open_price)
-        today_open_price = float(df[(df.date >= date)].iloc[[0]].open_price)
+        today_open_price = float(df[(df["date"].dt.date.astype(str) == date.strftime("%Y-%m-%d"))].iloc[[0]].open_price)
         if last_day_opening_price > last_day_closing_price > today_open_price:
             return "SELL"
         elif last_day_opening_price < last_day_closing_price < today_open_price:
@@ -157,8 +158,8 @@ class Symbol(models.Model):
         redis_cache = caches["redis"]
         cached_data = redis_cache.get(self.symbol)
         if len(cached_data) == 1:
-            first_ticker = cached_data
-            current_ticker = cached_data
+            first_ticker = cached_data[0]
+            current_ticker = cached_data[0]
         elif len(cached_data) == 2:
             first_ticker, current_ticker = cached_data
         elif len(cached_data) > 2:
@@ -202,6 +203,21 @@ class Symbol(models.Model):
             return variation
         except:
             return None
+
+    def is_stock_moved_good_for_trading(self, movement_percent:float=1.2, date=datetime.now().date()): #Need to work more on this function
+        stock_movement = self.get_stock_movement(date=date)
+        stock_closing_price_movement_percent = self.get_last_day_closing_price() * movement_percent / 100
+        if stock_movement:
+            if movement_percent > 0:
+                if stock_movement >= stock_closing_price_movement_percent:
+                    return True
+                else:
+                    return False
+            elif movement_percent < 0:
+                if stock_movement <= stock_closing_price_movement_percent:
+                    return True
+                else:
+                    return False
 
 class CandleQuerySet(models.QuerySet):
     def get_by_candle_type(self, type_of_candle):
@@ -356,7 +372,8 @@ class SortedStocksList(models.Model):
     entry_choices = {
         ("BUY", "BUY"),
         ("SELL", "SELL"),
-        ("SIDEWAYS", "SIDEWAYS")
+        ("SB", "SIDEWAYS_BUY"),
+        ("SS", "SIDEWAYS_SELL"),
     }
 
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE)

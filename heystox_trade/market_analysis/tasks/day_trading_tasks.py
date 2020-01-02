@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, time
-from heystox_intraday.select_stocks_for_trading import (get_liquid_stocks, get_stocks_for_trading,
+from heystox_intraday.select_stocks_for_trading import (get_liquid_stocks, get_stocks_for_trading, add_stock_on_market_sideways,
                                                         get_cached_liquid_stocks, add_today_movement_stocks)
 from heystox_intraday.intraday_functions_strategy import (is_stocks_ohl, is_stocks_pdhl, entry_for_long_short, get_macd_crossover,
                                                             get_stochastic_crossover)
@@ -140,17 +140,10 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
         send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}")
 
 def find_update_macd_crossover_in_stocks():
-    nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
-    stocks  = None
-    if nifty_50 == "BUY":
-        stocks = SortedStocksList.objects.filter(entry_type="BUY", created_at=datetime.now().date())
-    elif nifty_50 == "SELL":
-        stocks = SortedStocksList.objects.filter(entry_type="SELL", created_at=datetime.now().date())
+    stocks = SortedStocksList.objects.filter(created_at=datetime.now().date())
     if stocks:
         for stock in stocks:
-            if stock.entry_type == "BUY" and stock.symbol.get_stock_movement() >= 1.2:
-                get_macd_crossover(stock)
-            elif stock.entry_type == "SELL" and stock.get_stock_movement() <= -1.2:
+            if stock.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
                 get_macd_crossover(stock)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"medium": "default"}, name="macd_crossover_finder")
@@ -158,17 +151,10 @@ def find_macd_crossovers():
     function_caller(function=find_update_macd_crossover_in_stocks)
 
 def find_update_stochastic_crossover_in_stocks():
-    nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
-    stocks  = None
-    if nifty_50 == "BUY":
-        stocks = SortedStocksList.objects.filter(entry_type="BUY", created_at=datetime.now().date())
-    elif nifty_50 == "SELL":
-        stocks = SortedStocksList.objects.filter(entry_type="SELL", created_at=datetime.now().date())
+    stocks = SortedStocksList.objects.filter(created_at=datetime.now().date())
     if stocks:
         for stock in stocks:
-            if stock.entry_type == "BUY" and stock.symbol.get_stock_movement() >= 1.2:
-                get_stochastic_crossover(stock)
-            elif stock.entry_type == "SELL" and stock.get_stock_movement() <= -1.2:
+            if stock.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
                 get_stochastic_crossover(stock)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "medium"}, name="stochastic_crossover_finder")
@@ -176,6 +162,9 @@ def find_stochastic_crossovers():
     function_caller(function=find_update_stochastic_crossover_in_stocks)
 
 
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/2")),queue="medium", options={"queue": "medium"}, name="add_today_movement_stocks_on_sideways_market")
+def todays_movement_stocks_add_on_sideways():
+    function_caller(function=add_stock_on_market_sideways)
 
 # @task(name="testing_function_two")
 # def raju_mera_name(run_every=None, run=False):
