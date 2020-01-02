@@ -23,42 +23,67 @@ def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
     stocks = select_stocks_for_trading(min_price, max_price)
     return stocks.filter(last_day_vtt__gte=trade_volume)
 
-def get_stocks_for_trading(stocks, date=datetime.now().date(), movement_percent:float=1.2):
+def get_stocks_for_trading(stocks, date=datetime.now().date()):
     f"""Get stocks whose movement is greater or lower then {movement_percent}"""
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     if nifty_50 == "BUY":
-        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) and stock.get_stock_movement(date) >= (stock.get_last_day_closing_price() * movement_percent / 100)]
+        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
         return stocks_for_trade
     elif nifty_50 == "SELL":
-        stocks_for_trade  = [stock for stock in stocks if stock.get_stock_movement(date) and stock.get_stock_movement(date) <= -(stock.get_last_day_closing_price() * movement_percent / 100)]
+        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2)]
         return stocks_for_trade
     else:
         return None
     
-def add_today_movement_stocks():
+def add_today_movement_stocks(movement_percent:float=1.2, date=datetime.now().date()):
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     stocks_for_trading = get_stocks_for_trading(stocks=liquid_stocks)
-    sorted_stocks_id = []
-    for stock in stocks_for_trading:
-        try:
-            obj, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50,created_at__date=datetime.now().date())
-            sorted_stocks_id.append(obj.id)
-        except:
-            continue
-    slack_message_sender(text=f"{sorted_stocks_id} for Selected Stocks")
-    deleted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date()).exclude(id__in=sorted_stocks_id).delete()
-    if deleted_stocks:
-        slack_message_sender(text=f"{deleted_stocks} Deleted Stocks List")
+    sorted_stocks_name = []
+    if nifty_50 == "BUY" or nifty_50 == "SELL":
+        for stock in stocks_for_trading:
+            try:
+                obj, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50,created_at__date=date)
+                sorted_stocks_name.append(obj.symbol.symbol)
+            except:
+                continue
+        slack_message_sender(text=f"{sorted_stocks_name} for Selected Stocks")
+    sorted_stocks = SortedStocksList.objects.filter(created_at__date=date)
+    if sorted_stocks:
+        deleted_stocks = []
+        for stock in sorted_stocks:
+            if stock.entry_type == "BUY":
+                if not stock.symbol.is_stock_moved_good_for_trading(date=date, movement_percent=1.2):
+                    deleted_stocks.append(stock.delete())
+            elif stock.entry_type == "SELL":
+                if not stock.symbol.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2):
+                    deleted_stocks.append(stock.delete())
+        slack_message_sender.delay(text=f"Deleted Stocks {deleted_stocks}")
 
 # Market Sideways Functions
+def find_sideways_direction():
+    nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
+    if nifty_50 == "SIDEWAYS":
+        nifty_high = nifty_50.get_days_high_low_price(price_type="HIGH")
+        nifty_low = nifty_50.get_days_high_low_price(price_type="LOW")
+        try:
+            nifty_current = nifty_50.get_stock_current_candle().close_price
+        except:
+            nifty_current = nifty_50.get_day_closing_price()
+        nifty_high_variation = nifty_high - nifty_current
+        nifty_low_variation = nifty_low - nifty_current
+        if nifty_high_variation > 30:
+            return nifty_high_variation
+        elif nifty_low_variation < -20:
+            return nifty_low_variation
 
-# def find_sideways_direction(nifty_50:object, direction:str):
-#     if direction == "SIDEWAYS":
-#         liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
-#         stocks = []
-#         for stock in liquid_stocks:
-#             pass
-
-
-
+def add_stock_on_market_sideways(date=datetime.now().date()):
+    nifty_50_point = find_sideways_direction()
+    nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
+    stocks = get_stocks_for_trading(stocks=liquid_stocks)
+    if nifty_50_point > 30 and nifty_50 == "SIDEWAYS":
+        stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SB", created_at__date=date) for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
+        slack_message_sender.delay(text=f"Sideways Buy Stocks {stocks_for_trade}")
+    if nifty_50_point < -20 and nifty_50 == "SIDEWAYS":
+        stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SS", created_at__date=date) for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2)]
+        slack_message_sender.delay(text=f"Sideways Sell Stocks {stocks_for_trade}")
