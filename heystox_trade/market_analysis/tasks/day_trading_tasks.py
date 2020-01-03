@@ -92,7 +92,7 @@ def create_stocks_realtime_candle():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
-        cache_candles_data(upstox_user, stock)
+        cache_candles_data(upstox_user, stock) 
 
 def create_nifty_50_realtime_candle():
     user = UserProfile.objects.get(user__email="sonupal129@gmail.com")
@@ -146,7 +146,7 @@ def find_update_macd_crossover_in_stocks():
             if stock.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
                 get_macd_crossover(stock)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"medium": "default"}, name="macd_crossover_finder")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "default"}, name="macd_crossover_finder")
 def find_macd_crossovers():
     function_caller(function=find_update_macd_crossover_in_stocks)
 

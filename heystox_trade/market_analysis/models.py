@@ -170,7 +170,7 @@ class Symbol(models.Model):
             "high_price": max(data.get("high") for data in cached_data),
             "close_price": current_ticker.get("close"),
             "low_price": min(data.get("low") for data in cached_data),
-            "volume": current_ticker.get("vtt"),
+            "volume": sum(data.get("volume") for data in cached_data),
             "atp": current_ticker.get("atp"),
             "total_buy_quantity": current_ticker.get("total_buy_quantity"),
             "total_sell_quantity": current_ticker.get("total_sell_quantity"),
