@@ -24,7 +24,7 @@ def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
     return stocks.filter(last_day_vtt__gte=trade_volume)
 
 def get_stocks_for_trading(stocks, date=datetime.now().date()):
-    f"""Get stocks whose movement is greater or lower then {movement_percent}"""
+    f"""Get stocks whose movement is greater or lower then"""
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     if nifty_50 == "BUY":
         stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
@@ -62,8 +62,9 @@ def add_today_movement_stocks(movement_percent:float=1.2, date=datetime.now().da
 
 # Market Sideways Functions
 def find_sideways_direction():
-    nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
-    if nifty_50 == "SIDEWAYS":
+    nifty_50 = Symbol.objects.get(symbol="nifty_50")
+    nifty_50_movement = nifty_50.get_nifty_movement()
+    if nifty_50_movement == "SIDEWAYS":
         nifty_high = nifty_50.get_days_high_low_price(price_type="HIGH")
         nifty_low = nifty_50.get_days_high_low_price(price_type="LOW")
         try:
