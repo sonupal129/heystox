@@ -27,6 +27,7 @@
         Sorted Stock Created Date: <input type="date" name="created_at">
         <input type="submit" />
     </form>
+    <h2>Total Sorted Stocks Count: <span>{% if symbols %}{{ symbols.count }}{% else %} 0 {% endif %}</span></h2>
     <table>
         <tr>
             <th>Name</th>

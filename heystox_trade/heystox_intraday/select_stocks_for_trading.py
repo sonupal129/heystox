@@ -52,11 +52,11 @@ def add_today_movement_stocks(movement_percent:float=1.2, date=datetime.now().da
     if sorted_stocks:
         deleted_stocks = []
         for stock in sorted_stocks:
-            if stock.entry_type == "BUY" or stock.entry_type == "SB":
+            if stock.entry_type == "BUY" or stock.entry_type == "SB" and stock.created_at <= datetime.now() - timedelta(minutes=30):
                 if not stock.symbol.is_stock_moved_good_for_trading(date=date, movement_percent=1.2):
                     deleted_stocks.append(stock.symbol.symbol)
                     stock.delete()
-            elif stock.entry_type == "SELL" or stock.entry_type == "SS":
+            elif stock.entry_type == "SELL" or stock.entry_type == "SS" and stock.created_at <= datetime.now() - timedelta(minutes=30):
                 if not stock.symbol.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2):
                     deleted_stocks.append(stock.symbol.symbol)
                     stock.delete()

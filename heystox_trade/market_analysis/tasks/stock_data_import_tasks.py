@@ -52,7 +52,7 @@ def update_nifty_50_data(days=0):
         stock.save()
         return "Updated Nifty_50 Data"
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=10)),queue="default", options={"queue": "default"}, name="update_symbols_closing_opening_price")
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=23, minute=55)),queue="default", options={"queue": "default"}, name="update_symbols_closing_opening_price")
 def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
     symbols = Symbol.objects.exclude(exchange__name="NSE_INDEX")
