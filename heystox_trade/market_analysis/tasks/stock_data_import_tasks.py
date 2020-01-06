@@ -32,7 +32,7 @@ def update_stocks_volume():
     """Update total traded volume in stock"""
     stocks = Symbol.objects.exclude(exchange__name="NSE_INDEX")
     for stock in stocks:
-        volume = stock.get_stock_data(days=0).aggregate(Sum("volume"))
+        volume = stock.get_stock_data().aggregate(Sum("volume"))
         if volume is not None:
             stock.last_day_vtt = volume.get("volume__sum")
             stock.save(update_fields=["last_day_vtt"])
