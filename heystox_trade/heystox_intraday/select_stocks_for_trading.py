@@ -47,18 +47,21 @@ def add_today_movement_stocks(movement_percent:float=1.2, date=datetime.now().da
                 sorted_stocks_name.append(obj.symbol.symbol)
             except:
                 continue
-        slack_message_sender(text=f"{sorted_stocks_name} for Selected Stocks")
+        slack_message_sender(text=", ".join(sorted_stocks_name) + "Stocks Sorted For Trading in Market Trend")
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=date)
     if sorted_stocks:
         deleted_stocks = []
         for stock in sorted_stocks:
-            if stock.entry_type == "BUY":
+            if stock.entry_type == "BUY" or stock.entry_type == "SB":
                 if not stock.symbol.is_stock_moved_good_for_trading(date=date, movement_percent=1.2):
-                    deleted_stocks.append(stock.delete())
-            elif stock.entry_type == "SELL":
+                    deleted_stocks.append(stock.symbol.symbol)
+                    stock.delete()
+            elif stock.entry_type == "SELL" or stock.entry_type == "SS":
                 if not stock.symbol.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2):
-                    deleted_stocks.append(stock.delete())
-        slack_message_sender.delay(text=f"Deleted Stocks {deleted_stocks}")
+                    deleted_stocks.append(stock.symbol.symbol)
+                    stock.delete()
+        if deleted_stocks:
+            slack_message_sender.delay(text=", ".join(deleted_stocks) + "Stocks Deleted from Trending Market")
 
 # Market Sideways Functions
 def find_sideways_direction():
@@ -81,10 +84,11 @@ def find_sideways_direction():
 def add_stock_on_market_sideways(date=datetime.now().date()):
     nifty_50_point = find_sideways_direction()
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
+    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     stocks = get_stocks_for_trading(stocks=liquid_stocks)
     if nifty_50_point > 30 and nifty_50 == "SIDEWAYS":
         stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SB", created_at__date=date) for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
-        slack_message_sender.delay(text=f"Sideways Buy Stocks {stocks_for_trade}")
+        slack_message_sender.delay(text=f"List of Sideways Buy Stocks" +  ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))
     if nifty_50_point < -20 and nifty_50 == "SIDEWAYS":
         stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SS", created_at__date=date) for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2)]
-        slack_message_sender.delay(text=f"Sideways Sell Stocks {stocks_for_trade}")
+        slack_message_sender.delay(text=f"List of Sideways Sell Stocks" + ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))

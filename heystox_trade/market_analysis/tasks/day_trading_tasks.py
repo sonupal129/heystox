@@ -3,7 +3,7 @@ from heystox_intraday.select_stocks_for_trading import (get_liquid_stocks, get_s
                                                         get_cached_liquid_stocks, add_today_movement_stocks)
 from heystox_intraday.intraday_functions_strategy import (is_stocks_ohl, is_stocks_pdhl, entry_for_long_short, get_macd_crossover,
                                                             get_stochastic_crossover)
-from heystox_intraday.intraday_fetchdata import (update_all_symbol_candles, cache_candles_data, get_candles_data)
+from heystox_intraday.intraday_fetchdata import (update_all_symbol_candles, cache_candles_data, get_candles_data, get_upstox_user)
 from django.core.cache import cache, caches
 from upstox_api.api import *
 from django.contrib.auth.models import User
@@ -69,8 +69,7 @@ def take_entry_for_long_short(obj_id):
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="medium", options={"queue": "medium"}, name="create_market_hour_candles")
 def create_market_hour_candles():
-    user = UserProfile.objects.get(user__email="sonupal129@gmail.com")
-    upstox_user = user.get_upstox_user()
+    upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     upstox_user.get_master_contract("NSE_EQ")
     update_all_symbol_candles(user=upstox_user, qs=liquid_stocks, days=0, end_date=datetime.now().date()) # By Defautl Fetching 5 Minute Candle
@@ -87,16 +86,14 @@ def delete_last_cached_candles_data():
     redis_cache.delete("nifty_50")
 
 def create_stocks_realtime_candle():
-    user = UserProfile.objects.get(user__email="sonupal129@gmail.com")
-    upstox_user = user.get_upstox_user()
+    upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
         cache_candles_data(upstox_user, stock) 
 
 def create_nifty_50_realtime_candle():
-    user = UserProfile.objects.get(user__email="sonupal129@gmail.com")
-    upstox_user = user.get_upstox_user()
+    upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     nifty_50 = Symbol.objects.get(symbol="nifty_50")
     upstox_user.get_master_contract("NSE_INDEX")
     cache_candles_data(upstox_user, nifty_50)

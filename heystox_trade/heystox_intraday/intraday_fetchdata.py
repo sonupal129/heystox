@@ -6,8 +6,28 @@ import os
 from django.core.cache import cache, caches
 from market_analysis.tasks.tasks import slack_message_sender
 import pandas as pd
+from django.core.exceptions import ObjectDoesNotExist
 # Code Starts Below
 
+def get_upstox_user(email):
+    profile = None
+    try:
+        user = UserProfile.objects.get(user__email=email)
+    except UserProfile.DoesNotExist:
+        return f"user with {email} not found in system"
+    try:
+        profile = user.get_upstox_user().get_profile().get("email")
+    except:
+        profile = None
+    if user:
+        while profile != email:
+            try:
+                profile = user.get_upstox_user().get_profile().get("email")
+            except:
+                slack_message_sender.delay(text=user.get_authentication_url())
+                time.sleep(58)
+        return user.get_upstox_user()
+    
 def load_master_contract_data(contract:str=None):
     user = get_upstox_user(email="sonupal129@gmail.com")
     if contract:
@@ -90,7 +110,7 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
         slack_message_sender.delay(text=f"Stocks Data Not Updated For: {message}")
     if updated_stocks:
         message = " | ".join(updated_stocks)
-        slack_message_sender.delay(text=f"Stocks Data Updated For: {message}")
+        # slack_message_sender.delay(text=f"Stocks Data Updated For: {message}")
     return "All Stocks Data has been imported except these {0} ".format(not_updated_stocks)
 
 # def add_tickerdata_to_csv(data):
@@ -134,8 +154,6 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), start_date, end_date)
     if len(stock_data) > 3:
         *rest_candles, last_candle = stock_data
-        print(stock_data)
-        print(rest_candles)
         last_candle["timestamp"] = last_candle.get("timestamp")
         last_candle["open"] = float(last_candle.get("open"))
         last_candle["close"] = float(last_candle.get("close"))
@@ -143,7 +161,6 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
         last_candle["low"] = float(last_candle.get("low"))
         last_candle["volume"] = int(last_candle.get("volume"))
         data = redis_cache.get(stock.symbol)
-        print(data)
         if data:
             data.append(last_candle)
             redis_cache.set(stock.symbol, data)

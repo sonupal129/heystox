@@ -8,13 +8,12 @@ from upstox_api.api import *
 from heystox_trade import settings
 from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView
-
 from market_analysis.filters import SymbolFilters, SortedStocksFilter
 from heystox_intraday.select_stocks_for_trading import get_cached_liquid_stocks
 from django.views.generic import View
 from django.core.exceptions import ImproperlyConfigured
+from market_analysis.view_mixins import BasePermissionMixin
 # Create your views here.
-
 @login_required
 def upstox_login(request):
     if request.user:
@@ -70,13 +69,18 @@ class LiveStockDataView(View):
         obj = get_object_or_404(Symbol, pk=pk)
         context = {}
         context["obj"] = obj
+        context["data"] = obj.get_stock_live_data().to_html()
         template = self.get_template()
         return render(request, template, context)
 
-class SortedStocksDashBoardView(ListView):
+class SortedStocksDashBoardView(BasePermissionMixin, ListView):
     template_name = "sorted_stocks_dashboard.html"
     context_object_name = "symbols"
 
     def get_queryset(self):
-        filters = SortedStocksFilter(self.request.GET, queryset=SortedStocksList.objects.filter(created_at__gte=datetime.now().date()- timedelta(30)))
-        return filters
+        date = self.request.GET.get("created_at")
+        if date:
+            requested_date = datetime.strptime(date, "%Y-%m-%d").date()
+            filters = SortedStocksList.objects.filter(created_at__date=requested_date)
+            return filters
+        # return SortedStocksList.objects.filter(created_at__gte=datetime.now().date()- timedelta(30))
