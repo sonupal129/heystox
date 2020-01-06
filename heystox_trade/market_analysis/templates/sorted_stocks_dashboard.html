@@ -24,13 +24,14 @@
 
 <body>
     <form action="" method="get">
-        {{ symbols.form }}
+        Sorted Stock Created Date: <input type="date" name="created_at">
         <input type="submit" />
     </form>
     <table>
         <tr>
             <th>Name</th>
             <th>Date</th>
+            <th>Entry Type</th>
             <th>Today Movement</th>
             <th>OHL</th>
             <th>PDHL</th>
@@ -38,22 +39,25 @@
             <th>STOCHASTIC</th>
             <th>Current Price</th>
         </tr>
-        {% for symbol in symbols.qs %}
-        <tr>
-            <td>{{ symbol.symbol }}</td>
-            <td>{{ symbol.created_at.date }}</td>
-            {% if symbol.symbol.get_stock_movement %}
-            <td>{{ symbol.symbol.get_stock_movement|floatformat }}</td>
-            {% else %}
-            <td>Data Not Found</td>
-            {% endif %}
-            <td>{% get_timestamp_by_indicator symbol "OHL" %}</td>
-            <td>{% get_timestamp_by_indicator symbol "PDHL" %}</td>
-            <td>{% get_timestamp_by_indicator symbol "MACD" %}</td>
-            <td>{% get_timestamp_by_indicator symbol "STOCHASTIC" %}</td>
-            <td>{% get_sorted_stock_closing_price symbol %}</td>
-        </tr>
-        {% endfor %}
+        {% if symbols %}
+            {% for symbol in symbols %}
+            <tr>
+                <td>{{ symbol.symbol }}</td>
+                <td>{{ symbol.created_at.date }}</td>
+                <td>{{ symbol.entry_type }}</td>
+                {% if symbol.symbol.get_stock_movement %}
+                <td>{{ symbol.symbol.get_stock_movement|floatformat }}</td>
+                {% else %}
+                <td>Data Not Found</td>
+                {% endif %}
+                <td>{% get_timestamp_by_indicator symbol "OHL" %}</td>
+                <td>{% get_timestamp_by_indicator symbol "PDHL" %}</td>
+                <td>{% get_timestamp_by_indicator symbol "MACD" %}</td>
+                <td>{% get_timestamp_by_indicator symbol "STOCHASTIC" %}</td>
+                <td>{% get_sorted_stock_closing_price symbol %}</td>
+            </tr>
+            {% endfor %}
+        {% endif %}
     </table>
 </body>
 
