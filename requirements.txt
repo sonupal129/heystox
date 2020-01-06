@@ -7,6 +7,7 @@ backcall==0.1.0
 billiard==3.6.1.0
 bleach==3.1.0
 celery==4.3.0
+celery-slack==0.4.1
 certifi==2019.9.11
 chardet==3.0.4
 colorama==0.4.1
@@ -23,6 +24,7 @@ django-redis==4.10.0
 django-timezone-field==3.1
 djangorestframework==3.11.0
 entrypoints==0.3
+ephem==3.7.7.0
 Faker==0.9.1
 future==0.17.1
 idna==2.8

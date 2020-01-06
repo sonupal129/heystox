@@ -2,6 +2,10 @@ from __future__ import absolute_import
 import os
 from celery import Celery
 from django.conf import settings
+from celery_slack import Slackify
+
+# Code Below
+
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'heystox_trade.settings')
@@ -12,6 +16,7 @@ app = Celery('heystox_trade')
 app.config_from_object('django.conf:settings')
 app.autodiscover_tasks() # lambda: settings.INSTALLED_APPS
 
+slack_app = Slackify(app, settings.SLACK_WEBHOOK)
 
 @app.task(bind=True)
 def debug_task(self):
