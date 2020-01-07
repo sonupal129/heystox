@@ -195,7 +195,7 @@ class Symbol(models.Model):
             return df
         return df1
 
-    def get_stock_movement(self, date=datetime.now().date()):     
+    def get_stock_movement(self, date=datetime.now().date()):    
         """Return Movement of stock in %"""
         try:
             current_price = self.get_stock_live_data().iloc[-1].close_price
