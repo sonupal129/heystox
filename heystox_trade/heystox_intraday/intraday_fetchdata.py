@@ -154,6 +154,7 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), start_date, end_date)
     if stock_data:
         last_candle = stock_data[-1]
+        candle = {}
         candle["timestamp"] = last_candle.get("timestamp")
         candle["open"] = float(last_candle.get("open"))
         candle["close"] = float(last_candle.get("close"))
