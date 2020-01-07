@@ -109,7 +109,7 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
         message = " | ".join(not_updated_stocks)
         slack_message_sender.delay(text=f"Stocks Data Not Updated For: {message}")
     if updated_stocks:
-        message = " | ".join(updated_stocks)
+        # message = " | ".join(updated_stocks)
         # slack_message_sender.delay(text=f"Stocks Data Updated For: {message}")
     return "All Stocks Data has been imported except these {0} ".format(not_updated_stocks)
 
@@ -147,23 +147,23 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
         "15 Minute": OHLCInterval.Minute_15,
         }
     redis_cache = caches["redis"]
-    if start_day == 0:
+    if start_day == 0: 
         start_date = end_date
     else:
         start_date = end_date - timedelta(start_day)
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), start_date, end_date)
-    if len(stock_data) > 3:
-        *rest_candles, last_candle = stock_data
-        last_candle["timestamp"] = last_candle.get("timestamp")
-        last_candle["open"] = float(last_candle.get("open"))
-        last_candle["close"] = float(last_candle.get("close"))
-        last_candle["high"] = float(last_candle.get("high"))
-        last_candle["low"] = float(last_candle.get("low"))
-        last_candle["volume"] = int(last_candle.get("volume"))
+    if stock_data:
+        last_candle = stock_data[-1]
+        candle["timestamp"] = last_candle.get("timestamp")
+        candle["open"] = float(last_candle.get("open"))
+        candle["close"] = float(last_candle.get("close"))
+        candle["high"] = float(last_candle.get("high"))
+        candle["low"] = float(last_candle.get("low"))
+        candle["volume"] = int(last_candle.get("volume"))
         data = redis_cache.get(stock.symbol)
         if data:
-            data.append(last_candle)
+            data.append(candle)
             redis_cache.set(stock.symbol, data)
-        elif not data:
+        else:
             data = [last_candle]
             redis_cache.set(stock.symbol, data)
