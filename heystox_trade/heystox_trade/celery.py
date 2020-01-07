@@ -16,7 +16,7 @@ app = Celery('heystox_trade')
 app.config_from_object('django.conf:settings')
 app.autodiscover_tasks() # lambda: settings.INSTALLED_APPS
 
-slack_app = Slackify(app, settings.SLACK_WEBHOOK, **options)
+slack_app = Slackify(app, settings.SLACK_WEBHOOK)
 
 @app.task(bind=True)
 def debug_task(self):
