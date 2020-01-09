@@ -47,7 +47,7 @@ def add_today_movement_stocks(movement_percent:float=1.2, date=datetime.now().da
                 sorted_stocks_name.append(obj.symbol.symbol)
             except:
                 continue
-        slack_message_sender(text=", ".join(sorted_stocks_name) + "Stocks Sorted For Trading in Market Trend")
+        slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=date)
     if sorted_stocks:
         deleted_stocks = []
@@ -61,7 +61,7 @@ def add_today_movement_stocks(movement_percent:float=1.2, date=datetime.now().da
                     deleted_stocks.append(stock.symbol.symbol)
                     stock.delete()
         if deleted_stocks:
-            slack_message_sender.delay(text=", ".join(deleted_stocks) + "Stocks Deleted from Trending Market")
+            slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
 
 # Market Sideways Functions
 def find_sideways_direction():
