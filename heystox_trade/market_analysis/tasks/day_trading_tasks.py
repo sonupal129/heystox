@@ -18,8 +18,10 @@ from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol,
 def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
     """Call function on custom time with interval functionality using celery periodic task"""
     current_time = datetime.now().time()
+    print(f"{function.__name__}")
     if current_time >= start_time and current_time <= end_time:
         function()
+
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=14)), queue = "default", name="subscribe_for_todays_trading_stocks", option={"queue": "default"})
 def subscribe_today_trading_stocks():
@@ -90,7 +92,7 @@ def create_stocks_realtime_candle():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
-        cache_candles_data(upstox_user, stock) 
+        cache_candles_data(upstox_user, stock)
 
 def create_nifty_50_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
@@ -101,9 +103,9 @@ def create_nifty_50_realtime_candle():
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="high", options={"queue": "high"}, name="create_stocks_realtime_candle_fuction_caller")
 def create_stocks_realtime_candle_fuction_caller():
     # Now Call Nifty 50 Function to Create Candle
-    function_caller(create_nifty_50_realtime_candle)
+    create_nifty_50_realtime_candle()
     # Now Call Rest of Stocks Function to Create Candle
-    function_caller(create_stocks_realtime_candle)
+    create_stocks_realtime_candle()
 
 
 # @task(name="delete_cached_ticker_and_create_candle")

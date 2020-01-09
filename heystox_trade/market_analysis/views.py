@@ -63,7 +63,7 @@ class LiveStockDataView(View):
     def get_template(self):
         if self.template_name:
             return self.template_name
-        raise ImproperlyConfigured("Attribute template_name not found, please define attribute")
+        raise ImproperlyConfigured("Attribute template_name not found, please define attribute first")
 
     def get(self, request, pk):
         obj = get_object_or_404(Symbol, pk=pk)
@@ -81,6 +81,6 @@ class SortedStocksDashBoardView(BasePermissionMixin, ListView):
         date = self.request.GET.get("created_at")
         if date:
             requested_date = datetime.strptime(date, "%Y-%m-%d").date()
-            filters = SortedStocksList.objects.filter(created_at__date=requested_date)
+            filters = SortedStocksList.objects.filter(created_at__date=requested_date).order_by("symbol__symbol")
             return filters
         # return SortedStocksList.objects.filter(created_at__gte=datetime.now().date()- timedelta(30))
