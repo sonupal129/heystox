@@ -45,9 +45,9 @@ def get_macd_crossover(sorted_stock): # Macd Crossover Strategy
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     last_crossover = df[df.signal.str.endswith("CROSSOVER")].iloc[-1]
-    if last_crossover.signal == "SELL_CROSSOVER" and sorted_stock.entry_type == "SELL" and df.iloc[-1].percentage <= -0.0032:
+    if last_crossover.signal == "SELL_CROSSOVER" and sorted_stock.entry_type == "SELL" and df.iloc[-1].macd_diff >= -0.070 or df.iloc[-2].macd_diff >= -0.070:
         stamp, is_created = StrategyTimestamp.objects.update_or_create(stock=sorted_stock, indicator=macd_indicator, defaults={"timestamp": df.iloc[-1].date, "diff":df.iloc[-1].macd_diff})
-    elif last_crossover.signal == "BUY_CROSSOVER" and sorted_stock.entry_type == "BUY" and df.iloc[-1].percentage >= 0.0032:
+    elif last_crossover.signal == "BUY_CROSSOVER" and sorted_stock.entry_type == "BUY" and df.iloc[-1].macd_diff >= 0.070 or df.iloc[-2].macd_diff >= 0.070:
         stamp, is_created = StrategyTimestamp.objects.update_or_create(stock=sorted_stock, indicator=macd_indicator, defaults={"timestamp": df.iloc[-1].date, "diff":df.iloc[-1].macd_diff})
 
 
@@ -57,7 +57,7 @@ def get_stochastic_crossover(sorted_stock): # Stochastic crossover strategy
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     last_crossover = df[df.signal.str.endswith("CROSSOVER")].iloc[-1]
-    if last_crossover.signal == "SELL_CROSSOVER" and sorted_stock.entry_type == "SELL" and df.iloc[-1].percentage <= -22.70:
+    if last_crossover.signal == "SELL_CROSSOVER" and sorted_stock.entry_type == "SELL" and df.iloc[-1].percentage >= -22.70 or df.iloc[-2].percentage >= -22.70:
         stamp, is_created = StrategyTimestamp.objects.update_or_create(stock=sorted_stock, indicator=stoch_indicator, defaults={"timestamp": df.iloc[-1].date, "diff":df.iloc[-1].percentage})
-    elif last_crossover.signal == "BUY_CROSSOVER" and sorted_stock.entry_type == "BUY" and df.iloc[-1].percentage >= 22.80:
+    elif last_crossover.signal == "BUY_CROSSOVER" and sorted_stock.entry_type == "BUY" and df.iloc[-1].percentage >= 22.80 or df.iloc[-2].percentage >= 22.80:
         stamp, is_created = StrategyTimestamp.objects.update_or_create(stock=sorted_stock, indicator=stoch_indicator, defaults={"timestamp": df.iloc[-1].date, "diff":df.iloc[-1].percentage})
