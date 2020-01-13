@@ -146,7 +146,7 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
         "10 Minute": OHLCInterval.Minute_10,
         "15 Minute": OHLCInterval.Minute_15,
         }
-    redis_cache = caches["redis"]
+    redis_cache = cache
     if start_day == 0: 
         start_date = end_date
     else:
