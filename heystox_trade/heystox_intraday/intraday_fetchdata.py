@@ -139,7 +139,10 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
 #         del data["instrument"]
 #     return cache_ticker_data(data)
 
-def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start_day:int=0, end_date=datetime.now().date()): #Need to work more on this function bc correct candle nahi aa rhi hai 
+def cache_candles_data(user:object, stock:object, interval:str="1 Minute", end_date=datetime.now().date()): #Need to work more on this function bc correct candle nahi aa rhi hai 
+    print(end_date)
+    slack_message_sender(channel="#debug", text=f"{end_date} for Cached Candle Data")
+    today_date = datetime.today().date()
     interval_dic = {
         "1 Minute": OHLCInterval.Minute_1,
         "5 Minute": OHLCInterval.Minute_5,
@@ -147,11 +150,7 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
         "15 Minute": OHLCInterval.Minute_15,
         }
     redis_cache = cache
-    if start_day == 0: 
-        start_date = end_date
-    else:
-        start_date = end_date - timedelta(start_day)
-    stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), start_date, end_date)
+    stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), today_date, today_date)
     if stock_data:
         last_candle = stock_data[-1]
         candle = {}
@@ -168,3 +167,5 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", start
         else:
             data = [candle]
             redis_cache.set(stock.symbol, data) 
+        return "Data Cached"
+    return "Data Not Cached"

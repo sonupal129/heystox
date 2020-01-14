@@ -35,29 +35,31 @@ def get_stocks_for_trading(stocks, date=datetime.now().date()):
     else:
         return None
     
-def add_today_movement_stocks(movement_percent:float=1.2, date=datetime.now().date()):
+def add_today_movement_stocks(movement_percent:float=1.2):
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     stocks_for_trading = get_stocks_for_trading(stocks=liquid_stocks)
     sorted_stocks_name = []
+    today_date = datetime.today().date()
     if nifty_50 == "BUY" or nifty_50 == "SELL":
         for stock in stocks_for_trading:
             try:
-                obj, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50,created_at__date=date)
+                obj, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50,created_at__date=today_date)
                 sorted_stocks_name.append(obj.symbol.symbol)
             except:
                 continue
         slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
-    sorted_stocks = SortedStocksList.objects.filter(created_at__date=date)
+    sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date)
+    slack_message_sender(channel="#debug", text=f"{today_date} date for add_today_movement_stocks function")
     if sorted_stocks:
         deleted_stocks = []
         for stock in sorted_stocks:
             if stock.entry_type == "BUY" or stock.entry_type == "SB" and stock.created_at <= datetime.now() - timedelta(minutes=30):
-                if not stock.symbol.is_stock_moved_good_for_trading(date=date, movement_percent=1.2):
+                if not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=1.2):
                     deleted_stocks.append(stock.symbol.symbol)
                     stock.delete()
             elif stock.entry_type == "SELL" or stock.entry_type == "SS" and stock.created_at <= datetime.now() - timedelta(minutes=30):
-                if not stock.symbol.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2):
+                if not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=-1.2):
                     deleted_stocks.append(stock.symbol.symbol)
                     stock.delete()
         if deleted_stocks:

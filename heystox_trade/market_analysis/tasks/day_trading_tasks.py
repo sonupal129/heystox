@@ -82,10 +82,11 @@ def create_market_hour_candles():
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="high", options={"queue": "high"}, name="delete_last_cached_candles_data")
 def delete_last_cached_candles_data():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
-    redis_cache = caches["redis"]
+    redis_cache = cache
     for stock in liquid_stocks:
-        redis_cache.delete(stock.symbol)
+        print(redis_cache.delete(stock.symbol))
     redis_cache.delete("nifty_50")
+    return "All Cached Candles Deleted Successfully"
 
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
@@ -93,12 +94,14 @@ def create_stocks_realtime_candle():
     upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
         cache_candles_data(upstox_user, stock)
+    return "All Candles data cached"
 
 def create_nifty_50_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     nifty_50 = Symbol.objects.get(symbol="nifty_50")
     upstox_user.get_master_contract("NSE_INDEX")
     cache_candles_data(upstox_user, nifty_50)
+    return f"{nifty_50} Data Cached Successfully"
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="high", options={"queue": "high"}, name="create_stocks_realtime_candle_fuction_caller")
 def create_stocks_realtime_candle_fuction_caller():
