@@ -141,7 +141,7 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
 
 def cache_candles_data(user:object, stock:object, interval:str="1 Minute", end_date=datetime.now().date()): #Need to work more on this function bc correct candle nahi aa rhi hai 
     print(end_date)
-    slack_message_sender(channel="#debug", text=f"{end_date} for Cached Candle Data")
+    slack_message_sender(channel="#random", text=f"{end_date} for Cached Candle Data")
     today_date = datetime.today().date()
     interval_dic = {
         "1 Minute": OHLCInterval.Minute_1,
