@@ -166,6 +166,6 @@ def cache_candles_data(user:object, stock:object, interval:str="1 Minute", end_d
             redis_cache.set(stock.symbol, data)
         else:
             data = [candle]
-            redis_cache.set(stock.symbol, data) 
+            redis_cache.set(stock.symbol, data)
         return "Data Cached"
     return "Data Not Cached"

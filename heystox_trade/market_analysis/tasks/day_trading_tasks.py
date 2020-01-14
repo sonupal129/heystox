@@ -109,6 +109,7 @@ def create_stocks_realtime_candle_fuction_caller():
     create_nifty_50_realtime_candle()
     # Now Call Rest of Stocks Function to Create Candle
     create_stocks_realtime_candle()
+    return "All Data Cached"
 
 
 # @task(name="delete_cached_ticker_and_create_candle")
