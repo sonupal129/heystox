@@ -28,8 +28,8 @@ def get_upstox_user(email):
                 time.sleep(58)
         return user.get_upstox_user()
     
-def load_master_contract_data(contract:str=None):
-    user = get_upstox_user(email="sonupal129@gmail.com")
+def load_master_contract_data(contract:str=None, upstox_user_email="sonupal129@gmail.com"):
+    user = get_upstox_user(email=upstox_user_email)
     if contract:
         try:
             user.get_master_contract(contract.upper())
@@ -39,7 +39,8 @@ def load_master_contract_data(contract:str=None):
         for obj in MasterContract.objects.values():
             user.get_master_contract(obj.get("name"))
 
-def create_symbols_data(user:object, index:str, max_share_price:int=300):
+def create_symbols_data(index:str, max_share_price:int=300, upstox_user_email="sonupal129@gmail.com"):
+    user = get_upstox_user(email=upstox_user_email)
     stock_list = user.get_master_contract(index)
     bulk_symbol = []
     index_obj = MasterContract.objects.get(name=index)
@@ -53,7 +54,9 @@ def create_symbols_data(user:object, index:str, max_share_price:int=300):
     Symbol.objects.bulk_create(bulk_symbol)
     return "All Stocks Data Updated Sucessfully"
 
-def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=datetime.now().date()):
+def get_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_email="sonupal129@gmail.com"):
+    end_date = datetime.now().date()
+    user = get_upstox_user(email=upstox_user_email)
     interval_dic = {
         "5 Minute": OHLCInterval.Minute_5,
         "10 Minute": OHLCInterval.Minute_10,
@@ -95,13 +98,15 @@ def get_candles_data(user, symbol:str, interval="5 Minute", days=6, end_date=dat
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 
-def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=datetime.now().date()):
+def update_all_symbol_candles(qs, upstox_user_email="sonupal129@gmail.com", interval="5 Minute", days=6):
     """Takes symbols queryset and upstox user as input and update those symbols candle data"""
     not_updated_stocks = []
     updated_stocks = []
+    end_date=datetime.now().date()
+    user = get_upstox_user(email=upstox_user_email)
     for symbol in qs:
             try:
-                print(get_candles_data(user, symbol, interval, days, end_date))
+                print(get_candles_data(symbol=symbol.symbol, interval=interval, days=days, upstox_user_email=upstox_user_email))
                 updated_stocks.append(symbol.name)
             except:
                 not_updated_stocks.append(symbol.name)
@@ -113,34 +118,12 @@ def update_all_symbol_candles(user, qs, interval="5 Minute", days=6, end_date=da
         # slack_message_sender.delay(text=f"Stocks Data Updated For: {message}")
     return "All Stocks Data has been imported except these {0} ".format(not_updated_stocks)
 
-# def add_tickerdata_to_csv(data):
-#     dirpath = os.path.join(os.path.dirname(os.getcwd()),'ticketdata_csv')
-#     df = pd.DataFrame(data)
-#     filepath = os.path.join(dirpath, "tickerdata.csv")
-#     if not os.path.exists(dirpath):
-#         os.mkdir(dirpath)
-#         df.to_csv(filepath)
-#     else:
-#         df.to_csv(filepath, mode="a", header=False)
-
-# def cache_ticker_data(data:dict):
-#     redis_cache = caches["redis"]
-#     try:
-#         cache_data = redis_cache.get(data.get("symbol"))
-#         cache_data.append(data)
-#     except:
-#         redis_cache.set(str(data.get("symbol")), [data])
-#     else:
-#         redis_cache.set(str(data.get("symbol")), cache_data)
-
-# def parse_stock_response_data(data:dict):
-#     """Return only required data by tickerdata model from upstox websocket response"""
-#     if "instrument" in data:
-#         del data["instrument"]
-#     return cache_ticker_data(data)
-
-def cache_candles_data(user:object, stock:object, interval:str="1 Minute", end_date=datetime.now().date()): #Need to work more on this function bc correct candle nahi aa rhi hai 
-    print(end_date)
+def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com", interval:str="1 Minute"): #Need to work more on this function bc correct candle nahi aa rhi hai 
+    try:
+        stock = Symbol.objects.get(symbol=stock_name)
+    except:
+        raise Symbol.DoesNotExist(f"{stock_name} Not Found in Data")
+    user = get_upstox_user(email=upstox_user_email)
     slack_message_sender(channel="#random", text=f"{end_date} for Cached Candle Data")
     today_date = datetime.today().date()
     interval_dic = {

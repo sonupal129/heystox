@@ -8,13 +8,13 @@ from django.contrib.auth.models import User
 from market_analysis.models import Symbol, MasterContract, Candle
 from django.db.models import Sum
 from heystox_intraday.intraday_fetchdata import get_upstox_user
+from .day_trading_tasks import fetch_candles_data
 # START CODE BELOW
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=0)),queue="default", options={"queue": "default"}, name="update_all_symbols_price_data")    
 def update_stocks_data():
     """Update all stocks data after trading day"""
-    upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    create_symbols_data(upstox_user, "NSE_EQ")
+    create_symbols_data(index="NSE_EQ")
     return "All Stocks Data Updated Succefully"
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour=17, minute=10)),queue="default", options={"queue": "default"}, name="update_all_stocks_candle_data")
@@ -23,7 +23,8 @@ def update_stocks_candle_data(days=0):
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     qs = Symbol.objects.exclude(exchange__name="NSE_INDEX")
     upstox_user.get_master_contract("NSE_EQ")
-    update_all_symbol_candles(user=upstox_user, qs=qs, days=days)
+    for q in qs:
+        fetch_candles_data.delay(q.symbol, 0)
     return "All Stocks Candle Data Imported Successfully"
 
 

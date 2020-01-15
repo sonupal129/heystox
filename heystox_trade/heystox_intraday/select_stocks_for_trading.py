@@ -50,8 +50,6 @@ def add_today_movement_stocks(movement_percent:float=1.2):
                 continue
         slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date)
-    print(today_date)
-    slack_message_sender(channel="#random", text=f"{today_date} date for add_today_movement_stocks function")
     if sorted_stocks:
         deleted_stocks = []
         for stock in sorted_stocks:
@@ -84,7 +82,8 @@ def find_sideways_direction():
         elif nifty_low_variation > -20:
             return nifty_low_variation
 
-def add_stock_on_market_sideways(date=datetime.now().date()):
+def add_stock_on_market_sideways():
+    date = datetime.now().date()
     nifty_50_point = find_sideways_direction()
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())

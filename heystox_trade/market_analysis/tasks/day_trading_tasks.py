@@ -18,7 +18,6 @@ from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol,
 def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
     """Call function on custom time with interval functionality using celery periodic task"""
     current_time = datetime.now().time()
-    print(f"{function.__name__}")
     if current_time >= start_time and current_time <= end_time:
         function()
 
@@ -69,12 +68,21 @@ def find_pdhl_stocks(obj_id):
 def take_entry_for_long_short(obj_id):
     entry_for_long_short(obj_id)
 
+@task(queue="high", name="candle_data_caching_task")
+def candle_data_cache(stock_name):
+    return cache_candles_data(stock_name)
+
+@task(queue="medium", name="add_candles_data_database")
+def fetch_candles_data(stock_name, days):
+    return get_candles_data(symbol=stock_name, days=days)
+    
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="medium", options={"queue": "medium"}, name="create_market_hour_candles")
 def create_market_hour_candles():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     upstox_user.get_master_contract("NSE_EQ")
-    update_all_symbol_candles(user=upstox_user, qs=liquid_stocks, days=0, end_date=datetime.now().date()) # By Defautl Fetching 5 Minute Candle
+    for stock in liquid_stocks:
+        fetch_candles_data.delay(stock.symbol, 0) # By Defautl Fetching 5 Minute Candle
     # Now Create Nifty 50 Candle 
     upstox_user.get_master_contract("NSE_INDEX")
     get_candles_data(user=upstox_user, symbol="nifty_50", days=0, end_date=datetime.now().date())
@@ -93,14 +101,14 @@ def create_stocks_realtime_candle():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
-        cache_candles_data(upstox_user, stock)
+        candle_data_cache.delay(stock_name=stock.symbol) #By default one minute is set
     return "All Candles data cached"
 
 def create_nifty_50_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     nifty_50 = Symbol.objects.get(symbol="nifty_50")
     upstox_user.get_master_contract("NSE_INDEX")
-    cache_candles_data(upstox_user, nifty_50)
+    cache_candles_data.delay(stock_name=nifty_50.symbol)
     return f"{nifty_50} Data Cached Successfully"
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="high", options={"queue": "high"}, name="create_stocks_realtime_candle_fuction_caller")
@@ -142,27 +150,21 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
         macd.stock.save()
         send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}")
 
-def find_update_macd_crossover_in_stocks():
-    stocks = SortedStocksList.objects.filter(created_at=datetime.now().date())
-    if stocks:
-        for stock in stocks:
-            if stock.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
-                get_macd_crossover(stock)
-
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "default"}, name="macd_crossover_finder")
-def find_macd_crossovers():
-    function_caller(function=find_update_macd_crossover_in_stocks)
-
-def find_update_stochastic_crossover_in_stocks():
-    stocks = SortedStocksList.objects.filter(created_at=datetime.now().date())
+def find_update_macd_crossover_in_stocks():
+    stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     if stocks:
         for stock in stocks:
             if stock.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
-                get_stochastic_crossover(stock)
+                get_macd_crossover(stock.id)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "medium"}, name="stochastic_crossover_finder")
-def find_stochastic_crossovers():
-    function_caller(function=find_update_stochastic_crossover_in_stocks)
+def find_update_stochastic_crossover_in_stocks():
+    stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+    if stocks:
+        for stock in stocks:
+            if stock.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
+                get_stochastic_crossover(stock.id)
 
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/2")),queue="medium", options={"queue": "medium"}, name="add_today_movement_stocks_on_sideways_market")
