@@ -90,7 +90,7 @@ def delete_last_cached_candles_data():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     redis_cache = cache
     for stock in liquid_stocks:
-        print(redis_cache.delete(stock.symbol))
+        redis_cache.delete(stock.symbol)
     redis_cache.delete("nifty_50")
     return "All Cached Candles Deleted Successfully"
 
