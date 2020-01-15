@@ -41,7 +41,7 @@ def entry_for_long_short(obj_id):
 def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     """This function find crossover between macd and macd signal and return signal as buy or sell"""
     macd_indicator = Indicator.objects.get(name="MACD")
-    sotred_stock = SortedStocksList.objects.get(id=sorted_stock_id)
+    sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     df = get_macd_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
@@ -54,7 +54,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
 
 def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")
-    sotred_stock = SortedStocksList.objects.get(id=sorted_stock_id)
+    sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     df = get_stochastic_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"

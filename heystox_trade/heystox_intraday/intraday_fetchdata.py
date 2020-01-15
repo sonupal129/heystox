@@ -124,7 +124,6 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
     except:
         raise Symbol.DoesNotExist(f"{stock_name} Not Found in Data")
     user = get_upstox_user(email=upstox_user_email)
-    slack_message_sender(channel="#random", text=f"{end_date} for Cached Candle Data")
     today_date = datetime.today().date()
     interval_dic = {
         "1 Minute": OHLCInterval.Minute_1,
