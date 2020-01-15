@@ -22,7 +22,6 @@ def update_stocks_candle_data(days=0):
     """Update all stocks candles data after trading day"""
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     qs = Symbol.objects.exclude(exchange__name="NSE_INDEX")
-    upstox_user.get_master_contract("NSE_EQ")
     for q in qs:
         fetch_candles_data.delay(q.symbol, 0)
     return "All Stocks Candle Data Imported Successfully"
@@ -44,8 +43,7 @@ def update_nifty_50_data(days=0):
     exchange = MasterContract.objects.get(name="NSE_INDEX")
     stock, is_created = Symbol.objects.get_or_create(symbol="nifty_50", exchange=exchange)
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    upstox_user.get_master_contract("NSE_INDEX")
-    get_candles_data(user=upstox_user, symbol="nifty_50", days=days)
+    get_candles_data(symbol="nifty_50", days=days)
     todays_candles = stock.get_stock_data(days=0)
     if todays_candles:
         stock.last_day_closing_price = todays_candles.last().close_price
