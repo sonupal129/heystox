@@ -108,7 +108,7 @@ def create_nifty_50_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     nifty_50 = Symbol.objects.get(symbol="nifty_50")
     upstox_user.get_master_contract("NSE_INDEX")
-    cache_candles_data.delay(stock_name=nifty_50.symbol)
+    candle_data_cache.delay(stock_name=nifty_50.symbol)
     return f"{nifty_50} Data Cached Successfully"
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="high", options={"queue": "high"}, name="create_stocks_realtime_candle_fuction_caller")
@@ -155,7 +155,7 @@ def find_update_macd_crossover_in_stocks():
     stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     if stocks:
         for stock in stocks:
-            if stock.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
+            if stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
                 get_macd_crossover(stock.id)
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "medium"}, name="stochastic_crossover_finder")
@@ -163,7 +163,7 @@ def find_update_stochastic_crossover_in_stocks():
     stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     if stocks:
         for stock in stocks:
-            if stock.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
+            if stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
                 get_stochastic_crossover(stock.id)
 
 
