@@ -73,6 +73,7 @@ def get_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_email=
         stock = Symbol.objects.get(symbol=symbol)
     except Symbol.DoesNotExist:
         return "No Stock Found Please Try with Another"
+    user.get_master_contract(stock.exchange.name.upper())
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), candle_interval, start_date, end_date)
     bulk_candle_data = []
     for data in stock_data:
@@ -124,6 +125,7 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
     except:
         raise Symbol.DoesNotExist(f"{stock_name} Not Found in Data")
     user = get_upstox_user(email=upstox_user_email)
+    user.get_master_contract(stock.exchange.name.upper())
     today_date = datetime.today().date()
     interval_dic = {
         "1 Minute": OHLCInterval.Minute_1,

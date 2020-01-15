@@ -80,11 +80,11 @@ def fetch_candles_data(stock_name, days):
 def create_market_hour_candles():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
-    upstox_user.get_master_contract("NSE_EQ")
+    # upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
         fetch_candles_data.delay(stock.symbol, 0) # By Defautl Fetching 5 Minute Candle
     # Now Create Nifty 50 Candle 
-    upstox_user.get_master_contract("NSE_INDEX")
+    # upstox_user.get_master_contract("NSE_INDEX")
     get_candles_data(user=upstox_user, symbol="nifty_50", days=0, end_date=datetime.now().date())
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="high", options={"queue": "high"}, name="delete_last_cached_candles_data")
@@ -99,16 +99,15 @@ def delete_last_cached_candles_data():
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
-    upstox_user.get_master_contract("NSE_EQ")
+    # upstox_user.get_master_contract("NSE_EQ")
     for stock in liquid_stocks:
         candle_data_cache.delay(stock_name=stock.symbol) #By default one minute is set
     return "All Candles data cached"
 
 def create_nifty_50_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    nifty_50 = Symbol.objects.get(symbol="nifty_50")
-    upstox_user.get_master_contract("NSE_INDEX")
-    candle_data_cache.delay(stock_name=nifty_50.symbol)
+    # upstox_user.get_master_contract("NSE_INDEX")
+    candle_data_cache.delay(stock_name="nifty_50")
     return f"{nifty_50} Data Cached Successfully"
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="high", options={"queue": "high"}, name="create_stocks_realtime_candle_fuction_caller")
