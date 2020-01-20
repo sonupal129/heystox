@@ -38,6 +38,7 @@ def load_master_contract_data(contract:str=None, upstox_user_email="sonupal129@g
     else:
         for obj in MasterContract.objects.values():
             user.get_master_contract(obj.get("name"))
+    return "Contract Loaded Successfully"
 
 def create_symbols_data(index:str, max_share_price:int=300, upstox_user_email="sonupal129@gmail.com"):
     user = get_upstox_user(email=upstox_user_email)
@@ -46,11 +47,12 @@ def create_symbols_data(index:str, max_share_price:int=300, upstox_user_email="s
     index_obj = MasterContract.objects.get(name=index)
     for stock in stock_list:
         symbol = stock_list.get(stock)
-        try:
-            stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin)
-        except Symbol.DoesNotExist:
-            bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
-                last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
+        if symbol.token and symbol.isin:
+            try:
+                stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin)
+            except Symbol.DoesNotExist:
+                bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
+                    last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
     Symbol.objects.bulk_create(bulk_symbol)
     return "All Stocks Data Updated Sucessfully"
 
@@ -133,7 +135,7 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
         "10 Minute": OHLCInterval.Minute_10,
         "15 Minute": OHLCInterval.Minute_15,
         }
-    redis_cache = cache
+    redis_cache = caches["redis"]
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), today_date, today_date)
     if stock_data:
         last_candle = stock_data[-1]

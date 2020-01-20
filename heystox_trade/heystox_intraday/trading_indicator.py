@@ -19,6 +19,7 @@ def get_stochastic_data(symbol:object):
     df = symbol.get_stock_live_data()
     df["stoch"] = stoch(high=df.high_price, close=df.close_price, low=df.low_price)
     df["stoch_signal"] = stoch_signal(high=df.high_price, close=df.close_price, low=df.low_price)
+    df["stoch_diff"] = df.stoch - df.stoch_signal
     df["percentage"] = round(df.stoch * (df.stoch - df.stoch_signal) /100, 6)
     df["signal"] = np.where(df.stoch < df.stoch_signal, "SELL", "BUY")
     return df

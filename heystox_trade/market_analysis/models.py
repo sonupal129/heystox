@@ -155,7 +155,7 @@ class Symbol(models.Model):
             raise TypeError("This Function is limited to nifty 50 only")
 
     def get_stock_current_candle(self):
-        redis_cache = cache
+        redis_cache = caches["redis"]
         cached_data = redis_cache.get(self.symbol)
         if len(cached_data) == 1:
             first_ticker = cached_data[0]
@@ -199,7 +199,7 @@ class Symbol(models.Model):
         """Return Movement of stock in %"""
         try:
             current_price = self.get_stock_live_data().iloc[-1].close_price
-            variation = float(current_price) - self.last_day_closing_price
+            variation = float(current_price) - self.get_last_day_closing_price()
             return variation
         except:
             return None

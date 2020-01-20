@@ -167,6 +167,9 @@ CACHES = {
         },
     }
 }
+
+APPEND_SLASH = True
+
 # UPSTOX API
 UPSTOX_REDIRECT_URL = "http://127.0.0.1:8000/"
 
