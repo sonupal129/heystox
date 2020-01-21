@@ -44,8 +44,8 @@ def update_nifty_50_data(days=0):
     get_candles_data(symbol="nifty_50", days=days)
     todays_candles = stock.get_stock_data(days=0)
     if todays_candles:
-        stock.last_day_closing_price = todays_candles.get_day_closing_price()
-        stock.last_day_opening_price = todays_candles.get_day_opening_price()
+        stock.last_day_closing_price = stock.get_day_closing_price()
+        stock.last_day_opening_price = stock.get_day_opening_price()
         stock.save()
         return "Updated Nifty_50 Data"
 
