@@ -32,7 +32,7 @@ def update_stocks_volume():
     stocks = Symbol.objects.exclude(exchange__name="NSE_INDEX")
     for stock in stocks:
         volume = stock.get_stock_data().aggregate(Sum("volume"))
-        if volume.get("volume__sum"):
+        if volumeget.get("volume__sum"):
             stock.last_day_vtt = volume.get("volume__sum")
             stock.save(update_fields=["last_day_vtt"])
     return "All Stocks Volume Updated"
@@ -42,9 +42,10 @@ def update_nifty_50_data(days=0):
     exchange = MasterContract.objects.get(name="NSE_INDEX")
     stock, is_created = Symbol.objects.get_or_create(symbol="nifty_50", exchange=exchange)
     get_candles_data(symbol="nifty_50", days=days)
+    todays_candles = stock.get_stock_data(days=0)
     if todays_candles:
-        stock.last_day_closing_price = stock.get_day_closing_price()
-        stock.last_day_opening_price = stock.get_day_opening_price()
+        stock.last_day_closing_price = todays_candles.get_day_closing_price()
+        stock.last_day_opening_price = todays_candles.get_day_opening_price()
         stock.save()
         return "Updated Nifty_50 Data"
 
