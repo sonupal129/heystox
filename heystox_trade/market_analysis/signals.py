@@ -4,12 +4,14 @@ from market_analysis.models import UserProfile, BankDetail, Earning, SortedStock
 from django.dispatch import receiver
 from datetime import datetime
 from market_analysis.tasks.day_trading_tasks import order_on_macd_verification, find_pdhl_stocks, take_entry_for_long_short
+from rest_framework.authtoken.models import Token
 # Code Below
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, created, **kwargs):
     if created:
         user_profile = UserProfile.objects.get_or_create(user=instance)
+        Token.objects.get_or_create(user=instance)
 
 @receiver(post_save, sender=BankDetail)
 def create_earning_object(sender, instance, update_fields, **kwargs):
