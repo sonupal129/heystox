@@ -135,7 +135,7 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
         "10 Minute": OHLCInterval.Minute_10,
         "15 Minute": OHLCInterval.Minute_15,
         }
-    redis_cache = caches["redis"]
+    redis_cache = cache
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), today_date, today_date)
     if stock_data:
         last_candle = stock_data[-1]

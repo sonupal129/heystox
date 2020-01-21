@@ -88,7 +88,7 @@ def create_market_hour_candles():
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="high", options={"queue": "high"})
 def delete_last_cached_candles_data():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
-    redis_cache = caches["redis"]
+    redis_cache = cache
     for stock in liquid_stocks:
         redis_cache.delete(stock.symbol)
     redis_cache.delete("nifty_50")
