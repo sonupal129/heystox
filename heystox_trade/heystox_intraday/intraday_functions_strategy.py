@@ -45,20 +45,23 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     df = get_macd_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
+    df = df[75:]
     if sorted_stock.entry_type in ["SELL", "SS"]:
         last_crossover = df[df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
     elif sorted_stock.entry_type in ["BUY", "SB"]:
         last_crossover = df[df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
-    df = df.loc[df["date"] >= last_crossover.date]
+    df_after_last_crossover = df.loc[df["date"] >= last_crossover.date]
     try:
         if last_crossover.signal == "SELL_CROSSOVER":
-            crossover_signal = df.loc[(df.macd_diff <= -0.070)].iloc[0]
+            crossover_signal = df_after_last_crossover.loc[(df.macd_diff <= -0.070)].iloc[0]
         elif last_crossover.signal == "BUY_CROSSOVER":
-            crossover_signal = df.loc[(df.macd_diff >= 0.070)].iloc[0]
+            crossover_signal = df_after_last_crossover.loc[(df.macd_diff >= 0.070)].iloc[0]
     except:
         crossover_signal = None
-    if crossover_signal is not None:
-        stamp, is_created = StrategyTimestamp.objects.update_or_create(stock=sorted_stock, indicator=macd_indicator,defaults={"timestamp":crossover_signal.date, "diff":crossover_signal.macd_diff})
+    if crossover_signal is not None and crossover_signal.date == datetime.today().date():
+        stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date)
+        stamp.diff=crossover_signal.macd_diff
+        stamp.save()
         return crossover_signal
 
 
@@ -68,18 +71,21 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     df = get_stochastic_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
+    df = df[75:]
     if sorted_stock.entry_type in ["SELL", "SS"]:
         last_crossover = df[df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
     elif sorted_stock.entry_type in ["BUY", "SB"]:
         last_crossover = df[df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
-    df = df.loc[df["date"] >= last_crossover.date]
+    df_after_last_crossover = df.loc[df["date"] >= last_crossover.date]
     try:
         if last_crossover.signal == "SELL_CROSSOVER":
-            crossover_signal = df.loc[(df.stoch_diff <= -22.70)].iloc[0]
+            crossover_signal = df_after_last_crossover.loc[(df.stoch_diff <= -22.70)].iloc[0]
         elif last_crossover.signal == "BUY_CROSSOVER":
-            crossover_signal = df.loc[(df.stoch_diff >= 22.80)].iloc[0]
+            crossover_signal = df_after_last_crossover.loc[(df.stoch_diff >= 22.80)].iloc[0]
     except:
         crossover_signal = None
-    if crossover_signal is not None:
-        stamp, is_created = StrategyTimestamp.objects.update_or_create(stock=sorted_stock, indicator=stoch_indicator,defaults={"timestamp":crossover_signal.date, "diff":crossover_signal.stoch_diff})
+    if crossover_signal is not None and crossover_signal.date == datetime.today().date():
+        stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=stoch_indicator, timestamp=crossover_signal.date)
+        stamp.diff = crossover_signal.stoch_diff
+        stamp.save()
         return crossover_signal

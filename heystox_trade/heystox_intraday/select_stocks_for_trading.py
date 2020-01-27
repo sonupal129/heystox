@@ -41,6 +41,12 @@ def add_today_movement_stocks(movement_percent:float=1.2):
     stocks_for_trading = get_stocks_for_trading(stocks=liquid_stocks)
     sorted_stocks_name = []
     today_date = datetime.today().date()
+    movement_on_entry = {
+        "BUY" : 1.2,
+        "SB": 1.2,
+        "SELL": -1.2,
+        "SS": -1.2
+    }
     if nifty_50 == "BUY" or nifty_50 == "SELL":
         for stock in stocks_for_trading:
             try:
@@ -53,14 +59,10 @@ def add_today_movement_stocks(movement_percent:float=1.2):
     if sorted_stocks:
         deleted_stocks = []
         for stock in sorted_stocks:
-            if stock.entry_type == "BUY" or stock.entry_type == "SB" and stock.created_at <= datetime.now() - timedelta(minutes=30):
-                if not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=1.2):
-                    deleted_stocks.append(stock.symbol.symbol)
-                    stock.delete()
-            elif stock.entry_type == "SELL" or stock.entry_type == "SS" and stock.created_at <= datetime.now() - timedelta(minutes=30):
-                if not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=-1.2):
-                    deleted_stocks.append(stock.symbol.symbol)
-                    stock.delete()
+            if stock.created_at <= datetime.now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=movement_on_entry.get(stock.entry_type)) \
+                and not stock.timestamps.all():
+                deleted_stocks.append(stock.symbol.symbol)
+                stock.delete()
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
 

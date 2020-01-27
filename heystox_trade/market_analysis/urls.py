@@ -5,7 +5,7 @@ from market_analysis import views
 app_name = 'market_analysis_urls'
 
 urlpatterns = [
-    path('heystox/login', views.upstox_login, name="upstox-login"),
+    path('heystox/login/', views.upstox_login, name="upstox-login"),
     path('', views.get_access_token_from_upstox, name='login-upstox-done'),
     path('dashboard/', views.StockDashboardView.as_view(), name="dashboard"),
     path('dashboard/<int:pk>/', views.LiveStockDataView.as_view(), name="live-data"),

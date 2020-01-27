@@ -20,10 +20,14 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 
 @receiver(post_save, sender=StrategyTimestamp)
 def verify_macd_signal(instance, **kwargs):
-    if instance.indicator.name == "MACD":
+    if instance.indicator.name == "MACD" and instance.is_last_timestamp():
         stock = instance.stock
-        if instance.is_last_timestamp() and stock.get_second_last_timestamp().indicator.name == "STOCHASTIC":
-            order_on_macd_verification.delay(instance.id, stock.get_second_last_timestamp().id)
+        try:
+            stochastic_timestamp = stock.get_second_last_timestamp()
+        except:
+            stochastic_timestamp = None
+        if stochastic_timestamp and stochastic_timestamp.indicator.name == "STOCHASTIC":
+            order_on_macd_verification.delay(instance.id, stochastic_timestamp.id)
 
 @receiver(post_save, sender=SortedStocksList)
 def verify_stock_pdhl_longshort(sender, instance, **kwargs):
