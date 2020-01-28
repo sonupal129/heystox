@@ -91,8 +91,8 @@ def add_stock_on_market_sideways():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     if nifty_50 == "SIDEWAYS" and nifty_50_point:
         if nifty_50_point > 22:
-            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SS", created_at__date=date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
+            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SS", created_at__date=date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2)]
             slack_message_sender.delay(text=f"List of Sideways Sell Stocks: " +  ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))
         if nifty_50_point < -30:
-            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SB", created_at__date=date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2)]
+            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SB", created_at__date=date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
             slack_message_sender.delay(text=f"List of Sideways Buy Stocks: " + ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))
