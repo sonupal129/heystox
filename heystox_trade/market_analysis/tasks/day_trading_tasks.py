@@ -52,7 +52,7 @@ def unsubscribe_today_trading_stocks():
     # upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
     return message
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/2")),queue="medium", options={"queue": "medium"}) #Check more for minute how to start-stop after specific time
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "medium"}) #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
     function_caller(function=add_today_movement_stocks)
 
