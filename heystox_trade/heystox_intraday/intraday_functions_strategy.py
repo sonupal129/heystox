@@ -46,9 +46,9 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     df = df[75:]
-    if sorted_stock.entry_type in ["SELL", "SS"]:
+    if sorted_stock.entry_type == "SELL":
         last_crossover = df[df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
-    elif sorted_stock.entry_type in ["BUY", "SB"]:
+    elif sorted_stock.entry_type == "BUY":
         last_crossover = df[df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     df_after_last_crossover = df.loc[df["date"] >= last_crossover.date]
     try:
@@ -72,9 +72,9 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     df = df[75:]
-    if sorted_stock.entry_type in ["SELL", "SS"]:
+    if sorted_stock.entry_type == "SELL":
         last_crossover = df[df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
-    elif sorted_stock.entry_type in ["BUY", "SB"]:
+    elif sorted_stock.entry_type == "BUY":
         last_crossover = df[df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     df_after_last_crossover = df.loc[df["date"] >= last_crossover.date]
     try:

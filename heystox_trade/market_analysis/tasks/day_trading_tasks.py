@@ -143,7 +143,7 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
     stoch_timestamp = StrategyTimestamp.objects.get(pk=stochastic_stamp_id)
     if macd_timestamp.timestamp - stoch_timestamp.timestamp < timedelta(minutes=20):
         stock_current_candle = macd_timestamp.stock.symbol.get_stock_current_candle()
-        entry_price = stock_current_candle.open_price 
+        entry_price = stock_current_candle.get("open_price")
         macd.stock.entry_price = entry_price
         macd.stock.save()
         send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}")

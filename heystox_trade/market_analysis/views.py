@@ -7,12 +7,13 @@ from datetime import datetime, timedelta
 from upstox_api.api import *
 from heystox_trade import settings
 from django.contrib.auth.decorators import login_required
-from django.views.generic import ListView
+from django.contrib.auth.views import LoginView
+from django.views.generic import ListView, View, TemplateView
 from market_analysis.filters import SymbolFilters, SortedStocksFilter
 from heystox_intraday.select_stocks_for_trading import get_cached_liquid_stocks
-from django.views.generic import View
 from django.core.exceptions import ImproperlyConfigured
 from market_analysis.view_mixins import BasePermissionMixin
+from .forms import UserLoginRegisterForm
 # Create your views here.
 @login_required
 def upstox_login(request):
@@ -84,3 +85,16 @@ class SortedStocksDashBoardView(BasePermissionMixin, ListView):
             filters = SortedStocksList.objects.filter(created_at__date=requested_date).order_by("symbol__symbol")
             return filters
         # return SortedStocksList.objects.filter(created_at__gte=datetime.now().date()- timedelta(30))
+
+class UserLoginRegisterView(LoginView):
+    http_method_names = ["post", "get"]
+    template_name = "login.html"
+    form_class = UserLoginRegisterForm
+
+    def post(self, request, *args, **kwargs):
+        if request.method == "POST" and "email" in request.POST:
+            form = self.get_form()
+            if form.is_valid():
+                return self.form_valid(form)
+            else:
+                return self.form_invalid(form)

@@ -43,9 +43,7 @@ def add_today_movement_stocks(movement_percent:float=1.2):
     today_date = datetime.today().date()
     movement_on_entry = {
         "BUY" : 1.2,
-        "SB": 1.2,
         "SELL": -1.2,
-        "SS": -1.2
     }
     if nifty_50 == "BUY" or nifty_50 == "SELL":
         for stock in stocks_for_trading:
@@ -61,7 +59,7 @@ def add_today_movement_stocks(movement_percent:float=1.2):
         for stock in sorted_stocks:
             if stock.created_at <= datetime.now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=movement_on_entry.get(stock.entry_type)) \
                 and not stock.timestamps.all():
-                deleted_stocks.append(stock.symbol.symbol)
+                deleted_stocks.append(stock.symbol.symbol) 
                 stock.delete()
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
@@ -91,8 +89,8 @@ def add_stock_on_market_sideways():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     if nifty_50 == "SIDEWAYS" and nifty_50_point:
         if nifty_50_point > 22:
-            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SS", created_at__date=date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2)]
+            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SELL", created_at__date=date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2)]
             slack_message_sender.delay(text=f"List of Sideways Sell Stocks: " +  ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))
         if nifty_50_point < -30:
-            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SB", created_at__date=date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
+            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY", created_at__date=date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
             slack_message_sender.delay(text=f"List of Sideways Buy Stocks: " + ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))
