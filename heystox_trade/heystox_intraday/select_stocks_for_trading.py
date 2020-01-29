@@ -1,6 +1,6 @@
 from upstox_api.api import *
 from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db.models import Max, Min
 from django.core.cache import cache
 from market_analysis.tasks.tasks import slack_message_sender
@@ -57,9 +57,8 @@ def add_today_movement_stocks(movement_percent:float=1.2):
     if sorted_stocks:
         deleted_stocks = []
         for stock in sorted_stocks:
-            if stock.created_at <= datetime.now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=movement_on_entry.get(stock.entry_type)) \
-                and not stock.timestamps.all():
-                deleted_stocks.append(stock.symbol.symbol) 
+            if stock.created_at <= datetime.now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all():
+                deleted_stocks.append(stock.symbol.symbol)
                 stock.delete()
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")

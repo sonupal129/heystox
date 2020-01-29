@@ -42,6 +42,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     """This function find crossover between macd and macd signal and return signal as buy or sell"""
     macd_indicator = Indicator.objects.get(name="MACD")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
+    today_date = datetime.today().date()
     df = get_macd_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
@@ -58,7 +59,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             crossover_signal = df_after_last_crossover.loc[(df.macd_diff >= 0.070)].iloc[0]
     except:
         crossover_signal = None
-    if crossover_signal is not None and crossover_signal.date == datetime.today().date():
+    if crossover_signal is not None and crossover_signal.date == today_date and last_crossover.date == today_date:
         stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date)
         stamp.diff=crossover_signal.macd_diff
         stamp.save()
@@ -68,6 +69,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
 def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
+    today_date = datetime.today().date()
     df = get_stochastic_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
@@ -84,7 +86,7 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             crossover_signal = df_after_last_crossover.loc[(df.stoch_diff >= 22.80)].iloc[0]
     except:
         crossover_signal = None
-    if crossover_signal is not None and crossover_signal.date == datetime.today().date():
+    if crossover_signal is not None and crossover_signal.date == today_date and last_crossover.date == today_date:
         stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=stoch_indicator, timestamp=crossover_signal.date)
         stamp.diff = crossover_signal.stoch_diff
         stamp.save()
