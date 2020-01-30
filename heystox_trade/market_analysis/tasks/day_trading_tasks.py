@@ -144,8 +144,8 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
     if macd_timestamp.timestamp - stoch_timestamp.timestamp < timedelta(minutes=20):
         stock_current_candle = macd_timestamp.stock.symbol.get_stock_current_candle()
         entry_price = stock_current_candle.get("open_price")
-        macd.stock.entry_price = entry_price
-        macd.stock.save()
+        macd_timestamp.stock.entry_price = entry_price
+        macd_timestamp.stock.save()
         send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}")
 
 @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "default"})

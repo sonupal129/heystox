@@ -14,6 +14,7 @@ from heystox_intraday.select_stocks_for_trading import get_cached_liquid_stocks
 from django.core.exceptions import ImproperlyConfigured
 from market_analysis.view_mixins import BasePermissionMixin
 from .forms import UserLoginRegisterForm
+from django.contrib.auth import authenticate, login
 # Create your views here.
 @login_required
 def upstox_login(request):
@@ -90,6 +91,7 @@ class UserLoginRegisterView(LoginView):
     http_method_names = ["post", "get"]
     template_name = "login.html"
     form_class = UserLoginRegisterForm
+    success_url = "/dashboard/sorted-stocks/"
 
     def post(self, request, *args, **kwargs):
         if request.method == "POST" and "email" in request.POST:
@@ -98,3 +100,7 @@ class UserLoginRegisterView(LoginView):
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)
+        elif request.method == "POST" and "register-email" in request.POST:
+            return redirect("market_analysis_urls:login-register")
+
+            

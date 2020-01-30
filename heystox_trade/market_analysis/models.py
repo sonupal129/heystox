@@ -395,7 +395,7 @@ class SortedStocksList(models.Model):
         return self.timestamps.order_by("timestamp").reverse()[1]
 
     def get_indicator_timestamp(self, indicator_name=None):
-        return self.timestamps.filter(indicator__name=indicator_name).order_by("timestamp").last()
+        return self.timestamps.filter(indicator__name=indicator_name).order_by("timestamp").last() or None
 
 class Indicator(models.Model):
     name = models.CharField(max_length=50)

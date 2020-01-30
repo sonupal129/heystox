@@ -17,5 +17,4 @@ class UserLoginRegisterForm(forms.Form):
         user = authenticate(username=email, password=password)
         if user is not None:
             return user
-        raise ValidationError("User Not Found")
         

@@ -36,8 +36,8 @@
             <th>Today Movement</th>
             <th>OHL</th>
             <th>PDHL</th>
-            <th>MACD</th>
             <th>STOCHASTIC</th>
+            <th>MACD</th>
             <th>Current Price</th>
         </tr>
         {% if symbols %}
@@ -53,8 +53,8 @@
                 {% endif %}
                 <td>{% get_timestamp_by_indicator symbol "OHL" %}</td>
                 <td>{% get_timestamp_by_indicator symbol "PDHL" %}</td>
-                <td>{% get_timestamp_by_indicator symbol "MACD" %}</td>
                 <td>{% get_timestamp_by_indicator symbol "STOCHASTIC" %}</td>
+                <td>{% get_timestamp_by_indicator symbol "MACD" %}</td>
                 <td>{% get_sorted_stock_closing_price symbol %}</td>
             </tr>
             {% endfor %}

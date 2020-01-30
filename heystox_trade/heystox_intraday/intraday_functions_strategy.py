@@ -1,6 +1,7 @@
 from market_analysis.models import SortedStocksList, Indicator, StrategyTimestamp, Symbol
 from datetime import datetime, timedelta
 from heystox_intraday.trading_indicator import get_macd_data, get_stochastic_data
+from market_analysis.tasks.tasks import slack_message_sender
 # Start code below
 
 def is_stocks_ohl():
@@ -46,12 +47,12 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     df = get_macd_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
-    df = df[75:]
+    df = df[76:]
     if sorted_stock.entry_type == "SELL":
         last_crossover = df[df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
     elif sorted_stock.entry_type == "BUY":
         last_crossover = df[df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
-    df_after_last_crossover = df.loc[df["date"] >= last_crossover.date]
+    df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
     try:
         if last_crossover.signal == "SELL_CROSSOVER":
             crossover_signal = df_after_last_crossover.loc[(df.macd_diff <= -0.070)].iloc[0]
@@ -59,7 +60,9 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             crossover_signal = df_after_last_crossover.loc[(df.macd_diff >= 0.070)].iloc[0]
     except:
         crossover_signal = None
-    if crossover_signal is not None and crossover_signal.date == today_date and last_crossover.date == today_date:
+    if crossover_signal is not None and last_crossover.date == today_date:
+        slack_message_sender.delay(channel="#random", text=f"Last Crossover {sorted_stock.symbol.symbol}    " + str(last_crossover))
+        slack_message_sender.delay(channel="#random", text=f"Crossover Signal {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date)
         stamp.diff=crossover_signal.macd_diff
         stamp.save()
@@ -73,12 +76,12 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     df = get_stochastic_data(sorted_stock.symbol)
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
-    df = df[75:]
+    df = df[76:]
     if sorted_stock.entry_type == "SELL":
         last_crossover = df[df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
     elif sorted_stock.entry_type == "BUY":
         last_crossover = df[df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
-    df_after_last_crossover = df.loc[df["date"] >= last_crossover.date]
+    df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
     try:
         if last_crossover.signal == "SELL_CROSSOVER":
             crossover_signal = df_after_last_crossover.loc[(df.stoch_diff <= -22.70)].iloc[0]
@@ -86,7 +89,9 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             crossover_signal = df_after_last_crossover.loc[(df.stoch_diff >= 22.80)].iloc[0]
     except:
         crossover_signal = None
-    if crossover_signal is not None and crossover_signal.date == today_date and last_crossover.date == today_date:
+    if crossover_signal is not None and last_crossover.date == today_date:
+        slack_message_sender.delay(channel="#random", text=f"Last Crossover {sorted_stock.symbol.symbol}    " + str(last_crossover))
+        slack_message_sender.delay(channel="#random", text=f"Crossover Signal {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=stoch_indicator, timestamp=crossover_signal.date)
         stamp.diff = crossover_signal.stoch_diff
         stamp.save()
