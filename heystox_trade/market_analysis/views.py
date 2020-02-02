@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.core.cache import cache, caches
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import redirect, render, get_object_or_404, resolve_url
 from django.http import HttpResponse
 from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol
 from datetime import datetime, timedelta
@@ -93,10 +93,16 @@ class UserLoginRegisterView(LoginView):
     form_class = UserLoginRegisterForm
     success_url = "/dashboard/sorted-stocks/"
 
+    def get_success_url(self):
+        if self.success_url:
+            return resolve_url(self.success_url)
+        raise ImproperlyConfigured("Success Url not defined")
+
     def post(self, request, *args, **kwargs):
         if request.method == "POST" and "email" in request.POST:
             form = self.get_form()
             if form.is_valid():
+                print("RSJU")
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)

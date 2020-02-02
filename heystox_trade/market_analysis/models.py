@@ -449,3 +449,11 @@ class MarketHoliday(models.Model):
     #     if self.date == today:
     #         return True
     #     return False
+
+
+# class PreMarketSymbol(models.Model):
+#     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="pre_market")
+#     price = models.FloatField(blank=True, null=True)
+#     change = models.FloatField(blank=True, null=True)
+#     previous_close = models.FloatField(blank=True, null=True)
+#     buy_qty_ato = models.IntegerField()

@@ -85,12 +85,10 @@
                 <form method="POST">
                 {% csrf_token %}
                 <div class="form-group">
-                    <!-- <input type="text" class="form-control" placeholder="Your Email *" value="" /> -->
-                    {{ form.email }}
+                    <input type="{{ form.email.type }}" class="form-control" placeholder="Your Email *" name="{{ form.email.html_name }}"/>
                 </div>
                 <div class="form-group">
-                    <!-- <input type="password" class="form-control" placeholder="Your Password *" value="" /> -->
-                    {{ form.password }}
+                    <input type="password" class="form-control" placeholder="Your Password *" name="{{ form.password.html_name }}" />
                 </div>
                 <div class="form-group">
                     <input type="submit" class="btnSubmit" value="Login" />

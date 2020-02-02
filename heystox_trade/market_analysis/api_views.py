@@ -14,7 +14,7 @@ from datetime import datetime
 # Code Starts Below
 
 class UsersListView(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     
     def get(self, request):
         users = UserProfile.objects.all()
