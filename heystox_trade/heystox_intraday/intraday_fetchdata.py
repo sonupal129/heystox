@@ -15,18 +15,18 @@ def get_upstox_user(email):
         user = UserProfile.objects.get(user__email=email)
     except UserProfile.DoesNotExist:
         return f"user with {email} not found in system"
+    profile = None
     try:
-        profile = user.get_upstox_user().get_profile().get("email")
+        profile = user.get_upstox_user().get_profile()
     except:
         profile = None
-    if user:
-        while profile != email:
-            try:
-                profile = user.get_upstox_user().get_profile().get("email")
-            except:
-                slack_message_sender.delay(text=user.get_authentication_url())
-                time.sleep(58)
-        return user.get_upstox_user()
+    while profile is None:
+        try:
+            profile = user.get_upstox_user().get_profile()
+        except:
+            slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
+            time.sleep(58)
+    return user.get_upstox_user()
     
 def load_master_contract_data(contract:str=None, upstox_user_email="sonupal129@gmail.com"):
     user = get_upstox_user(email=upstox_user_email)

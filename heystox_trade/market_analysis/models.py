@@ -452,8 +452,30 @@ class MarketHoliday(models.Model):
 
 
 # class PreMarketSymbol(models.Model):
+#     sector_choices = {
+#         ("NFTYBNK", "Nifty Bank"),
+#         ("NFTY", "Nifty")
+#     }
+
 #     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="pre_market")
+#     sector = models.CharField(choices=sector_choices, default="NFTYBNK", max_length=20)
 #     price = models.FloatField(blank=True, null=True)
 #     change = models.FloatField(blank=True, null=True)
 #     previous_close = models.FloatField(blank=True, null=True)
-#     buy_qty_ato = models.IntegerField()
+#     buy_qty_ato = models.IntegerField(blank=True, null=True)
+#     sell_qty_ato = models.IntegerField(blank=True, null=True)
+#     total_buy_qty = models.IntegerField(blank=True, null=True)
+#     total_sell_qty = models.IntegerField(blank=True, null=True)
+#     created_at = models.DateTimeField(auto_now=True, editable=False)
+#     modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+# class PreMarketSymbolOrderBook(models.Model):
+#     created_at = models.DateTimeField(auto_now=True, editable=False)
+#     modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+#     symbol = models.ForeignKey(PreMarketSymbol, on_delete=models.CASCADE, related_name="order_book")
+#     price = models.FloatField(blank=True, null=True)
+#     buy_qty = models.IntegerField(blank=True, null=True)
+#     sell_qty = models.IntegerField(blank=True, null=True)
+
+
+
