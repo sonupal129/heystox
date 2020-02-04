@@ -48,22 +48,23 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     df = df.loc[df["date"] > str(today_date)]
+    new_df = df.copy(deep=True).drop(df.tail(1).index)
     try:
         if sorted_stock.entry_type == "SELL":
-            last_crossover = df[df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
+            last_crossover = new_df[new_df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
         elif sorted_stock.entry_type == "BUY":
-            last_crossover = df[df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
+            last_crossover = new_df[new_df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         last_crossover = None
     if last_crossover is not None:
-        slack_message_sender.delay(text=f"Last Crossover {sorted_stock.symbol.symbol}    " + str(last_crossover))
+        slack_message_sender.delay(text=f"Last Crossover MACD {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
         try:
             if last_crossover.signal == "SELL_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.macd_diff <= -0.070)].iloc[0]
             elif last_crossover.signal == "BUY_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.macd_diff >= 0.070)].iloc[0]
-            slack_message_sender.delay(channel="#random", text=f"Crossover Signal {sorted_stock.symbol.symbol}    " + str(crossover_signal))
+            slack_message_sender.delay(text=f"Crossover Signal MACD {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
         if crossover_signal is not None and last_crossover is not None:
@@ -81,22 +82,23 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     df = df.loc[df["date"] > str(today_date)]
+    new_df = df.copy(deep=True).drop(df.tail(1).index)
     try:
         if sorted_stock.entry_type == "SELL":
-            last_crossover = df[df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
+            last_crossover = new_df[new_df.signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
         elif sorted_stock.entry_type == "BUY":
-            last_crossover = df[df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
+            last_crossover = new_df[new_df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         last_crossover = None
     if last_crossover is not None:
-        slack_message_sender.delay(text=f"Last Crossover {sorted_stock.symbol.symbol}    " + str(last_crossover))
+        slack_message_sender.delay(text=f"Last Crossover STOCHASTIC {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
         try:
             if last_crossover.signal == "SELL_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.stoch_diff <= -20.05)].iloc[0]
             elif last_crossover.signal == "BUY_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.stoch_diff >= 22.80)].iloc[0]
-            slack_message_sender.delay(text=f"Crossover Signal {sorted_stock.symbol.symbol}    " + str(crossover_signal))
+            slack_message_sender.delay(text=f"Crossover Signal STOCHASTIC {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
         if crossover_signal is not None and last_crossover is not None:

@@ -82,4 +82,25 @@ def update_symbols_closing_opening_price():
 #                     symbol.change = float(data.get("chn"))
 #                     symbol.previous_close = float(data.get("pCls"))
 
+# def import_daily_losers_gainers():
+#     urls = {
+#         "BUY": ["https://www1.nseindia.com/live_market/dynaContent/live_analysis/gainers/niftyGainers1.json",
+#                 "https://www1.nseindia.com/live_market/dynaContent/live_analysis/gainers/jrNiftyGainers1.json"],
+#         "SELL": ["https://www1.nseindia.com/live_market/dynaContent/live_analysis/losers/niftyLosers1.json",
+#                 "https://www1.nseindia.com/live_market/dynaContent/live_analysis/losers/jrNiftyLosers1.json"]
+#     }
+#     nifty_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
+#     def func(obj):
+#         open_price = float(obj.get("openPrice"))
+#         change = float(obj.get("netPrice"))
+#         if open_price >= 100 and open_price <= 300 and change >= 1.2:
+#             return obj
+#     if nifty_movement in ("BUY", "SELL"):
+#         import_urls = urls.get(nifty_movement, None)
+#         if import_urls:
+#             for url in import_urls:
+#                 response = requests.get(url, headers=settings.NSE_HEADERS)
+#                 if response.status_code == 200:
+#                     response = filter(key=func, response)
+#                     print(list(response))
 
