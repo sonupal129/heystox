@@ -8,27 +8,28 @@ from django.contrib.auth.models import User
 from market_analysis.models import Symbol, MasterContract, Candle
 from django.db.models import Sum
 from heystox_intraday.intraday_fetchdata import get_upstox_user
-from .day_trading_tasks import fetch_candles_data
+from .day_trading_tasks import fetch_candles_data, function_caller
 import requests
 from django.conf import settings
 # START CODE BELOW
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=0)),queue="default", options={"queue": "default"})    
+
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=0)), options={"queue": "default"})    
 def update_stocks_data():
     """Update all stocks data after trading day"""
     create_symbols_data(index="NSE_EQ")
     return "All Stocks Data Updated Succefully"
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=17, minute=10)),queue="default", options={"queue": "default"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=17, minute=10)), options={"queue": "default"})
 def update_stocks_candle_data(days=0):
     """Update all stocks candles data after trading day"""
-    qs = Symbol.objects.exclude(exchange__name="NSE_INDEX")
+    qs = Symbol.objects.all()
     for q in qs:
         fetch_candles_data.delay(q.symbol, days)
     return "All Stocks Candle Data Imported Successfully"
 
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=20)),queue="default", options={"queue": "default"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=20)), options={"queue": "default"})
 def update_stocks_volume():
     """Update total traded volume in stock"""
     stocks = Symbol.objects.exclude(exchange__name="NSE_INDEX")
@@ -39,19 +40,17 @@ def update_stocks_volume():
             stock.save(update_fields=["last_day_vtt"])
     return "All Stocks Volume Updated"
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=22)),queue="default", options={"queue": "default"})
-def update_nifty_50_data(days=0):
-    exchange = MasterContract.objects.get(name="NSE_INDEX")
-    stock, is_created = Symbol.objects.get_or_create(symbol="nifty_50", exchange=exchange)
-    get_candles_data(symbol="nifty_50", days=days)
-    todays_candles = stock.get_stock_data(days=0)
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=18, minute=50)), options={"queue": "default"})    
+def update_nifty_50_price_data():
+    nifty = Symbol.objects.get(symbol="nifty_50", exchange__name="NSE_INDEX")
+    todays_candles = nifty.get_stock_data(days=0)
     if todays_candles:
-        stock.last_day_closing_price = stock.get_day_closing_price()
-        stock.last_day_opening_price = stock.get_day_opening_price()
-        stock.save()
+        nifty.last_day_closing_price = nifty.get_day_closing_price()
+        nifty.last_day_opening_price = nifty.get_day_opening_price()
+        nifty.save()
         return "Updated Nifty_50 Data"
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=23, minute=55)),queue="default", options={"queue": "default"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=23, minute=55)), options={"queue": "default"})
 def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
     symbols = Symbol.objects.exclude(exchange__name="NSE_INDEX")
@@ -82,25 +81,45 @@ def update_symbols_closing_opening_price():
 #                     symbol.change = float(data.get("chn"))
 #                     symbol.previous_close = float(data.get("pCls"))
 
-# def import_daily_losers_gainers():
-#     urls = {
-#         "BUY": ["https://www1.nseindia.com/live_market/dynaContent/live_analysis/gainers/niftyGainers1.json",
-#                 "https://www1.nseindia.com/live_market/dynaContent/live_analysis/gainers/jrNiftyGainers1.json"],
-#         "SELL": ["https://www1.nseindia.com/live_market/dynaContent/live_analysis/losers/niftyLosers1.json",
-#                 "https://www1.nseindia.com/live_market/dynaContent/live_analysis/losers/jrNiftyLosers1.json"]
-#     }
-#     nifty_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
-#     def func(obj):
-#         open_price = float(obj.get("openPrice"))
-#         change = float(obj.get("netPrice"))
-#         if open_price >= 100 and open_price <= 300 and change >= 1.2:
-#             return obj
-#     if nifty_movement in ("BUY", "SELL"):
-#         import_urls = urls.get(nifty_movement, None)
-#         if import_urls:
-#             for url in import_urls:
-#                 response = requests.get(url, headers=settings.NSE_HEADERS)
-#                 if response.status_code == 200:
-#                     response = filter(key=func, response)
-#                     print(list(response))
+def import_daily_losers_gainers():
+    urls = {
+            "BUY": ["https://www1.nseindia.com/live_market/dynaContent/live_analysis/gainers/niftyGainers1.json",
+                    "https://www1.nseindia.com/live_market/dynaContent/live_analysis/gainers/jrNiftyGainers1.json"],
+            "SELL": ["https://www1.nseindia.com/live_market/dynaContent/live_analysis/losers/niftyLosers1.json",
+                    "https://www1.nseindia.com/live_market/dynaContent/live_analysis/losers/jrNiftyLosers1.json"]
+        }
+    
+    nifty_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
+    
+    def response_filter(obj):
+        open_price = obj.get("openPrice")
+        change = float(obj.get("netPrice"))
+        if "," in open_price:
+            open_price = open_price.replace(",","")
+        open_price = float(open_price)
+        if open_price >= 100 and open_price <= 300 and change >= 1.2:
+            return obj
+        
+    
+    if nifty_movement in ("BUY", "SELL"):
+        import_urls = urls.get(nifty_movement)
+        if import_urls:
+            for url in import_urls:
+                response = requests.get(url, headers=settings.NSE_HEADERS)
+                if response.status_code == 200:
+                    responses = filter(response_filter, response.json().get("data"))
+                    for symbol in responses:
+                        try:
+                            stock = Symbol.objects.get(symbol=symbol.get("symbol").lower())
+                        except:
+                            stock = None
+                        if stock:
+                            SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_movement, created_at__date=datetime.now().date())
+                    return f"Data imported successfully! from {url}"
+                return slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")
+            return "All Urls Data Imported Succefully"
 
+
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/2")), options={"queue": "medium"})
+def import_daily_losers_gainers_caller():
+    function_caller(function=import_daily_losers_gainers, start_minute=30)

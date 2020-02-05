@@ -1,4 +1,4 @@
-from django.shortcuts import render
+
 from django.core.cache import cache, caches
 from django.shortcuts import redirect, render, get_object_or_404, resolve_url
 from django.http import HttpResponse
@@ -16,6 +16,7 @@ from market_analysis.view_mixins import BasePermissionMixin
 from .forms import UserLoginRegisterForm
 from django.contrib.auth import authenticate, login
 # Create your views here.
+
 @login_required
 def upstox_login(request):
     if request.user:

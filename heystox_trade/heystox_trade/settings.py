@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'market_analysis.middleware.UserAuthRequired',
 ]
 
 ROOT_URLCONF = 'heystox_trade.urls'
@@ -205,6 +206,9 @@ SLACK_WEBHOOK = "https://hooks.slack.com/services/TPA2UKPB7/BSAUU6TL0/rGqcp2yMoN
 # LOGIN URL
 LOGIN_URL = "/admin/login/"
 # LOGIN_REDIRECT_URL = "/dashboard/sorted-stocks/"
+
+# LOGIN Redirect Exempted Url
+LOGIN_REDIRECT_EXEMPTED_URLS = [LOGIN_URL, "/login/"]
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [

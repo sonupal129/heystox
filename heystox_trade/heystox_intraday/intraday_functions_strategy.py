@@ -57,20 +57,26 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     except:
         last_crossover = None
     if last_crossover is not None:
-        slack_message_sender.delay(text=f"Last Crossover MACD {sorted_stock.symbol.symbol}    " + str(last_crossover))
+        slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
+        # slack_message_sender.delay(text=f"Last Crossover MACD {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
         try:
             if last_crossover.signal == "SELL_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.macd_diff <= -0.070)].iloc[0]
             elif last_crossover.signal == "BUY_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.macd_diff >= 0.070)].iloc[0]
-            slack_message_sender.delay(text=f"Crossover Signal MACD {sorted_stock.symbol.symbol}    " + str(crossover_signal))
+            # slack_message_sender.delay(text=f"Crossover Signal MACD {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
         if crossover_signal is not None and last_crossover is not None:
-            stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date)
-            stamp.diff=crossover_signal.macd_diff
-            stamp.save()
+            try:
+                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date - timedelta(minutes=5))
+            except:
+                stamp = None
+            if not stamp:
+                stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date)
+                stamp.diff=crossover_signal.macd_diff
+                stamp.save()
             return crossover_signal
 
 
@@ -91,18 +97,24 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     except:
         last_crossover = None
     if last_crossover is not None:
-        slack_message_sender.delay(text=f"Last Crossover STOCHASTIC {sorted_stock.symbol.symbol}    " + str(last_crossover))
+        slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
+        # slack_message_sender.delay(text=f"Last Crossover STOCHASTIC {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
         try:
             if last_crossover.signal == "SELL_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.stoch_diff <= -20.05)].iloc[0]
             elif last_crossover.signal == "BUY_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.stoch_diff >= 22.80)].iloc[0]
-            slack_message_sender.delay(text=f"Crossover Signal STOCHASTIC {sorted_stock.symbol.symbol}    " + str(crossover_signal))
+            # slack_message_sender.delay(text=f"Crossover Signal STOCHASTIC {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
         if crossover_signal is not None and last_crossover is not None:
-            stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=stoch_indicator, timestamp=crossover_signal.date)
-            stamp.diff = crossover_signal.stoch_diff
-            stamp.save()
+            try:
+                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=stoch_indicator, timestamp=crossover_signal.date - timedelta(minutes=5))
+            except:
+                stamp = None
+            if not stamp:
+                stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=stoch_indicator, timestamp=crossover_signal.date)
+                stamp.diff = crossover_signal.stoch_diff
+                stamp.save()
             return crossover_signal

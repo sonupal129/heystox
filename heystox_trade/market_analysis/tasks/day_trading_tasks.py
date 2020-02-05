@@ -15,14 +15,16 @@ from celery.decorators import task
 from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle)
 # CODE STARTS BELOW
 
-def function_caller(function, start_time=time(9,15), end_time=time(15,30)):
+def function_caller(function, start_hour:int=9, start_minute:int=15, end_hour:int=15, end_minute:int=30):
     """Call function on custom time with interval functionality using celery periodic task"""
+    start_time = time(start_hour, start_minute)
+    end_time = time(end_hour, end_minute)
     current_time = datetime.now().time()
     if current_time >= start_time and current_time <= end_time:
         function()
 
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=14)), queue = "default", option={"queue": "default"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=14)), option={"queue": "default"})
 def subscribe_today_trading_stocks():
     """Fetch todays liquid stocks from cache then register those stock for live feed"""
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
@@ -39,7 +41,7 @@ def subscribe_today_trading_stocks():
     return message
 
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=15, minute=45)), queue="default", option={"queue": "default"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour=15, minute=45)), option={"queue": "default"})
 def unsubscribe_today_trading_stocks():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     message = "Stocks Unsubscribed for Today:\n" + "| ".join(stock.symbol.upper() for stock in liquid_stocks)
@@ -52,11 +54,11 @@ def unsubscribe_today_trading_stocks():
     # upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
     return message
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "medium"}) #Check more for minute how to start-stop after specific time
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), options={"queue": "medium"}) #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
-    function_caller(function=add_today_movement_stocks)
+    function_caller(function=add_today_movement_stocks, start_minute=25)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/6")),queue="medium", options={"queue": "medium"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/6")), options={"queue": "medium"})
 def find_ohl_stocks():
     function_caller(function=is_stocks_ohl)
 
@@ -76,7 +78,7 @@ def candle_data_cache(stock_name):
 def fetch_candles_data(stock_name, days):
     return get_candles_data(symbol=stock_name, days=days)
     
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="medium", options={"queue": "medium"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")), options={"queue": "medium"})
 def create_market_hour_candles():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
@@ -85,7 +87,7 @@ def create_market_hour_candles():
     # Now Create Nifty 50 Candle
     get_candles_data(symbol="nifty_50", days=0)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")),queue="high", options={"queue": "high"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="1-59/5")), options={"queue": "high"})
 def delete_last_cached_candles_data():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     redis_cache = cache
@@ -108,7 +110,7 @@ def create_nifty_50_realtime_candle():
     candle_data_cache.delay(stock_name="nifty_50")
     return f"nifty_50 Data Cached Successfully"
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="high", options={"queue": "high"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), options={"queue": "high"})
 def create_stocks_realtime_candle_fuction_caller():
     # Now Call Nifty 50 Function to Create Candle
     create_nifty_50_realtime_candle()
@@ -117,57 +119,36 @@ def create_stocks_realtime_candle_fuction_caller():
     return "All Data Cached"
 
 
-# @task(name="delete_cached_ticker_and_create_candle")
-# def delete_cached_tickerdata_and_create_candle():
-#     """This function will delete all stocks cached tickerdata and create candle on every 4:59 minute """
-#     liquid_stocks = get_cached_liquid_stocks()
-#     redis_cache = caches["redis"]
-#     candle_to_create = []
-#     for stock in liquid_stocks:
-#         try:
-#             data = get_stock_current_candle(stock.symbol.upper())
-#             data["symbol_id"] = stock.id
-#             candle_to_create.append(Candle(**data))
-#             redis_cache.delete(stock.symbol.upper())
-#         except:
-#             continue
-#     Candle.objects.bulk_create(candle_to_create)
-
-# @periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/5")), name="create_candles_and_delete_ticker")
-# def create_candles_and_delete_ticker():
-#     function_caller(9,20,15,35,delete_cached_tickerdata_and_create_candle)
-
 @task(queue="default")
 def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to work more on current entry price
     macd_timestamp = StrategyTimestamp.objects.get(pk=macd_stamp_id)
     stoch_timestamp = StrategyTimestamp.objects.get(pk=stochastic_stamp_id)
-    if macd_timestamp.timestamp - stoch_timestamp.timestamp < timedelta(minutes=20):
+    if macd_timestamp.timestamp - stoch_timestamp.timestamp < timedelta(minutes=30):
         stock_current_candle = macd_timestamp.stock.symbol.get_stock_current_candle()
         entry_price = stock_current_candle.get("open_price")
         macd_timestamp.stock.entry_price = entry_price
         macd_timestamp.stock.save()
-        send_slack_message(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}")
+        slack_message_sender.delay(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}", channel="#random")
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "default"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), options={"queue": "default"})
 def find_update_macd_crossover_in_stocks():
     stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     if stocks:
         for stock in stocks:
-            if stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
+            if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
                 get_macd_crossover(stock.id)
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")),queue="medium", options={"queue": "medium"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/1")), options={"queue": "medium"})
 def find_update_stochastic_crossover_in_stocks():
     stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     if stocks:
         for stock in stocks:
-            if stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2) or stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2):
+            if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
                 get_stochastic_crossover(stock.id)
 
-
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/2")),queue="medium", options={"queue": "medium"})
+@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/2")), options={"queue": "medium"})
 def todays_movement_stocks_add_on_sideways():
-    function_caller(function=add_stock_on_market_sideways)
+    function_caller(function=add_stock_on_market_sideways, start_minute=25)
 
 # @task(name="testing_function_two")
 # def raju_mera_name(run_every=None, run=False):
