@@ -6,7 +6,7 @@ from upstox_api.api import *
 from django.contrib.auth.models import User
 from market_analysis.models import Symbol, MasterContract, Candle
 from django.db.models import Sum
-# from .day_trading_tasks import fetch_candles_data, function_caller
+from .day_trading_tasks import fetch_candles_data, function_caller
 import requests
 from django.conf import settings
 from celery import shared_task
