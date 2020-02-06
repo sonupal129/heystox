@@ -1,26 +1,25 @@
-from heystox_intraday.intraday_fetchdata import update_all_symbol_candles, create_symbols_data, get_candles_data, get_upstox_user
-from datetime import datetime, timedelta
+from market_analysis.heystox_intraday.intraday_fetchdata import create_symbols_data
+from datetime import datetime, timedelta, time
 from django.core.cache import cache
-from celery.task import periodic_task
 from celery.schedules import crontab
 from upstox_api.api import *
 from django.contrib.auth.models import User
 from market_analysis.models import Symbol, MasterContract, Candle
 from django.db.models import Sum
-from heystox_intraday.intraday_fetchdata import get_upstox_user
-from .day_trading_tasks import fetch_candles_data, function_caller
+# from .day_trading_tasks import fetch_candles_data, function_caller
 import requests
 from django.conf import settings
+from celery import shared_task
+
 # START CODE BELOW
 
-
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=0)), options={"queue": "default"})    
+@shared_task(queue="default")
 def update_stocks_data():
     """Update all stocks data after trading day"""
     create_symbols_data(index="NSE_EQ")
     return "All Stocks Data Updated Succefully"
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=17, minute=10)), options={"queue": "default"})
+@shared_task(queue="default")
 def update_stocks_candle_data(days=0):
     """Update all stocks candles data after trading day"""
     qs = Symbol.objects.all()
@@ -29,7 +28,7 @@ def update_stocks_candle_data(days=0):
     return "All Stocks Candle Data Imported Successfully"
 
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=19, minute=20)), options={"queue": "default"})
+@shared_task(queue="default")
 def update_stocks_volume():
     """Update total traded volume in stock"""
     stocks = Symbol.objects.exclude(exchange__name="NSE_INDEX")
@@ -40,7 +39,7 @@ def update_stocks_volume():
             stock.save(update_fields=["last_day_vtt"])
     return "All Stocks Volume Updated"
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=18, minute=50)), options={"queue": "default"})    
+@shared_task(queue="default")    
 def update_nifty_50_price_data():
     nifty = Symbol.objects.get(symbol="nifty_50", exchange__name="NSE_INDEX")
     todays_candles = nifty.get_stock_data(days=0)
@@ -50,7 +49,7 @@ def update_nifty_50_price_data():
         nifty.save()
         return "Updated Nifty_50 Data"
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour=23, minute=55)), options={"queue": "default"})
+@shared_task(queue="default")
 def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
     symbols = Symbol.objects.exclude(exchange__name="NSE_INDEX")
@@ -81,6 +80,7 @@ def update_symbols_closing_opening_price():
 #                     symbol.change = float(data.get("chn"))
 #                     symbol.previous_close = float(data.get("pCls"))
 
+@shared_task(queue="default")
 def import_daily_losers_gainers():
     urls = {
             "BUY": ["https://www1.nseindia.com/live_market/dynaContent/live_analysis/gainers/niftyGainers1.json",
@@ -120,6 +120,12 @@ def import_daily_losers_gainers():
             return "All Urls Data Imported Succefully"
 
 
-@periodic_task(run_every=(crontab(day_of_week="1-5", hour="9-15", minute="*/2")), options={"queue": "medium"})
+@shared_task(queue="medium")
 def import_daily_losers_gainers_caller():
-    function_caller(function=import_daily_losers_gainers, start_minute=30)
+    current_time = datetime.now().time()
+    start_time = time(9,30)
+    end_time = time(15,30)
+    if current_time > start_time and current_time < end_time:
+        import_daily_losers_gainers.delay()
+        return "Function Called Successfully"
+    return "Function Not Called"

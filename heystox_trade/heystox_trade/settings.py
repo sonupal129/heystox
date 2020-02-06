@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'django_celery_results',
     'rest_framework',
     'django_filters',
-    'rest_framework.authtoken'
+    'rest_framework.authtoken',
+    'celerybeat_status',
 ]
 
 MIDDLEWARE = [
@@ -85,29 +86,29 @@ WSGI_APPLICATION = 'heystox_trade.wsgi.application'
 # Use ssh -i heystox_makki -L 9211:localhost:5432 heystox@139.59.90.114 for tunneling with remote data
 # heystox_makki = ssh key, 9211 is local machine port, 5432 is server machine psql port, then user then ip address
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'heystox',                      # Or path to database file if using sqlite3.
-        'USER': 'heystox',                      # Not used with sqlite3.
-        'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
-        'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+#         'NAME': 'heystox',                      # Or path to database file if using sqlite3.
+#         'USER': 'heystox',                      # Not used with sqlite3.
+#         'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
+#         'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
+#         'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
+#     }
+# }
 
 # Local Data Base
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'testdb',
-#         'USER': 'testdb',
-#         'PASSWORD': '123456',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'testdb',
+        'USER': 'testdb',
+        'PASSWORD': '123456',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 
 
 
@@ -185,7 +186,7 @@ NSE_HEADERS = {"Host": "www1.nseindia.com", "Cache-Control": "max-age=0", "Upgra
 UPSTOX_REDIRECT_URL = "http://127.0.0.1:8000/"
 
 # CELERY STUFF
-BROKER_URL = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -199,6 +200,12 @@ CELERY_QUEUES = (
     Queue("medium"),
     Queue("high"),
 )
+CELERY_CACHE_BACKEND = "redis"
+
+
+
+
+# SLACK SETTINGS
 
 SLACK_TOKEN = 'xoxp-792096669381-779313280690-793468872963-37b278cd3fab65d3d0b16de3c8747123'
 SLACK_WEBHOOK = "https://hooks.slack.com/services/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"

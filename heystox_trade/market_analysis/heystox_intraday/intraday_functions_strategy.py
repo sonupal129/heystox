@@ -1,6 +1,6 @@
 from market_analysis.models import SortedStocksList, Indicator, StrategyTimestamp, Symbol
 from datetime import datetime, timedelta
-from heystox_intraday.trading_indicator import get_macd_data, get_stochastic_data
+from .trading_indicator import get_macd_data, get_stochastic_data
 from market_analysis.tasks.tasks import slack_message_sender
 # Start code below
 
@@ -70,7 +70,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             crossover_signal = None
         if crossover_signal is not None and last_crossover is not None:
             try:
-                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date - timedelta(minutes=5))
+                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=macd_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=5), crossover_signal.date])
             except:
                 stamp = None
             if not stamp:
@@ -110,7 +110,7 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             crossover_signal = None
         if crossover_signal is not None and last_crossover is not None:
             try:
-                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=stoch_indicator, timestamp=crossover_signal.date - timedelta(minutes=5))
+                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=stoch_indicator, timestamp=[crossover_signal.date - timedelta(minutes=5), crossover_signal.date])
             except:
                 stamp = None
             if not stamp:

@@ -16,6 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+
 admin.site.site_header = 'Heystox Admin'
 admin.site.site_title = "Heystox Admin"
 admin.site.index_title = "Welcome to Heystox"
@@ -23,6 +24,7 @@ admin.site.index_title = "Welcome to Heystox"
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include("market_analysis.urls", namespace="market_analysis_urls")),
-    path('api/v1/', include("market_analysis.api_urls", namespace="market_analysis_api_urls"))
+    path('api/v1/', include("market_analysis.api_urls", namespace="market_analysis_api_urls")),
+    path('admin/statuscheck', include("celerybeat_status.urls")),
 
 ]

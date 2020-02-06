@@ -7,9 +7,9 @@ db.sqlite3
 __pycache__/
 *.log
 *.pot
-*.pyc
+**.pyc
 *.md
-*.DS_Store
+**.DS_Store
 *.csv
 *.ipynb
 *.pid

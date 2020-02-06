@@ -7,6 +7,7 @@ from django.core.cache import cache, caches
 from market_analysis.tasks.tasks import slack_message_sender
 import pandas as pd
 from django.core.exceptions import ObjectDoesNotExist
+
 # Code Starts Below
 
 def get_upstox_user(email):

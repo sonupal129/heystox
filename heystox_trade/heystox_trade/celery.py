@@ -9,15 +9,16 @@ from celery_slack import Slackify
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'heystox_trade.settings')
+
 app = Celery('heystox_trade')
 
 # Using a string here means the worker will not have to
 # pickle the object when using Windows.
-app.config_from_object('django.conf:settings')
+app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks() # lambda: settings.INSTALLED_APPS
 
-# if not settings.DEBUG:
-#     slack_app = Slackify(app, settings.SLACK_WEBHOOK)
+if settings.DEBUG:
+    slack_app = Slackify(app, settings.SLACK_WEBHOOK)
 
 @app.task(bind=True)
 def debug_task(self):
