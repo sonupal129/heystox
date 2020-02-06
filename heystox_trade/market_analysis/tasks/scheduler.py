@@ -4,10 +4,10 @@ from heystox_trade.celery import app
 
 
 tasks = {
-    "add_function": {
-        "task": "market_analysis.tasks.tasks.add",
-        "schedule": crontab(day_of_week="1-5", minute="*/1"),
-    },
+    # "add_function": {
+    #     "task": "market_analysis.tasks.tasks.add",
+    #     "schedule": crontab(day_of_week="1-5", minute="*/1"),
+    # },
 
 }
 
