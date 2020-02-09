@@ -1,6 +1,5 @@
 from django.contrib import admin
-from market_analysis.models import (Candle, UserProfile, 
-    MasterContract, Symbol, BankDetail, Credentials, Earning, Indicator, SortedStocksList, StrategyTimestamp, MarketHoliday)
+from market_analysis.models import *
 # Register your models here.
 
 class SymbolAdmin(admin.ModelAdmin):
@@ -45,6 +44,12 @@ class MarketHolidayAdmin(admin.ModelAdmin):
     def get_day_from_date(self, obj):
         return obj.date.strftime("%A")
 
+
+class PreMarketOrderDataAdmin(admin.ModelAdmin):
+    list_dispaly = ["symbol__symbol", "sector", "created_at"]
+    search_fields = ["symbol__symbol"]
+
+
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
 admin.site.register(Candle, CandleAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)
@@ -55,3 +60,4 @@ admin.site.register(Credentials)
 admin.site.register(Earning)
 admin.site.register(Indicator)
 admin.site.register(SortedStocksList, SortedStocksListAdmin)
+admin.site.register(PreMarketOrderData, PreMarketOrderDataAdmin)

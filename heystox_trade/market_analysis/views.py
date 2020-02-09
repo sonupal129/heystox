@@ -86,7 +86,8 @@ class SortedStocksDashBoardView(BasePermissionMixin, ListView):
             requested_date = datetime.strptime(date, "%Y-%m-%d").date()
             filters = SortedStocksList.objects.filter(created_at__date=requested_date).order_by("symbol__symbol")
             return filters
-        # return SortedStocksList.objects.filter(created_at__gte=datetime.now().date()- timedelta(30))
+        return SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+
 
 class UserLoginRegisterView(LoginView):
     http_method_names = ["post", "get"]
@@ -103,7 +104,6 @@ class UserLoginRegisterView(LoginView):
         if request.method == "POST" and "email" in request.POST:
             form = self.get_form()
             if form.is_valid():
-                print("RSJU")
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)

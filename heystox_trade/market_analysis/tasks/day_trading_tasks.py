@@ -146,25 +146,19 @@ def check_macd_crossover(stock_id):
     return get_macd_crossover(stock_id)
 
 
-@shared_task(queue="default")
-def find_update_macd_crossover_in_stocks():
-    stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
-    if stocks:
-        for stock in stocks:
-            if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
-                check_macd_crossover.delay(stock.id)
-
 @shared_task(queue="high")
 def check_stochastic_crossover(stock_id):
     return get_stochastic_crossover(stock_id)
 
-@shared_task(queue="medium")
-def find_update_stochastic_crossover_in_stocks():
+
+@shared_task(queue="default")
+def find_update_macd_stochastic_crossover_in_stocks():
     stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     if stocks:
         for stock in stocks:
             if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
                 check_stochastic_crossover.delay(stock.id)
+                check_macd_crossover.delay(stock.id)             
 
 @shared_task(queue="medium")
 def todays_movement_stocks_add_on_sideways():

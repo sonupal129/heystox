@@ -69,6 +69,10 @@ stock_data_import_tasks = {
         "task": "market_analysis.tasks.stock_data_import_tasks.import_daily_losers_gainers_caller",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/2"),
     },
+    "import_premarket_stocks_data": {
+        "task": "market_analysis.tasks.stock_data_import_tasks.import_premarket_stocks_data",
+        "schedule": crontab(day_of_week="1-5", hour=9, minute=9),
+    },
 }
 
 
@@ -101,12 +105,8 @@ day_trading_tasks = {
         "task": "market_analysis.tasks.day_trading_tasks.create_stocks_realtime_candle_fuction_caller",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
     },
-    "find_update_macd_crossover_in_stocks": {
-        "task": "market_analysis.tasks.day_trading_tasks.find_update_macd_crossover_in_stocks",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
-    },
-    "find_update_stochastic_crossover_in_stocks": {
-        "task": "market_analysis.tasks.day_trading_tasks.find_update_stochastic_crossover_in_stocks",
+    "find_update_macd_stochastic_crossover_in_stocks": {
+        "task": "market_analysis.tasks.day_trading_tasks.find_update_macd_stochastic_crossover_in_stocks",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
     },
     "todays_movement_stocks_add_on_sideways": {

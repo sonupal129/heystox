@@ -4,7 +4,7 @@ from django.core.cache import cache
 from celery.schedules import crontab
 from upstox_api.api import *
 from django.contrib.auth.models import User
-from market_analysis.models import Symbol, MasterContract, Candle
+from market_analysis.models import Symbol, MasterContract, Candle, PreMarketOrderData
 from django.db.models import Sum
 from .day_trading_tasks import fetch_candles_data, function_caller
 import requests
@@ -62,23 +62,48 @@ def update_symbols_closing_opening_price():
             updated_stocks.append(symbol.id)
     return "Updated Symbols Closing Price"
 
-# @periodic_task(run_every=(crontab(day_of_week="1-5", hour=9, minute=9)),queue="default", options={"queue": "default"})
-# def import_premarket_stocks_data():
-#     urls = {"NFTY": "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/nifty.json",
-#             "NFTYBNK": "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/niftybank.json"}
-#     for sector, url in urls.items():
-#         response = requests.get(url, headers=settings.NSE_HEADERS)
-#         if response.status_code == 200:
-#             response_data = response.json().get("data")
-#             bulk_data_upload = []
-#             if response_data:
-#                 for data in response_data:
-#                     context = {}
-#                     symbol = Symbol.objects.get_or_create(symbol=data.get("symbol"), created_at__date=datetime.now().date())
-#                     symbol.sector = sector
-#                     symbol.price = float(data.get("iep"))
-#                     symbol.change = float(data.get("chn"))
-#                     symbol.previous_close = float(data.get("pCls"))
+
+@shared_task(queue="default")
+def import_premarket_stocks_data():
+    urls = {"NFTY": "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/nifty.json",
+            "NFTYBNK": "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/niftybank.json"}
+    
+    def convert_price(price:str):
+        obj_price = price
+        if "," in obj_price:
+            obj_price = obj_price.replace(",", "")
+        obj_price = float(obj_price)
+        return obj_price
+    
+    market_date_url = "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/pomMktStatus.jsp"
+    today_date = datetime.today().date()
+    web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS)
+    market_trading_date = datetime.strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%b-%Y").date()
+    if market_trading_date == today_date:
+        for sector, url in urls.items():
+            response = requests.get(url, headers=settings.NSE_HEADERS)
+            if response.status_code == 200:
+                response_data = response.json().get("data")
+                bulk_data_upload = []
+                if response_data:
+                    for data in response_data:
+                        context = {}
+                        symbol = Symbol.objects.get(symbol=data.get("symbol").lower())
+                        try:
+                            pre_market_stock = PreMarketOrderData.objects.get(symbol=symbol, created_at__date=datetime.now().date())
+                        except:
+                            pre_market_stock = PreMarketOrderData.objects.create(symbol=symbol, created_at=datetime.now())
+                        if pre_market_stock:
+                            pre_market_stock.sector = sector
+                            pre_market_stock.open_price = convert_price(data.get("iep"))
+                            pre_market_stock.change = convert_price(data.get("chn"))
+                            pre_market_stock.change_percent = convert_price(data.get("perChn"))
+                            pre_market_stock.previous_close = convert_price(data.get("pCls"))
+                            pre_market_stock.change_percent = convert_price(data.get("perChn"))
+                            pre_market_stock.total_trade_qty = convert_price(data.get("trdQnty"))
+                            pre_market_stock.save()
+                    return "Premarket Data Saved Successfully"
+    return f"No Trading Day on {today_date}"
 
 @shared_task(queue="default")
 def import_daily_losers_gainers():
