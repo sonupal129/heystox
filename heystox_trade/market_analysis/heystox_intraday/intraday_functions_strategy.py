@@ -41,6 +41,7 @@ def entry_for_long_short(obj_id):
 
 def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     """This function find crossover between macd and macd signal and return signal as buy or sell"""
+    slack_message_sender(text=f"Sorted Stock ID in MACD {sorted_stock_id}")
     macd_indicator = Indicator.objects.get(name="MACD")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = datetime.today().date()
@@ -81,6 +82,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
 
 
 def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
+    slack_message_sender(text=f"Sorted Stock ID in Stochastic {sorted_stock_id}")
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = datetime.today().date()
