@@ -57,7 +57,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     except:
         last_crossover = None
     if last_crossover is not None:
-        slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
+        # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
         # slack_message_sender.delay(text=f"Last Crossover MACD {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
         try:
@@ -97,7 +97,7 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     except:
         last_crossover = None
     if last_crossover is not None:
-        slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
+        # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
         # slack_message_sender.delay(text=f"Last Crossover STOCHASTIC {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
         try:

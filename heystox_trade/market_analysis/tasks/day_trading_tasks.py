@@ -157,8 +157,9 @@ def find_update_macd_stochastic_crossover_in_stocks():
     if stocks:
         for stock in stocks:
             if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
-                check_stochastic_crossover.delay(stock.id)
-                check_macd_crossover.delay(stock.id)             
+                slack_message_sender(text=f"Stock ID {stock.id}")
+                chain = check_stochastic_crossover.s(stock.id) | check_macd_crossover.delay.s(stock.id)
+                chain()
 
 @shared_task(queue="medium")
 def todays_movement_stocks_add_on_sideways():
