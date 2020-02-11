@@ -5,7 +5,7 @@ from django.dispatch import receiver
 from datetime import datetime
 from market_analysis.tasks.day_trading_tasks import order_on_macd_verification, find_pdhl_stocks, take_entry_for_long_short
 from rest_framework.authtoken.models import Token
-from market_analysis.tasks.tasks import slack_message_sender
+from market_analysis.tasks.notification_tasks import slack_message_sender
 # Code Below
 
 @receiver(post_save, sender=User)

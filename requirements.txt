@@ -3,6 +3,7 @@ amqp==2.5.1
 appnope==0.1.0
 async-timeout==3.0.1
 attrs==19.3.0
+Babel==2.8.0
 backcall==0.1.0
 beautifulsoup4==4.8.2
 billiard==3.6.1.0
@@ -19,7 +20,6 @@ defusedxml==0.6.0
 Django==2.2.5
 django-celery-beat==1.5.0
 django-celery-results==1.1.2
-django-celerybeat-status==0.0.10
 django-extensions==2.2.5
 django-filter==2.2.0
 django-redis==4.10.0
@@ -28,6 +28,7 @@ djangorestframework==3.11.0
 entrypoints==0.3
 ephem==3.7.7.0
 Faker==0.9.1
+flower==0.9.3
 future==0.17.1
 idna==2.8
 importlib-metadata==0.23
@@ -93,7 +94,7 @@ ta==0.4.5
 terminado==0.8.2
 testpath==0.4.2
 text-unidecode==1.2
-tornado==6.0.3
+tornado==5.1.1
 traitlets==4.3.3
 upstox==2.0.0
 urllib3==1.25.3

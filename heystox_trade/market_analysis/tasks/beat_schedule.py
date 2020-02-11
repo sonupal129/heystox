@@ -2,17 +2,7 @@ from celery.schedules import crontab
 from heystox_trade.celery import app
 
 
-
-tasks = {
-    # "add_function": {
-    #     "task": "market_analysis.tasks.tasks.add",
-    #     "schedule": crontab(day_of_week="1-5", minute="*/1"),
-    # },
-
-}
-
-
-misc = {
+misc_tasks = {
     "delete_stocks_candles": {
         "task": "market_analysis.tasks.misc.delete_stocks_candles",
         "schedule": crontab(day_of_month=1, hour=5, minute=5),
@@ -45,9 +35,10 @@ users_tasks = {
 
 
 stock_data_import_tasks = {
-    "update_stocks_data": {
-        "task": "market_analysis.tasks.stock_data_import_tasks.update_stocks_data",
+    "update_create_stocks_data": {
+        "task": "market_analysis.tasks.stock_data_import_tasks.update_create_stocks_data",
         "schedule": crontab(day_of_week="1-5", hour=19, minute=0),
+        "kwargs": {"index": "NSE_EQ"}
     },
     "update_stocks_candle_data": {
         "task": "market_analysis.tasks.stock_data_import_tasks.update_stocks_candle_data",
@@ -65,8 +56,8 @@ stock_data_import_tasks = {
         "task": "market_analysis.tasks.stock_data_import_tasks.update_symbols_closing_opening_price",
         "schedule": crontab(day_of_week="1-5", hour=23, minute=55),
     },
-    "import_daily_losers_gainers_caller": {
-        "task": "market_analysis.tasks.stock_data_import_tasks.import_daily_losers_gainers_caller",
+    "import_daily_losers_gainers": {
+        "task": "market_analysis.tasks.stock_data_import_tasks.import_daily_losers_gainers",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/2"),
     },
     "import_premarket_stocks_data": {
@@ -117,5 +108,5 @@ day_trading_tasks = {
 # CRON JOB SCHEDULES
 
 app.conf.beat_schedule = {
-    **tasks, **misc, **users_tasks, **stock_data_import_tasks, **day_trading_tasks
+    **misc_tasks, **users_tasks, **stock_data_import_tasks, **day_trading_tasks
 }

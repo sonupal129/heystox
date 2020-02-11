@@ -1,51 +1,25 @@
 from market_analysis.models import SortedStocksList, Indicator, StrategyTimestamp, Symbol
 from datetime import datetime, timedelta
-from .trading_indicator import get_macd_data, get_stochastic_data
-from market_analysis.tasks.tasks import slack_message_sender
+from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
+from ta.momentum import stoch, stoch_signal
+import numpy as np
+from market_analysis.tasks.notification_tasks import slack_message_sender
+from celery import shared_task
 # Start code below
 
-def is_stocks_ohl():
-    sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
-    ohl_indicator = Indicator.objects.get(name="OHL")
-    for stock in sorted_stocks:
-        indi = StrategyTimestamp.objects.filter(indicator__name="OHL", timestamp__date=datetime.now().date(), stock=stock)
-        if stock.symbol.is_stock_ohl() == stock.entry_type:
-            if indi.count() == 0:
-                StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
-            elif indi.count() >= 1:
-                indi.exclude(pk=indi.order_by("timestamp").first().pk).delete() 
-        else:
-            if indi.count() >= 0:
-                indi.delete()
-
-
-def is_stocks_pdhl(obj_id):
-    stock = SortedStocksList.objects.get(created_at__date=datetime.now().date(), id=obj_id)
-    pdhl_indicator = Indicator.objects.get(name="PDHL")
-    if stock.symbol.is_stock_pdhl() == stock.entry_type:
-        pdhl, is_created = StrategyTimestamp.objects.get_or_create(indicator=pdhl_indicator, stock=stock)
-        pdhl.timestamp = datetime.now()
-        pdhl.save()
-
-
-def entry_for_long_short(obj_id):
-    stock = SortedStocksList.objects.get(created_at__date=datetime.now().date(), id=obj_id)
-    long_short_entry = Indicator.objects.get(name="LONGSHORT")
-    if stock.symbol.has_entry_for_long_short() == stock.entry_type:
-        long_short, is_created = StrategyTimestamp.objects.get_or_create(indicator=long_short_entry, stock=stock)
-        long_short.timestamp = datetime.now()
-        long_short.save()
-    else:
-        StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp__date=datetime.now().date()).delete()
-
-
+@shared_task(queue="high")
 def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     """This function find crossover between macd and macd signal and return signal as buy or sell"""
     slack_message_sender(text=f"Sorted Stock ID in MACD {sorted_stock_id}")
     macd_indicator = Indicator.objects.get(name="MACD")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = datetime.today().date()
-    df = get_macd_data(sorted_stock.symbol)
+    df = sorted_stock.symbol.get_stock_live_data()
+    df["macd"] = macd(df.close_price)
+    df["macd_signal"] = macd_signal(df.close_price)
+    df["macd_diff"] = macd_diff(df.close_price)
+    df["percentage"] = round(df.macd * df.macd_diff /100, 6)
+    df["signal"] = np.where(df.macd < df.macd_signal, "SELL", "BUY")
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     df = df.loc[df["date"] > str(today_date)]
@@ -78,15 +52,21 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
                 stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date)
                 stamp.diff=crossover_signal.macd_diff
                 stamp.save()
-            return crossover_signal
+            return "Crossover Signal Found"
 
 
+@shared_task(queue="high")
 def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     slack_message_sender(text=f"Sorted Stock ID in Stochastic {sorted_stock_id}")
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")
-    sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = datetime.today().date()
-    df = get_stochastic_data(sorted_stock.symbol)
+    sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
+    df = sorted_stock.symbol.get_stock_live_data()
+    df["stoch"] = stoch(high=df.high_price, close=df.close_price, low=df.low_price)
+    df["stoch_signal"] = stoch_signal(high=df.high_price, close=df.close_price, low=df.low_price)
+    df["stoch_diff"] = df.stoch - df.stoch_signal
+    df["percentage"] = round(df.stoch * (df.stoch - df.stoch_signal) /100, 6)
+    df["signal"] = np.where(df.stoch < df.stoch_signal, "SELL", "BUY")
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "BUY"), "signal"] = "BUY_CROSSOVER"
     df.loc[(df["signal"] != df["signal"].shift()) & (df["signal"] == "SELL"), "signal"] = "SELL_CROSSOVER"
     df = df.loc[df["date"] > str(today_date)]
@@ -119,4 +99,4 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
                 stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=stoch_indicator, timestamp=crossover_signal.date)
                 stamp.diff = crossover_signal.stoch_diff
                 stamp.save()
-            return crossover_signal
+            return "Crossover Signal Found"

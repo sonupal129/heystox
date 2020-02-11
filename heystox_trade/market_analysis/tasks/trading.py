@@ -1,10 +1,33 @@
 from upstox_api.api import *
-from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList
+from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList, UserProfile
 from datetime import datetime, timedelta
 from django.db.models import Max, Min
 from django.core.cache import cache
-from market_analysis.tasks.tasks import slack_message_sender
+from .notification_tasks import slack_message_sender
+from celery import shared_task
 # Codes Starts Below
+
+def get_upstox_user(email):
+    profile = None
+    try:
+        user = UserProfile.objects.get(user__email=email)
+    except UserProfile.DoesNotExist:
+        return f"user with {email} not found in system"
+    profile = None
+    try:
+        profile = user.get_upstox_user().get_profile()
+    except:
+        profile = None
+    while profile is None:
+        try:
+            profile = user.get_upstox_user().get_profile()
+        except:
+            slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
+            time.sleep(58)
+    return user.get_upstox_user()
+
+
+
 def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
     liquid_stocks_id = get_liquid_stocks(trade_volume=trade_volume, max_price=max_price).values_list("id", flat=True)
     if cached:
@@ -35,6 +58,7 @@ def get_stocks_for_trading(stocks, date=datetime.now().date()):
     else:
         return None
     
+@shared_task(queue="high")
 def add_today_movement_stocks(movement_percent:float=1.2):
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
@@ -63,6 +87,7 @@ def add_today_movement_stocks(movement_percent:float=1.2):
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
 
+
 # Market Sideways Functions - Need To Work More on below functions
 def find_sideways_direction():
     nifty_50 = Symbol.objects.get(symbol="nifty_50")
@@ -81,6 +106,7 @@ def find_sideways_direction():
         elif nifty_low_variation > -30:
             return nifty_low_variation
  
+@shared_task(queue="high")
 def add_stock_on_market_sideways():
     date = datetime.now().date()
     nifty_50_point = find_sideways_direction()

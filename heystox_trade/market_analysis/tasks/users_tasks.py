@@ -2,7 +2,7 @@ from django.core.cache import cache
 from django.contrib.auth.models import User
 from market_analysis.models import Earning, UserProfile
 from datetime import timedelta, datetime
-from market_analysis.tasks.tasks import slack_message_sender
+from market_analysis.tasks.notification_tasks import slack_message_sender
 from celery import shared_task
 
 # START CODE BELOW
@@ -35,6 +35,7 @@ def stop_trading_on_profit_loss():
         elif current_balance > expected_profit:
             user_profile.for_trade = False
         user_profile.save()
+    return "Trading Data Updated"
 
 @shared_task(queue="default")
 def authenticate_users_in_morning():
