@@ -58,7 +58,7 @@ stock_data_import_tasks = {
     },
     "import_daily_losers_gainers": {
         "task": "market_analysis.tasks.stock_data_import_tasks.import_daily_losers_gainers",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/2"),
+        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
     },
     "import_premarket_stocks_data": {
         "task": "market_analysis.tasks.stock_data_import_tasks.import_premarket_stocks_data",

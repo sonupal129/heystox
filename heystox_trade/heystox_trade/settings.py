@@ -193,12 +193,11 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_BACKEND = 'redis'
 CELERY_IMPORTS = ('market_analysis.tasks')
-CELERY_DEFAULT_QUEUE = "default"
-CELERYBEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_DEFAULT_QUEUE = "low_priority"
 CELERY_QUEUES = (
-    Queue("default"),
-    Queue("medium"),
-    Queue("high"),
+    Queue("low_priority"),
+    Queue("medium_priority"),
+    Queue("high_priority"),
 )
 CELERY_CACHE_BACKEND = "redis"
 
