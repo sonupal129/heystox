@@ -5,6 +5,9 @@ from ta.momentum import stoch, stoch_signal
 import numpy as np
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from celery import shared_task
+
+
+from celery.contrib import rdb
 # Start code below
 
 @shared_task(queue="debug")
@@ -31,6 +34,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             last_crossover = new_df[new_df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         last_crossover = None
+    rdb.set_trace()
     if last_crossover is not None:
         # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
         # slack_message_sender.delay(text=f"Last Crossover MACD {sorted_stock.symbol.symbol}    " + str(last_crossover))
@@ -49,6 +53,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             except:
                 stamp = None
             if not stamp:
+                rdb.set_trace()
                 stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date)
                 stamp.diff=crossover_signal.macd_diff
                 stamp.save()
