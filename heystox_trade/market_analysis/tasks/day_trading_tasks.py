@@ -51,7 +51,7 @@ def todays_movement_stocks_add():
         return "Function Called"
     return "Function Not Called"
 
-@shared_task(queue="debug") 
+@shared_task(queue="high") 
 def find_ohl_stocks():
     current_time = datetime.now().time()
     start_time = time(9,25)
@@ -71,7 +71,7 @@ def find_ohl_stocks():
         return "OHL Updated"
     return "OHL Not Updated"
 
-@shared_task(queue="default")
+@shared_task(queue="high")
 def find_pdhl_stocks(obj_id):
     stock = SortedStocksList.objects.get(created_at__date=datetime.now().date(), id=obj_id)
     pdhl_indicator = Indicator.objects.get(name="PDHL")
@@ -80,7 +80,7 @@ def find_pdhl_stocks(obj_id):
         pdhl.timestamp = datetime.now()
         pdhl.save()
 
-@shared_task(queue="default")
+@shared_task(queue="low")
 def take_entry_for_long_short(obj_id):
     stock = SortedStocksList.objects.get(created_at__date=datetime.now().date(), id=obj_id)
     long_short_entry = Indicator.objects.get(name="LONGSHORT")
@@ -129,7 +129,7 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
     return "Data Not Cached"
 
 
-@shared_task(queue="medium")
+@shared_task(queue="low")
 def create_market_hour_candles():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
@@ -138,7 +138,7 @@ def create_market_hour_candles():
     # Now Create Nifty 50 Candle
     fetch_candles_data(symbol="nifty_50", days=0)
 
-@shared_task(queue="high")
+@shared_task(queue="low")
 def delete_last_cached_candles_data():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     redis_cache = cache
@@ -156,7 +156,7 @@ def create_stocks_realtime_candle():
         cache_candles_data.delay(stock_name=stock.symbol) #By default one minute is set
     return "All Candles data cached"
 
-@shared_task(queue="medium")
+@shared_task(queue="low")
 def create_nifty_50_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     # upstox_user.get_master_contract("NSE_INDEX")
@@ -172,7 +172,7 @@ def create_stocks_realtime_candle_fuction_caller():
     return "All Data Cached"
 
 
-@shared_task(queue="default")
+@shared_task(queue="low")
 def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to work more on current entry price
     macd_timestamp = StrategyTimestamp.objects.get(pk=macd_stamp_id)
     stoch_timestamp = StrategyTimestamp.objects.get(pk=stochastic_stamp_id)
@@ -184,17 +184,17 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
         slack_message_sender.delay(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}", channel="#random")
 
 
-@shared_task(queue="default")
+@shared_task(queue="high")
 def find_update_macd_stochastic_crossover_in_stocks():
     stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
     if stocks:
         for stock in stocks:
             if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
-                slack_message_sender(text=f"Stock ID {stock.id}")
+                # slack_message_sender(text=f"Stock ID {stock.id}")
                 get_stochastic_crossover.s(stock.id).delay()
                 get_macd_crossover.s(stock.id).delay()
 
-@shared_task(queue="medium")
+@shared_task(queue="default")
 def todays_movement_stocks_add_on_sideways():
     current_time = datetime.now().time()
     start_time = time(9,25)

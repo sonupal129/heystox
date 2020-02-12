@@ -106,7 +106,7 @@ def find_sideways_direction():
         elif nifty_low_variation > -30:
             return nifty_low_variation
  
-@shared_task(queue="high")
+@shared_task(queue="medium")
 def add_stock_on_market_sideways():
     date = datetime.now().date()
     nifty_50_point = find_sideways_direction()
