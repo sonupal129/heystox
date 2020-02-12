@@ -58,7 +58,7 @@ def get_stocks_for_trading(stocks, date=datetime.now().date()):
     else:
         return None
     
-@shared_task(queue="high")
+@shared_task
 def add_today_movement_stocks(movement_percent:float=1.2):
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
@@ -106,7 +106,7 @@ def find_sideways_direction():
         elif nifty_low_variation > -30:
             return nifty_low_variation
  
-@shared_task(queue="high")
+@shared_task
 def add_stock_on_market_sideways():
     date = datetime.now().date()
     nifty_50_point = find_sideways_direction()

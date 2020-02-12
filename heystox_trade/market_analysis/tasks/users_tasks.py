@@ -7,21 +7,21 @@ from celery import shared_task
 
 # START CODE BELOW
 
-@shared_task(queue="default")
+@shared_task
 def update_initial_balance():
     """This function will run on 1st of every month and update balance of user"""
     user_profiles = UserProfile.objects.filter(for_trade=True).prefetch_related("bank")
     for user_profile in user_profiles:
         user_profile.update_initial_balance()
 
-@shared_task(queue="default")
+@shared_task
 def update_current_earning_balance():
     """This function will update daily earnings and current balance of user"""
     user_profiles = UserProfile.objects.filter(for_trade=True).prefetch_related("bank")
     for user_profile in user_profiles:
         user_profile.update_current_earning_balance()
 
-@shared_task(queue="default")
+@shared_task
 def stop_trading_on_profit_loss():
     """This Function will run in every morning to check if user is in loss or in profit then stop trading accordingly"""
     user_profiles = UserProfile.objects.filter(for_trade=True).prefetch_related("bank")
@@ -37,7 +37,7 @@ def stop_trading_on_profit_loss():
         user_profile.save()
     return "Trading Data Updated"
 
-@shared_task(queue="default")
+@shared_task
 def authenticate_users_in_morning():
     user_profiles = UserProfile.objects.filter(for_trade=True)
     for user_profile in user_profiles:
