@@ -9,6 +9,9 @@ from celery import shared_task
 from .trading import *
 from .intraday_functions_strategies import *
 
+from celery.contrib import rdb
+
+
 # CODE STARTS BELOW
 
 @shared_task(queue="default")
@@ -50,7 +53,7 @@ def todays_movement_stocks_add():
         return "Function Called"
     return "Function Not Called"
 
-@shared_task(queue="medium")
+@shared_task(queue="debug")
 def find_ohl_stocks():
     current_time = datetime.now().time()
     start_time = time(9,25)
@@ -59,9 +62,11 @@ def find_ohl_stocks():
         ohl_indicator = Indicator.objects.get(name="OHL")
         for stock in sorted_stocks:
             indi = StrategyTimestamp.objects.filter(indicator__name="OHL", timestamp__date=datetime.now().date(), stock=stock)
+            rdb.set_trace()
             if stock.symbol.is_stock_ohl() == stock.entry_type:
                 if indi.count() == 0:
                     StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
+                    rdb.set_trace()
                 elif indi.count() >= 1:
                     indi.exclude(pk=indi.order_by("timestamp").first().pk).delete() 
             else:
