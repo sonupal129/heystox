@@ -30,7 +30,7 @@ def update_create_stocks_data(index:str, max_share_price:int=300, upstox_user_em
     Symbol.objects.bulk_create(bulk_symbol)
     return "All Stocks Data Updated Sucessfully"
 
-@shared_task(queue="medium")
+@shared_task(queue="default")
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_email="sonupal129@gmail.com"):
     end_date = datetime.now().date()
     user = get_upstox_user(email=upstox_user_email)
@@ -76,7 +76,7 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_emai
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 
-@shared_task(queue="low")
+@shared_task(queue="default")
 def update_stocks_candle_data(days=0):
     """Update all stocks candles data after trading day"""
     qs = Symbol.objects.all()

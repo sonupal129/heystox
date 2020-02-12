@@ -3,7 +3,7 @@ import slack
 from heystox_trade import settings
 # Code Starts Below
 
-@shared_task(queue="low")
+@shared_task(queue="default")
 def slack_message_sender(channel='#heystox', text='Message', attachments=None):
     """Send Slack notification to user"""
     if not settings.DEBUG:
