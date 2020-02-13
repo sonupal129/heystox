@@ -1,6 +1,6 @@
 
 from datetime import datetime, timedelta, time
-from django.core.cache import cache
+from django.core.cache import cache, caches
 from celery.schedules import crontab
 from upstox_api.api import *
 from django.contrib.auth.models import User
@@ -34,6 +34,7 @@ def update_create_stocks_data(index:str, max_share_price:int=300, upstox_user_em
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_email="sonupal129@gmail.com"):
     end_date = datetime.now().date()
     user = get_upstox_user(email=upstox_user_email)
+    redis_cache = caches["redis"]
     interval_dic = {
         "5 Minute": OHLCInterval.Minute_5,
         "10 Minute": OHLCInterval.Minute_10,
@@ -73,14 +74,14 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_emai
                                         high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),
                                         symbol=stock, candle_type="M5"))
     Candle.objects.bulk_create(bulk_candle_data)
+    symbol.get_stock_live_data(cached=False)
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 
 @shared_task(queue="high_priority")
 def update_stocks_candle_data(days=0):
     """Update all stocks candles data after trading day"""
-    qs = Symbol.objects.all()
-    for q in qs:
+    for q in Symbol.objects.all():
         fetch_candles_data.s(symbol=q.symbol, days=days).delay()
     return "All Stocks Candle Data Imported Successfully"
 
@@ -88,8 +89,7 @@ def update_stocks_candle_data(days=0):
 @shared_task(queue="low_priority")
 def update_stocks_volume():
     """Update total traded volume in stock"""
-    stocks = Symbol.objects.exclude(exchange__name="NSE_INDEX")
-    for stock in stocks:
+    for stock in Symbol.objects.exclude(exchange__name="NSE_INDEX"):
         volume = stock.get_stock_data().aggregate(Sum("volume"))
         if volume.get("volume__sum"):
             stock.last_day_vtt = volume.get("volume__sum")
@@ -99,7 +99,7 @@ def update_stocks_volume():
 @shared_task(queue="low_priority")    
 def update_nifty_50_price_data():
     nifty = Symbol.objects.get(symbol="nifty_50", exchange__name="NSE_INDEX")
-    todays_candles = nifty.get_stock_data(days=0)
+    todays_candles = nifty.get_stock_data(days=0, cached=False)
     if todays_candles:
         nifty.last_day_closing_price = nifty.get_day_closing_price()
         nifty.last_day_opening_price = nifty.get_day_opening_price()
@@ -109,9 +109,8 @@ def update_nifty_50_price_data():
 @shared_task(queue="low_priority")
 def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
-    symbols = Symbol.objects.exclude(exchange__name="NSE_INDEX")
     updated_stocks = []
-    for symbol in symbols:
+    for symbol in Symbol.objects.exclude(exchange__name="NSE_INDEX"):
         if symbol.get_stock_data(days=0):
             symbol.last_day_closing_price = symbol.get_day_closing_price()
             symbol.last_day_opening_price = symbol.get_day_opening_price()
@@ -135,7 +134,7 @@ def import_premarket_stocks_data():
     market_date_url = "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/pomMktStatus.jsp"
     today_date = datetime.today().date()
     web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS)
-    market_trading_date = datetime.strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%b-%Y").date()
+    market_trading_date = datetime.strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%m-%Y").date()
     if market_trading_date == today_date:
         for sector, url in urls.items():
             response = requests.get(url, headers=settings.NSE_HEADERS)

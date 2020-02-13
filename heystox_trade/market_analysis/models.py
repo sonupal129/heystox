@@ -60,18 +60,15 @@ class Symbol(models.Model):
 
     def is_stock_ohl(self, date=datetime.now().date(), candle_type="M5"):
         """Find Stock falls in open high low strategy"""
-        candles = self.get_stock_data(days=0, end_date=date).values()
-        if candles:
-            df = pd.DataFrame(list(candles))
-            first_candle_price = df.loc[[0], ["open_price", "high_price", "low_price", "close_price"]]
-            current_candle_price = df.loc[:, ["open_price", "high_price", "low_price", "close_price"]]
-            if float(first_candle_price.open_price) == float(max(current_candle_price.max().values)):
-                return "SELL"
-            elif float(first_candle_price.open_price) == float(min(current_candle_price.min().values)):
-                return "BUY"
-            else:
-                return None
-        return None
+        stock_open_price = self.get_day_opening_price()
+        stock_high_price = self.get_days_high_low_price(price_type="HIGH")
+        stock_low_price = self.get_days_high_low_price(price_type="LOW")
+        if stock_open_price == stock_high_price:
+            return "SELL"
+        elif stock_open_price == stock_low_price:
+            return "BUY"
+        else:
+            return None
     
     def is_stock_pdhl(self, date=datetime.now().date(), candle_type="M5"):
         """Finds stocks is fall under previous day high low conditions"""
@@ -92,9 +89,9 @@ class Symbol(models.Model):
     def get_days_high_low_price(self, start_date=None, end_date=datetime.now().date(), price_type="HIGH", candle_type="M5"):
         start_date = start_date or end_date
         if start_date == end_date:
-            candles = Candle.objects.filter(symbol=self, candle_type=candle_type, date__date=start_date)
+            candles = self.get_stock_data(days=0)
         else:
-            candles = Candle.objects.filter(symbol=self, candle_type=candle_type, date__range=[start_date, end_date + timedelta(1)])
+            candles = self.get_stock_data(days=(end_date - start_date).days)
         if price_type == "HIGH":
             return candles.aggregate(Max("high_price")).get("high_price__max")
         elif price_type == "LOW":
@@ -117,7 +114,14 @@ class Symbol(models.Model):
         if stock_data:
             return stock_data.first().open_price or None
 
-    def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5"):
+    def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5", cached=True):
+        cache_id = str(end_date) + "_stock_data_" + self.symbol
+        redis_cache = caches["redis"]
+        if not cached or redis_cache.get(cache_id):
+            candles = Candle.objects.filter(candle_type=candle_type, date__range=[end_date - timedelta(5), end_date + timedelta(1)], symbol=self)
+            redis_cache.set(cache_id, candles)
+        else:
+            candles = redis_cache.get(cache_id)
         day_count = None
         if days or days == 0:
             day_count = days
@@ -125,9 +129,9 @@ class Symbol(models.Model):
             day_count = self.get_last_trading_day_count(end_date)
         if day_count > 0:
             start_date = end_date - timedelta(day_count)               
-            candles = Candle.objects.filter(candle_type=candle_type, date__range=[start_date, end_date + timedelta(1)], symbol=self)
+            candles = candles.filter(candle_type=candle_type, date__range=[start_date, end_date + timedelta(1)], symbol=self)
         else:
-            candles = Candle.objects.filter(candle_type=candle_type, date__date=end_date, symbol=self)
+            candles = candles.filter(candle_type=candle_type, date__date=end_date, symbol=self)
         return candles
 
     def get_day_closing_price(self, date=datetime.now().date()):
@@ -182,18 +186,25 @@ class Symbol(models.Model):
         }
         return df_ticker
       
-    def get_stock_live_data(self):
-        stock_data = self.get_stock_data()
+    def get_stock_live_data(self, cached=True):
+        today_date = datetime.today().date()
+        cache_id = str(today_date) + "_stock_live_data_" + self.symbol
+        redis_cache = caches["redis"]
+        if not cached:
+            stock_data = self.get_stock_data(cached=False)
+            df = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
+            redis_cache.set(cache_id, df)
+        else:
+            df = redis_cache.get(cache_id)
         try:
             current_candle_data = self.get_stock_current_candle()
         except:
             current_candle_data = None
-        df1 = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
         if current_candle_data:
             df2 = pd.DataFrame(current_candle_data, index=[0])
-            df = pd.concat([df1, df2], ignore_index=True)
+            df = pd.concat([df, df2], ignore_index=True)
             return df
-        return df1
+        return df
 
     def get_stock_movement(self, date=datetime.now().date()):    
         """Return Movement of stock in %"""

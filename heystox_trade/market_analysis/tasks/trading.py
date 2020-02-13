@@ -2,7 +2,7 @@ from upstox_api.api import *
 from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList, UserProfile
 from datetime import datetime, timedelta
 from django.db.models import Max, Min
-from django.core.cache import cache
+from django.core.cache import cache, caches
 from .notification_tasks import slack_message_sender
 from celery import shared_task
 # Codes Starts Below
@@ -46,8 +46,9 @@ def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
     stocks = select_stocks_for_trading(min_price, max_price)
     return stocks.filter(last_day_vtt__gte=trade_volume)
 
-def get_stocks_for_trading(stocks, date=datetime.now().date()):
+def get_stocks_for_trading(date=datetime.now().date()):
     f"""Get stocks whose movement is greater or lower then"""
+    stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     if nifty_50 == "BUY":
         stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
@@ -60,32 +61,35 @@ def get_stocks_for_trading(stocks, date=datetime.now().date()):
     
 @shared_task(queue="high_priority")
 def add_today_movement_stocks(movement_percent:float=1.2):
-    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
-    stocks_for_trading = get_stocks_for_trading(stocks=liquid_stocks)
-    sorted_stocks_name = []
+    # sorted_stocks_name = []
     today_date = datetime.today().date()
     movement_on_entry = {
         "BUY" : 1.2,
         "SELL": -1.2,
     }
     if nifty_50 == "BUY" or nifty_50 == "SELL":
-        for stock in stocks_for_trading:
+        for stock in get_stocks_for_trading():
             try:
                 obj, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50,created_at__date=today_date)
-                sorted_stocks_name.append(obj.symbol.symbol)
+                # sorted_stocks_name.append(obj.symbol.symbol)
             except:
                 continue
         # slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date)
+    redis_cache = caches["redis"]
+    cached_stocks = []
     if sorted_stocks:
         deleted_stocks = []
         for stock in sorted_stocks:
             if stock.created_at <= datetime.now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all():
-                deleted_stocks.append(stock.symbol.symbol)
+                deleted_stocks.append(stock)
                 stock.delete()
+            else:
+                cached_stocks.append(stock)
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
+        redis_cache.set("todays_sorted_stocks", cached_stocks)
 
 
 # Market Sideways Functions - Need To Work More on below functions

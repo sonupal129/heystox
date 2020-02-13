@@ -51,38 +51,38 @@ def todays_movement_stocks_add():
         return "Function Called"
     return "Function Not Called"
 
-@shared_task(queue="medium_priority") 
+@shared_task(queue="low_priority") 
 def find_ohl_stocks():
+    redis_cache = caches["redis"]
     current_time = datetime.now().time()
     start_time = time(9,25)
     if current_time > start_time:
-        sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
-        ohl_indicator = Indicator.objects.get(name="OHL")
-        for stock in sorted_stocks:
-            indi = StrategyTimestamp.objects.filter(indicator__name="OHL", timestamp__date=datetime.now().date(), stock=stock)
-            if stock.symbol.is_stock_ohl() == stock.entry_type:
-                if indi.count() == 0:
-                    StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
-                elif indi.count() > 1:
-                    indi.exclude(pk=indi.order_by("timestamp").first().pk).delete() 
-            else:
-                if indi.count() > 0:
-                    indi.delete()
-        return "OHL Updated"
+        sorted_stocks = redis_cache.get("todays_sorted_stocks")
+        if sorted_stocks:
+            ohl_indicator = Indicator.objects.get(name="OHL")
+            for stock in sorted_stocks:
+                symbol = stock.symbol
+                timestamps = StrategyTimestamp.objects.filter(indicator__name="OHL", timestamp__date=datetime.now().date(), stock__symbol=stock)
+                if symbol.is_stock_ohl() == stock.entry_type and not timestamps.exists():
+                        StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
+                else:
+                    if timestamps.count() > 0:
+                        timestamps.delete()
+            return "OHL Updated"
     return "OHL Not Updated"
 
-@shared_task(queue="medium_priority")
+@shared_task(queue="low_priority")
 def find_pdhl_stocks(obj_id):
-    stock = SortedStocksList.objects.get(created_at__date=datetime.now().date(), id=obj_id)
+    stock = SortedStocksList.objects.get(id=obj_id)
     pdhl_indicator = Indicator.objects.get(name="PDHL")
     if stock.symbol.is_stock_pdhl() == stock.entry_type:
         pdhl, is_created = StrategyTimestamp.objects.get_or_create(indicator=pdhl_indicator, stock=stock)
         pdhl.timestamp = datetime.now()
         pdhl.save()
 
-@shared_task(queue="medium_priority")
+@shared_task(queue="low_priority")
 def take_entry_for_long_short(obj_id):
-    stock = SortedStocksList.objects.get(created_at__date=datetime.now().date(), id=obj_id)
+    stock = SortedStocksList.objects.get(id=obj_id)
     long_short_entry = Indicator.objects.get(name="LONGSHORT")
     if stock.symbol.has_entry_for_long_short() == stock.entry_type:
         long_short, is_created = StrategyTimestamp.objects.get_or_create(indicator=long_short_entry, stock=stock)
@@ -132,17 +132,15 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
 @shared_task(queue="high_priority")
 def create_market_hour_candles():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
-    for stock in liquid_stocks:
+    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()):
         fetch_candles_data.apply_async(kwargs={"symbol":stock.symbol, "days":0}) # By Defautl Fetching 5 Minute Candle
     # Now Create Nifty 50 Candle
     fetch_candles_data(symbol="nifty_50", days=0)
 
 @shared_task(queue="medium_priority")
 def delete_last_cached_candles_data():
-    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     redis_cache = cache
-    for stock in liquid_stocks:
+    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()):
         redis_cache.delete(stock.symbol)
     redis_cache.delete("nifty_50")
     return "All Cached Candles Deleted Successfully"
@@ -150,9 +148,8 @@ def delete_last_cached_candles_data():
 @shared_task(queue="medium_priority")
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     # upstox_user.get_master_contract("NSE_EQ")
-    for stock in liquid_stocks:
+    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()):
         cache_candles_data.apply_async(kwargs={"stock_name":stock.symbol}) #By default one minute is set
     return "All Candles data cached"
 
@@ -186,13 +183,12 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
 
 @shared_task(queue="high_priority")
 def find_update_macd_stochastic_crossover_in_stocks():
-    stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
-    if stocks:
-        for stock in stocks:
-            if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
-                # slack_message_sender(text=f"Stock ID {stock.id}")
-                get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-                get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+    redis_cache = caches["redis"]
+    for stock in redis_cache.get("todays_sorted_stocks"):
+        if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
+            # slack_message_sender(text=f"Stock ID {stock.id}")
+            get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+            get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
 
 @shared_task(queue="medium_priority")
 def todays_movement_stocks_add_on_sideways():

@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.views.generic import ListView, View, TemplateView
 from market_analysis.filters import SymbolFilters, SortedStocksFilter
-# from heystox_intraday.select_stocks_for_trading import get_cached_liquid_stocks
+from market_analysis.tasks.trading import get_cached_liquid_stocks
 from django.core.exceptions import ImproperlyConfigured
 from market_analysis.view_mixins import BasePermissionMixin
 from .forms import UserLoginRegisterForm

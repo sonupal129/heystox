@@ -7,7 +7,7 @@ from market_analysis.tasks.notification_tasks import slack_message_sender
 from celery import shared_task
 # Start code below
 
-@shared_task(queue="medium_priority")
+@shared_task(queue="low_priority")
 def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     """This function find crossover between macd and macd signal and return signal as buy or sell"""
     # slack_message_sender(text=f"Sorted Stock ID in MACD {sorted_stock_id}")

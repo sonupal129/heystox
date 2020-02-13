@@ -163,7 +163,7 @@ CACHES = {
     "redis": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://localhost:6379",
-        'TIMEOUT': None,
+        'TIMEOUT': 330,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         },
@@ -194,6 +194,7 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_BACKEND = 'redis'
 CELERY_IMPORTS = ('market_analysis.tasks')
 CELERY_DEFAULT_QUEUE = "low_priority"
+
 CELERY_QUEUES = (
     Queue("low_priority"),
     Queue("medium_priority"),
