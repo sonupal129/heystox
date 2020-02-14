@@ -152,8 +152,15 @@ day_trading_tasks = {
             'expires': 10*60,
         }
     },
-    "create_stocks_realtime_candle_fuction_caller": {
-        "task": "market_analysis.tasks.day_trading_tasks.create_stocks_realtime_candle_fuction_caller",
+    "create_stocks_realtime_candle": {
+        "task": "market_analysis.tasks.day_trading_tasks.create_stocks_realtime_candle",
+        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
+        'options': {
+            'expires': 10*60,
+        }
+    },
+    "create_nifty_50_realtime_candle": {
+        "task": "market_analysis.tasks.day_trading_tasks.create_nifty_50_realtime_candle",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
         'options': {
             'expires': 10*60,

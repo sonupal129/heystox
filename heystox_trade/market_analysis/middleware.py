@@ -1,5 +1,6 @@
 from django.http import HttpResponseRedirect
 from django.conf import settings
+from .tasks.notification_tasks import slack_message_sender
 #  CODE 
 
 class UserAuthRequired(object):
@@ -12,3 +13,4 @@ class UserAuthRequired(object):
             return HttpResponseRedirect(settings.LOGIN_URL)
         response = self.get_response(request)
         return response
+

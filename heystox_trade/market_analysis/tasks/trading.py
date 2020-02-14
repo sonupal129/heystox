@@ -1,6 +1,6 @@
 from upstox_api.api import *
 from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList, UserProfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from django.db.models import Max, Min
 from django.core.cache import cache, caches
 from .notification_tasks import slack_message_sender

@@ -45,7 +45,6 @@ def get_access_token_from_upstox(request):
             user_profile.credential.save()
             upstox_user = Upstox(user_profile.credential.api_key, access_token)
             cache.set(request.user.email + "_upstox_login_user", upstox_user)
-            master_contracts = MasterContract.objects.values()
             return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
         except SystemError:
             return redirect("market_analysis_urls:upstox-login")

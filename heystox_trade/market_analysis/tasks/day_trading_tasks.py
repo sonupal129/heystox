@@ -62,7 +62,7 @@ def find_ohl_stocks():
             ohl_indicator = Indicator.objects.get(name="OHL")
             for stock in sorted_stocks:
                 symbol = stock.symbol
-                timestamps = StrategyTimestamp.objects.filter(indicator__name="OHL", timestamp__date=datetime.now().date(), stock__symbol=stock)
+                timestamps = StrategyTimestamp.objects.filter(indicator__name="OHL", timestamp__date=datetime.now().date(), stock=stock)
                 if symbol.is_stock_ohl() == stock.entry_type and not timestamps.exists():
                         StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
                 else:
@@ -148,7 +148,7 @@ def delete_last_cached_candles_data():
 @shared_task(queue="medium_priority")
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    # upstox_user.get_master_contract("NSE_EQ")
+    # upstox_user.get_master_contract("NSE_EQ") 
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()):
         cache_candles_data.apply_async(kwargs={"stock_name":stock.symbol}) #By default one minute is set
     return "All Candles data cached"
@@ -159,14 +159,6 @@ def create_nifty_50_realtime_candle():
     # upstox_user.get_master_contract("NSE_INDEX")
     cache_candles_data.delay(stock_name="nifty_50")
     return f"nifty_50 Data Cached Successfully"
-
-@shared_task(queue="medium_priority")
-def create_stocks_realtime_candle_fuction_caller():
-    # Now Call Nifty 50 Function to Create Candle
-    create_nifty_50_realtime_candle.apply_async()
-    # Now Call Rest of Stocks Function to Create Candle
-    create_stocks_realtime_candle.apply_async()
-    return "All Data Cached"
 
 
 @shared_task(queue="low_priority")
