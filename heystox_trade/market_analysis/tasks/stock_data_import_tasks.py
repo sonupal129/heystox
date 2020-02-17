@@ -34,7 +34,6 @@ def update_create_stocks_data(index:str, max_share_price:int=300, upstox_user_em
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_email="sonupal129@gmail.com"):
     end_date = datetime.now().date()
     user = get_upstox_user(email=upstox_user_email)
-    redis_cache = caches["redis"]
     interval_dic = {
         "5 Minute": OHLCInterval.Minute_5,
         "10 Minute": OHLCInterval.Minute_10,

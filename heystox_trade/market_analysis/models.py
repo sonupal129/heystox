@@ -116,7 +116,7 @@ class Symbol(models.Model):
 
     def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5", cached=True):
         cache_id = str(end_date) + "_stock_data_" + self.symbol
-        redis_cache = caches["redis"]
+        redis_cache = cache
         if not cached or not redis_cache.get(cache_id):
             candles = Candle.objects.filter(candle_type=candle_type, date__range=[end_date - timedelta(5), end_date + timedelta(1)], symbol=self)
             redis_cache.set(cache_id, candles, 300)
@@ -189,7 +189,7 @@ class Symbol(models.Model):
     def get_stock_live_data(self, is_cache=True):
         today_date = datetime.today().date()
         cache_id = str(today_date) + "_stock_live_data_" + self.symbol
-        redis_cache = caches["redis"]
+        redis_cache = cache
         if is_cache:
             df = redis_cache.get(cache_id)
         else:

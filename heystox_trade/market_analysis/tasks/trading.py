@@ -77,7 +77,7 @@ def add_today_movement_stocks(movement_percent:float=1.2):
                 continue
         # slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date)
-    redis_cache = caches["redis"]
+    redis_cache = cache
     cached_stocks = []
     if sorted_stocks:
         deleted_stocks = []

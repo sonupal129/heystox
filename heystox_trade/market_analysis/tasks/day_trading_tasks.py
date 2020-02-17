@@ -53,7 +53,7 @@ def todays_movement_stocks_add():
 
 @shared_task(queue="low_priority") 
 def find_ohl_stocks():
-    redis_cache = caches["redis"]
+    redis_cache = cache
     current_time = datetime.now().time()
     start_time = time(9,25)
     if current_time > start_time:
@@ -178,7 +178,7 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
 
 @shared_task(queue="high_priority")
 def find_update_macd_stochastic_crossover_in_stocks():
-    redis_cache = caches["redis"]
+    redis_cache = cache
     for stock in redis_cache.get("todays_sorted_stocks"):
         if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
             # slack_message_sender(text=f"Stock ID {stock.id}")
