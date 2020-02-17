@@ -117,13 +117,13 @@ class Symbol(models.Model):
     def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5", cached=True):
         cache_id = str(end_date) + "_stock_data_" + self.symbol
         redis_cache = caches["redis"]
-        if not cached or redis_cache.get(cache_id):
+        if not cached or not redis_cache.get(cache_id):
             candles = Candle.objects.filter(candle_type=candle_type, date__range=[end_date - timedelta(5), end_date + timedelta(1)], symbol=self)
-            redis_cache.set(cache_id, candles)
+            redis_cache.set(cache_id, candles, 300)
         else:
             candles = redis_cache.get(cache_id)
         day_count = None
-        if days or days == 0:
+        if days == 0:
             day_count = days
         else:
             day_count = self.get_last_trading_day_count(end_date)
@@ -186,25 +186,26 @@ class Symbol(models.Model):
         }
         return df_ticker
       
-    def get_stock_live_data(self, cached=True):
+    def get_stock_live_data(self, is_cache=True):
         today_date = datetime.today().date()
         cache_id = str(today_date) + "_stock_live_data_" + self.symbol
         redis_cache = caches["redis"]
-        if not cached:
-            stock_data = self.get_stock_data(cached=False)
-            df = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
-            redis_cache.set(cache_id, df)
-        else:
+        if is_cache:
             df = redis_cache.get(cache_id)
+        else:
+            stock_data = self.get_stock_data(cached=is_cache)
+            df = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
+            redis_cache.set(cache_id, df, 300)
         try:
             current_candle_data = self.get_stock_current_candle()
         except:
             current_candle_data = None
-        if current_candle_data:
-            df2 = pd.DataFrame(current_candle_data, index=[0])
-            df = pd.concat([df, df2], ignore_index=True)
+        if df is not None:
+            if current_candle_data:
+                df2 = pd.DataFrame(current_candle_data, index=[0])
+                df = pd.concat([df, df2], ignore_index=True)
+                return df
             return df
-        return df
 
     def get_stock_movement(self, date=datetime.now().date()):    
         """Return Movement of stock in %"""

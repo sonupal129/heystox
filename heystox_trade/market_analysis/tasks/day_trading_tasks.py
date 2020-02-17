@@ -62,12 +62,15 @@ def find_ohl_stocks():
             ohl_indicator = Indicator.objects.get(name="OHL")
             for stock in sorted_stocks:
                 symbol = stock.symbol
-                timestamps = StrategyTimestamp.objects.filter(indicator__name="OHL", timestamp__date=datetime.now().date(), stock=stock)
-                if symbol.is_stock_ohl() == stock.entry_type and not timestamps.exists():
+                timestamps = stock.timestamps.filter(indicator=ohl_indicator)
+                ohl_condition = symbol.is_stock_ohl()
+                if ohl_condition:
+                    if ohl_condition == stock.entry_type and not timestamps.exists():
                         StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
-                else:
-                    if timestamps.count() > 0:
+                    elif ohl_condition != stock.entry_type and timestamps.exists():
                         timestamps.delete()
+                    elif timestamps.count() >= 1:
+                        timestamps.exclude(id=timestamps.first().id).delete()
             return "OHL Updated"
     return "OHL Not Updated"
 
@@ -170,7 +173,7 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
         entry_price = stock_current_candle.get("open_price")
         macd_timestamp.stock.entry_price = entry_price
         macd_timestamp.stock.save()
-        slack_message_sender.delay(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol}", channel="#random")
+        slack_message_sender.delay(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol} Entry Type {macd.stock.symbol.entry_type}", channel="#random")
 
 
 @shared_task(queue="high_priority")

@@ -92,7 +92,7 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             crossover_signal = None
         if crossover_signal is not None and last_crossover is not None:
             try:
-                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=stoch_indicator, timestamp=[crossover_signal.date - timedelta(minutes=5), crossover_signal.date])
+                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=stoch_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=5), crossover_signal.date])
             except:
                 stamp = None
             if not stamp:

@@ -85,29 +85,29 @@ WSGI_APPLICATION = 'heystox_trade.wsgi.application'
 # Use ssh -i heystox_makki -L 9211:localhost:5432 heystox@139.59.90.114 for tunneling with remote data
 # heystox_makki = ssh key, 9211 is local machine port, 5432 is server machine psql port, then user then ip address
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-#         'NAME': 'heystox',                      # Or path to database file if using sqlite3.
-#         'USER': 'heystox',                      # Not used with sqlite3.
-#         'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
-#         'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
-#         'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': 'heystox',                      # Or path to database file if using sqlite3.
+        'USER': 'heystox',                      # Not used with sqlite3.
+        'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
+        'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
+    }
+}
 
 # Local Data Base
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'testdb',
-        'USER': 'testdb',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'testdb',
+#         'USER': 'testdb',
+#         'PASSWORD': '123456',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
 
 
 
@@ -211,11 +211,11 @@ SLACK_TOKEN = 'xoxp-792096669381-779313280690-793468872963-37b278cd3fab65d3d0b16
 SLACK_WEBHOOK = "https://hooks.slack.com/services/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"
 
 # LOGIN URL
-LOGIN_URL = "/admin/login/"
+LOGIN_URL = "/login/"
 # LOGIN_REDIRECT_URL = "/dashboard/sorted-stocks/"
 
 # LOGIN Redirect Exempted Url
-LOGIN_REDIRECT_EXEMPTED_URLS = [LOGIN_URL, "/login/"]
+LOGIN_REDIRECT_EXEMPTED_URLS = [LOGIN_URL, "/admin/login/"]
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [

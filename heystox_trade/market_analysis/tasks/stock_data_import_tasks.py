@@ -74,7 +74,7 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_emai
                                         high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),
                                         symbol=stock, candle_type="M5"))
     Candle.objects.bulk_create(bulk_candle_data)
-    stock.get_stock_live_data(cached=False)
+    stock.get_stock_live_data(is_cache=False)
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 

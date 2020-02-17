@@ -15,6 +15,7 @@ from django.core.exceptions import ImproperlyConfigured
 from market_analysis.view_mixins import BasePermissionMixin
 from .forms import UserLoginRegisterForm
 from django.contrib.auth import authenticate, login
+from .mixins import GroupRequiredMixins
 # Create your views here.
 
 @login_required
@@ -75,9 +76,24 @@ class LiveStockDataView(View):
         template = self.get_template()
         return render(request, template, context)
 
-class SortedStocksDashBoardView(BasePermissionMixin, ListView):
+# class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListView):
+#     template_name = "sorted_stocks_dashboard.html"
+#     context_object_name = "symbols"
+#     group_required = ["trader"]
+
+#     def get_queryset(self):
+#         date = self.request.GET.get("created_at")
+#         if date:
+#             requested_date = datetime.strptime(date, "%Y-%m-%d").date()
+#             filters = SortedStocksList.objects.filter(created_at__date=requested_date).order_by("symbol__symbol")
+#             return filters
+#         return SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+
+
+class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListView):
     template_name = "sorted_stocks_dashboard.html"
     context_object_name = "symbols"
+    group_required = ["trader"]
 
     def get_queryset(self):
         date = self.request.GET.get("created_at")
