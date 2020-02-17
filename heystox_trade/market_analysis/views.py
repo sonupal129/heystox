@@ -2,7 +2,7 @@
 from django.core.cache import cache, caches
 from django.shortcuts import redirect, render, get_object_or_404, resolve_url
 from django.http import HttpResponse
-from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol
+from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol, StrategyTimestamp
 from datetime import datetime, timedelta
 from upstox_api.api import *
 from heystox_trade import settings
@@ -99,9 +99,26 @@ class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListVi
         date = self.request.GET.get("created_at")
         if date:
             requested_date = datetime.strptime(date, "%Y-%m-%d").date()
-            filters = SortedStocksList.objects.filter(created_at__date=requested_date).order_by("symbol__symbol")
-            return filters
-        return SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+            # filtered_qs = SortedStocksList.objects.filter(created_at__date=requested_date)
+            timestamps = StrategyTimestamp.objects.filter(timestamp__date=requested_date, indicator__name="MACD")
+        else:
+            # filtered_qs = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+            timestamps = StrategyTimestamp.objects.filter(timestamp__date=datetime.now().date(), indicator__name="MACD")
+        sorted_stock_id = []
+        
+        if self.request.GET.get("sara"):
+            return SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+                   
+        for stamp in timestamps:
+            if stamp.is_last_timestamp():
+                try:
+                    secondlast_timestamp = stamp.stock.get_second_last_timestamp()
+                except:
+                    secondlast_timestamp = None
+                if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
+                    if stamp.timestamp - secondlast_timestamp.timestamp < timedelta(minutes=50):
+                        sorted_stock_id.append(stamp.stock.id)
+        return SortedStocksList.objects.filter(id__in=sorted_stock_id)
 
 
 class UserLoginRegisterView(LoginView):

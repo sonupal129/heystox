@@ -173,7 +173,7 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
         entry_price = stock_current_candle.get("open_price")
         macd_timestamp.stock.entry_price = entry_price
         macd_timestamp.stock.save()
-        slack_message_sender.delay(text=f"{entry_price} Signal {macd.stock.entry_type} Stock Name {macd.stock.symbol.symbol} Entry Type {macd.stock.symbol.entry_type}", channel="#random")
+        slack_message_sender.delay(text=f"{entry_price} Signal {macd_timestamp.stock.entry_type} Stock Name {macd_timestamp.stock.symbol.symbol} Time {macd_timestamp.timestamp.time()}", channel="#random")
 
 
 @shared_task(queue="high_priority")

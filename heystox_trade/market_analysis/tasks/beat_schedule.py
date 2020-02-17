@@ -8,14 +8,14 @@ from datetime import datetime
 misc_tasks = {
     "delete_stocks_candles": {
         "task": "market_analysis.tasks.misc.delete_stocks_candles",
-        "schedule": crontab(day_of_month=1, hour=5, minute=5),
+        "schedule": crontab(hour=5, minute=50),
         'options': {
             'expires': 10*60,
         }
     },
     "clear_all_cache": {
         "task": "market_analysis.tasks.misc.clear_all_cache",
-        "schedule": crontab(day_of_week="2-6", hour=5, minute=55),
+        "schedule": crontab(hour=5, minute=55),
         'options': {
             'expires': 10*60,
         }

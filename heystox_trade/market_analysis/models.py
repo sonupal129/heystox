@@ -494,6 +494,3 @@ class PreMarketOrderData(models.Model):
 #     price = models.FloatField(blank=True, null=True)
 #     buy_qty = models.IntegerField(blank=True, null=True)
 #     sell_qty = models.IntegerField(blank=True, null=True)
-
-
-

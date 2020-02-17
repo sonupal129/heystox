@@ -24,12 +24,12 @@ def verify_macd_signal(instance, **kwargs):
     if instance.indicator.name == "MACD" and instance.is_last_timestamp():
         stock = instance.stock
         try:
-            stochastic_timestamp = stock.get_second_last_timestamp()
+            secondlast_timestamp = stock.get_second_last_timestamp()
         except:
-            stochastic_timestamp = None
-        if stochastic_timestamp and stochastic_timestamp.indicator.name == "STOCHASTIC":
+            secondlast_timestamp = None
+        if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
             slack_message_sender.delay(text=f"STOCHASTIC and MACD Found for Stock {instance.stock}", channel="#random")
-            order_on_macd_verification.delay(instance.id, stochastic_timestamp.id)
+            order_on_macd_verification.delay(instance.id, secondlast_timestamp.id)
 
 @receiver(post_save, sender=SortedStocksList)
 def verify_stock_pdhl_longshort(sender, instance, **kwargs):

@@ -61,3 +61,8 @@ admin.site.register(Earning)
 admin.site.register(Indicator)
 admin.site.register(SortedStocksList, SortedStocksListAdmin)
 admin.site.register(PreMarketOrderData, PreMarketOrderDataAdmin)
+
+# TEST
+
+
+# admin.site.register(StrategyTimestamp)
