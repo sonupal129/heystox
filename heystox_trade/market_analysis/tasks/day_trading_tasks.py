@@ -10,6 +10,7 @@ from .trading import *
 from .intraday_functions_strategies import *
 
 
+
 # CODE STARTS BELOW
 
 @shared_task(queue="low_priority")
