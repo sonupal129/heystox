@@ -1,7 +1,7 @@
 from upstox_api.api import *
 from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList, UserProfile
 from datetime import datetime, timedelta
-import time
+import time as sleep_time
 from django.db.models import Max, Min
 from django.core.cache import cache, caches
 from .notification_tasks import slack_message_sender
@@ -24,7 +24,7 @@ def get_upstox_user(email):
             profile = user.get_upstox_user().get_profile()
         except:
             slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
-            time.sleep(58)
+            sleep_time.sleep(58)
     return user.get_upstox_user()
 
 
