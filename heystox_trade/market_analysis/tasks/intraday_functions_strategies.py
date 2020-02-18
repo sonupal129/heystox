@@ -45,10 +45,10 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             crossover_signal = None
         if crossover_signal is not None and last_crossover is not None:
             try:
-                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=macd_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=5), crossover_signal.date]).order_by("timestamp")
+                stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=macd_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=5), crossover_signal.date]).order_by("timestamp")
             except:
                 stamp = None
-            if not stamp:
+            if not stamp.exists():
                 stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date)
                 stamp.diff=crossover_signal.macd_diff
                 stamp.save()
@@ -94,10 +94,10 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             crossover_signal = None
         if crossover_signal is not None and last_crossover is not None:
             try:
-                stamp = StrategyTimestamp.objects.get(stock=sorted_stock, indicator=stoch_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=5), crossover_signal.date]).order_by("timestamp")
+                stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=stoch_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=5), crossover_signal.date]).order_by("timestamp")
             except:
                 stamp = None
-            if not stamp:
+            if not stamp.exists():
                 stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=stoch_indicator, timestamp=crossover_signal.date)
                 stamp.diff = crossover_signal.stoch_diff
                 stamp.save()
