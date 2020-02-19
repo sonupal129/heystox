@@ -18,6 +18,8 @@ app = Celery('heystox_trade')
 
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks() # lambda: settings.INSTALLED_APPS
+app.conf.broker_transport_options = {'fanout_prefix': True}
+app.conf.broker_transport_options = {'fanout_patterns': True}
 
 # if not settings.DEBUG:
     # slack_app = Slackify(app, settings.SLACK_WEBHOOK)

@@ -190,10 +190,10 @@ class Symbol(models.Model):
         today_date = datetime.today().date()
         cache_id = str(today_date) + "_stock_live_data_" + self.symbol
         redis_cache = cache
-        if is_cache:
+        if is_cache and redis_cache.get(cache_id) is not None:
             df = redis_cache.get(cache_id)
         else:
-            stock_data = self.get_stock_data(cached=is_cache)
+            stock_data = self.get_stock_data()
             df = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
             redis_cache.set(cache_id, df, 300)
         try:

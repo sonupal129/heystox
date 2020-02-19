@@ -1,4 +1,4 @@
-
+from .notification_tasks import slack_message_sender
 from datetime import datetime, timedelta, time
 from django.core.cache import cache, caches
 from celery.schedules import crontab
@@ -73,7 +73,7 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_emai
                                         high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),
                                         symbol=stock, candle_type="M5"))
     Candle.objects.bulk_create(bulk_candle_data)
-    stock.get_stock_live_data(is_cache=False)
+    invalidate_stocks_cached_data(symbol)
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 
@@ -134,6 +134,7 @@ def import_premarket_stocks_data():
     today_date = datetime.today().date()
     web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS)
     market_trading_date = datetime.strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%m-%Y").date()
+    slack_message_sender(channel="#random", text=market_trading_date)
     if market_trading_date == today_date:
         for sector, url in urls.items():
             response = requests.get(url, headers=settings.NSE_HEADERS)
@@ -141,6 +142,7 @@ def import_premarket_stocks_data():
                 response_data = response.json().get("data")
                 bulk_data_upload = []
                 if response_data:
+                    slack_message_sender(channel="#random", text=response)
                     for data in response_data:
                         context = {}
                         symbol = Symbol.objects.get(symbol=data.get("symbol").lower())
@@ -202,3 +204,12 @@ def import_daily_losers_gainers():
                         return f"Data imported successfully! from {url}"
                     return slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")
                 return "All Urls Data Imported Succefully"
+
+
+@shared_task(queue="low_priority")
+def invalidate_stocks_cached_data(symbol:str):
+    today_date = str(datetime.today().date())
+    stock_data_id = str(today_date) + "_stock_data_" + symbol
+    stock_live_data = str(today_date) + "_stock_live_data_" + symbol
+    cache.delete(stock_data_id)
+    cache.delete(stock_live_data)
