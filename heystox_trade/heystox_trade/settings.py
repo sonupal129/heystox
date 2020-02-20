@@ -155,7 +155,7 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
         'LOCATION': os.path.dirname(os.getcwd()) + "/cache",
-        'TIMEOUT': None,
+        'TIMEOUT': 32400,
         'OPTIONS': {
             'MAX_ENTRIES': 1000
         }
@@ -185,8 +185,10 @@ NSE_HEADERS = {"Host": "www1.nseindia.com", "Cache-Control": "max-age=0", "Upgra
 UPSTOX_REDIRECT_URL = "http://127.0.0.1:8000/"
 
 # CELERY STUFF
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+# CELERY_BROKER_URL = 'redis://localhost:6379/0'
+# CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_BROKER_URL = 'amqp://localhost'
+CELERY_RESULT_BACKEND = 'amqp://localhost'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

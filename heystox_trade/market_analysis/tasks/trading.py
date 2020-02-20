@@ -30,15 +30,12 @@ def get_upstox_user(email):
 
 
 def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
-    liquid_stocks_id = get_liquid_stocks(trade_volume=trade_volume, max_price=max_price).values_list("id", flat=True)
-    if cached:
-        if cache.get(str(datetime.now().date()) + "_today_liquid_stocks"):
-            return cache.get(str(datetime.now().date()) + "_today_liquid_stocks")
-        else:
-            cache.set(str(datetime.now().date()) + "_today_liquid_stocks", liquid_stocks_id)
-            return liquid_stocks_id
-    else:
+    cache_id = str(datetime.now().date()) + "_today_liquid_stocks"
+    if not cached or not cache.get(cache_id):
+        liquid_stocks_id = get_liquid_stocks(trade_volume=trade_volume, max_price=max_price).values_list("id", flat=True)
+        cache.set(cache_id, liquid_stocks_id)
         return liquid_stocks_id
+    return cache.get(cache_id)
 
 def select_stocks_for_trading(min_price:int, max_price:int):
       return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price)).exclude(exchange__name="NSE_INDEX")
@@ -79,8 +76,8 @@ def add_today_movement_stocks(movement_percent:float=1.2):
         # slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date)
     redis_cache = cache
-    cached_stocks = []
     if sorted_stocks:
+        cached_stocks = []
         deleted_stocks = []
         for stock in sorted_stocks:
             if stock.created_at <= datetime.now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(date=today_date, movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all():
