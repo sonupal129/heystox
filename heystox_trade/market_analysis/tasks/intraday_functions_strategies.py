@@ -55,6 +55,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             elif stamp.count() > 1:
                 stamp.exclude(id=stamp.first().id).delete()
             return "Crossover Signal Found"
+        return "No Crossover signal or last_crossover found"
 
 
 @shared_task(queue="medium_priority")
@@ -104,3 +105,4 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             elif stamp.count() > 1:
                 stamp.exclude(id=stamp.first().id).delete()
             return "Crossover Signal Found"
+        return "No Crossover signal or last_crossover found"

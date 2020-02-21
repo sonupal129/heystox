@@ -73,7 +73,7 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_emai
                                         high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),
                                         symbol=stock, candle_type="M5"))
     Candle.objects.bulk_create(bulk_candle_data)
-    invalidate_stocks_cached_data(symbol)
+    invalidate_stocks_cached_data.delay(symbol)
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 
@@ -204,12 +204,14 @@ def import_daily_losers_gainers():
                         return f"Data imported successfully! from {url}"
                     return slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")
                 return "All Urls Data Imported Succefully"
+    return f"{current_time} Time is greater or lower than {start_time} {end_time}"
 
 
 @shared_task(queue="low_priority")
 def invalidate_stocks_cached_data(symbol:str):
     today_date = str(datetime.today().date())
-    stock_data_id = str(today_date) + "_stock_data_" + symbol
-    stock_live_data = str(today_date) + "_stock_live_data_" + symbol
+    stock_data_id = today_date + "_stock_data_" + symbol
+    stock_live_data_id = today_date + "_stock_live_data_" + symbol
     cache.delete(stock_data_id)
-    cache.delete(stock_live_data)
+    cache.delete(stock_live_data_id)
+    return f"cache invalidated for {stock_data_id} and {stock_live_data_id}"

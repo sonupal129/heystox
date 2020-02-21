@@ -1,11 +1,8 @@
-from market_analysis.tasks.users_tasks import *
-from market_analysis.tasks.stock_data_import_tasks import *
-from market_analysis.tasks.day_trading_tasks import *
-from market_analysis.tasks.misc_tasks import *
-from market_analysis.tasks.intraday_functions_strategies import *
-from market_analysis.tasks.notification_tasks import *
-from market_analysis.tasks.trading import *
-
-
-
-from market_analysis.tasks.beat_schedule import *
+from .beat_schedule import *
+from .day_trading_tasks import *
+from .intraday_functions_strategies import *
+from .misc_tasks import *
+from .notification_tasks import *
+from .stock_data_import_tasks import *
+from .trading import *
+from .users_tasks import *

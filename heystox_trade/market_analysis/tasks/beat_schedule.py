@@ -14,6 +14,10 @@ misc_tasks = {
         "task": "market_analysis.tasks.misc.clear_all_cache",
         "schedule": crontab(day_of_week="2-6", hour=5, minute=55),
     },
+    "add_together": {
+        "task": "market_analysis.tasks.misc.add_together",
+        "schedule": crontab(minute="*/1"),
+    }, 
 }
 
 
