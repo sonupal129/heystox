@@ -106,3 +106,4 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
                 stamp.exclude(id=stamp.first().id).delete()
             return "Crossover Signal Found"
         return "No Crossover signal or last_crossover found"
+

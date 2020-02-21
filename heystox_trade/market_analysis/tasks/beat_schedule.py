@@ -7,17 +7,17 @@ from datetime import datetime
 
 misc_tasks = {
     "delete_stocks_candles": {
-        "task": "market_analysis.tasks.misc.delete_stocks_candles",
+        "task": "market_analysis.tasks.misc_tasks.delete_stocks_candles",
         "schedule": crontab(day_of_week="2-6", hour=5, minute=50),
     },
     "clear_all_cache": {
-        "task": "market_analysis.tasks.misc.clear_all_cache",
+        "task": "market_analysis.tasks.misc_tasks.clear_all_cache",
         "schedule": crontab(day_of_week="2-6", hour=5, minute=55),
     },
-    "add_together": {
-        "task": "market_analysis.tasks.misc.add_together",
-        "schedule": crontab(minute="*/1"),
-    }, 
+    # "add_together": {
+    #     "task": "market_analysis.tasks.misc_tasks.add_together",
+    #     "schedule": crontab(minute="*/1"),
+    # },
 }
 
 

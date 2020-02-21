@@ -16,9 +16,9 @@ def clear_all_cache():
     caches["redis"].clear()
     cache.clear()
 
-@shared_task(queue="low_priority")
-def add_together():
-    return 5+6
+# @shared_task(queue="low_priority")
+# def add_together():
+#     return 5+6
 
 
 

@@ -207,3 +207,4 @@ def todays_movement_stocks_add_on_sideways():
 # def call_function_raju(run=True, run_every=5):
 #         users = User.objects.all()
 #         print(users)
+

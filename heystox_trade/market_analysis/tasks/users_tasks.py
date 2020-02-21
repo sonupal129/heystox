@@ -40,3 +40,4 @@ def authenticate_users_in_morning():
         message = "Login URL for " + user_profile.user.get_full_name() + ": " + user_profile.get_authentication_url()
         slack_message_sender.delay(text=message)
 
+
