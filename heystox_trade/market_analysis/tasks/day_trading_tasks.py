@@ -60,15 +60,14 @@ def find_ohl_stocks():
     if current_time > start_time:
         sorted_stocks = redis_cache.get("todays_sorted_stocks")
         if sorted_stocks:
-            ohl_indicator = Indicator.objects.get(name="OHL")
+            todays_timestamps = StrategyTimestamp.objects.select_related("stock", "indicator").filter(indicator__name="OHL", timestamp__date=datetime.now().date())
             for stock in sorted_stocks:
-                symbol = stock.symbol
-                timestamps = stock.timestamps.filter(indicator=ohl_indicator)
-                ohl_condition = symbol.is_stock_ohl()
+                timestamps = todays_timestamps.filter(stock=stock)
+                ohl_condition = stock.symbol.is_stock_ohl()
                 if ohl_condition:
                     if ohl_condition == stock.entry_type and not timestamps.exists():
                         StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
-                    elif ohl_condition != stock.entry_type and timestamps.exists():
+                    elif ohl_condition != stock.entry_type:
                         timestamps.delete()
                     elif timestamps.count() >= 1:
                         timestamps.exclude(id=timestamps.first().id).delete()
@@ -134,12 +133,12 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
 
 
 @shared_task(queue="high_priority")
-def create_market_hour_candles():
+def create_market_hour_candles(days, fetch_last_candle_number):
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()):
-        fetch_candles_data.apply_async(kwargs={"symbol":stock.symbol, "days":0}) # By Defautl Fetching 5 Minute Candle
+        fetch_candles_data.apply_async(kwargs={"symbol":stock.symbol, "days":days, "fetch_last_candle":fetch_last_candle_number}) # By Defautl Fetching 5 Minute Candle
     # Now Create Nifty 50 Candle
-    fetch_candles_data(symbol="nifty_50", days=0)
+    fetch_candles_data(symbol="nifty_50", days=days, fetch_last_candle=fetch_last_candle_number)
 
 @shared_task(queue="medium_priority")
 def delete_last_cached_candles_data():
@@ -152,7 +151,6 @@ def delete_last_cached_candles_data():
 @shared_task(queue="medium_priority")
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    # upstox_user.get_master_contract("NSE_EQ") 
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()):
         cache_candles_data.apply_async(kwargs={"stock_name":stock.symbol}) #By default one minute is set
     return "All Candles data cached"
@@ -160,7 +158,6 @@ def create_stocks_realtime_candle():
 @shared_task(queue="low_priority")
 def create_nifty_50_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    # upstox_user.get_master_contract("NSE_INDEX")
     cache_candles_data.delay(stock_name="nifty_50")
     return f"nifty_50 Data Cached Successfully"
 

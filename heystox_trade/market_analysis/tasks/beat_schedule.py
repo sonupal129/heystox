@@ -8,11 +8,11 @@ from datetime import datetime
 misc_tasks = {
     "delete_stocks_candles": {
         "task": "market_analysis.tasks.misc_tasks.delete_stocks_candles",
-        "schedule": crontab(day_of_week="2-6", hour=5, minute=50),
+        "schedule": crontab(hour=5, minute=50),
     },
     "clear_all_cache": {
         "task": "market_analysis.tasks.misc_tasks.clear_all_cache",
-        "schedule": crontab(day_of_week="2-6", hour=5, minute=55),
+        "schedule": crontab(hour=5, minute=55),
     },
     # "add_together": {
     #     "task": "market_analysis.tasks.misc_tasks.add_together",
@@ -91,9 +91,15 @@ day_trading_tasks = {
         "task": "market_analysis.tasks.day_trading_tasks.find_ohl_stocks",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/6"),
     },
-    "create_market_hour_candles": {
+    "create_market_hour_candles_every_five_minute": {
         "task": "market_analysis.tasks.day_trading_tasks.create_market_hour_candles",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="1-59/5"),
+        "kwargs": {"days": 0, "fetch_last_candle_number": 2},
+    },
+    "create_market_hour_candles_every_two_hour": {
+        "task": "market_analysis.tasks.day_trading_tasks.create_market_hour_candles",
+        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/118"),
+        "kwargs": {"days": 0, "fetch_last_candle_number": None},
     },
     "delete_last_cached_candles_data": {
         "task": "market_analysis.tasks.day_trading_tasks.delete_last_cached_candles_data",

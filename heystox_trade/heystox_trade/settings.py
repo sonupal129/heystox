@@ -155,9 +155,9 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
         'LOCATION': os.path.dirname(os.getcwd()) + "/cache",
-        'TIMEOUT': 32400,
+        'TIMEOUT': None,
         'OPTIONS': {
-            'MAX_ENTRIES': 1000
+            'MAX_ENTRIES': 2000
         }
     },
     "redis": {
@@ -196,6 +196,7 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_BACKEND = 'redis'
 CELERY_IMPORTS = ('market_analysis.tasks')
 CELERY_DEFAULT_QUEUE = "low_priority"
+CELERY_WORKER_POOL_RESTARTS = True
 
 CELERY_QUEUES = (
     Queue("low_priority"),

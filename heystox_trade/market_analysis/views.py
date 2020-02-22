@@ -18,6 +18,9 @@ from django.contrib.auth import authenticate, login
 from .mixins import GroupRequiredMixins
 # Create your views here.
 
+
+
+
 @login_required
 def upstox_login(request):
     if request.user:

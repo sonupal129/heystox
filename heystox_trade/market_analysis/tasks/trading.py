@@ -9,7 +9,6 @@ from celery import shared_task
 # Codes Starts Below
 
 def get_upstox_user(email):
-    profile = None
     try:
         user = UserProfile.objects.get(user__email=email)
     except UserProfile.DoesNotExist:
@@ -19,12 +18,12 @@ def get_upstox_user(email):
         profile = user.get_upstox_user().get_profile()
     except:
         profile = None
-    # while profile is None:
-    #     try:
-    #         profile = user.get_upstox_user().get_profile()
-    #     except:
-    #         slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
-    #         sleep(58)
+    while profile is None:
+        try:
+            profile = user.get_upstox_user().get_profile()
+        except:
+            slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
+            sleep(180)
     return user.get_upstox_user()
 
 
@@ -74,7 +73,7 @@ def add_today_movement_stocks(movement_percent:float=1.2):
             except:
                 continue
         # slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
-    sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date)
+    sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date).select_related("symbol").prefetch_related("timestamps")
     redis_cache = cache
     if sorted_stocks:
         cached_stocks = []

@@ -43,7 +43,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             # slack_message_sender.delay(text=f"Crossover Signal MACD {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
-        if crossover_signal is not None and last_crossover is not None:
+        if crossover_signal is not None:
             try:
                 stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=macd_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date]).order_by("timestamp")
             except:
@@ -55,7 +55,8 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             elif stamp.count() > 1:
                 stamp.exclude(id=stamp.first().id).delete()
             return "Crossover Signal Found"
-        return "No Crossover signal or last_crossover found"
+        return "Crossover Signal Not Found"
+    return "last_crossover not found"
 
 
 @shared_task(queue="medium_priority")
@@ -93,7 +94,7 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             # slack_message_sender.delay(text=f"Crossover Signal STOCHASTIC {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
-        if crossover_signal is not None and last_crossover is not None:
+        if crossover_signal is not None:
             try:
                 stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=stoch_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date]).order_by("timestamp")
             except:
@@ -105,5 +106,6 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             elif stamp.count() > 1:
                 stamp.exclude(id=stamp.first().id).delete()
             return "Crossover Signal Found"
-        return "No Crossover signal or last_crossover found"
+        return "Crossover Signal Not Found"
+    return "last_crossover not found"
 

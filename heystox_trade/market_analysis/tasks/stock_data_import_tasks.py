@@ -10,10 +10,11 @@ import requests
 from django.conf import settings
 from celery import shared_task
 from .trading import get_upstox_user
+from time import sleep
 # START CODE BELOW  
 
 @shared_task(queue="low_priority")
-def update_create_stocks_data(index:str, max_share_price:int=300, upstox_user_email="sonupal129@gmail.com"):
+def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_price:int=40, upstox_user_email="sonupal129@gmail.com"):
     """Update all stocks data after trading day"""
     user = get_upstox_user(email=upstox_user_email)
     stock_list = user.get_master_contract(index)
@@ -21,17 +22,20 @@ def update_create_stocks_data(index:str, max_share_price:int=300, upstox_user_em
     index_obj = MasterContract.objects.get(name=index)
     for stock in stock_list:
         symbol = stock_list.get(stock)
-        if symbol.token and symbol.isin:
-            try:
-                stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin)
-            except Symbol.DoesNotExist:
-                bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
-                    last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
+        if symbol.token and symbol.isin and symbol.closing_price:
+            if symbol.closing_price <= max_share_price or symbol.closing_price >= min_share_price:
+                try:
+                    stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin)
+                except Symbol.DoesNotExist:
+                    bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
+                        last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
     Symbol.objects.bulk_create(bulk_symbol)
+    Symbol.objects.filter(last_day_closing_price__lt=min_share_price).delete()
+    Symbol.objects.filter(last_day_closing_price__gt=max_share_price).delete()
     return "All Stocks Data Updated Sucessfully"
 
 @shared_task(queue="medium_priority")
-def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_email="sonupal129@gmail.com"):
+def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_email="sonupal129@gmail.com", fetch_last_candle:int=None):
     end_date = datetime.now().date()
     user = get_upstox_user(email=upstox_user_email)
     interval_dic = {
@@ -53,6 +57,9 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_emai
     user.get_master_contract(stock.exchange.name.upper())
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), candle_interval, start_date, end_date)
     bulk_candle_data = []
+    candle_counter = 0
+    if fetch_last_candle:
+        stock_data = stock_data[-fetch_last_candle:]
     for data in stock_data:
         timestamp = int(data.get("timestamp")[:10])
         open_price = float(data.get("open"))
@@ -133,11 +140,13 @@ def import_premarket_stocks_data():
     market_date_url = "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/pomMktStatus.jsp"
     today_date = datetime.today().date()
     web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS)
+    sleep(5)
     market_trading_date = datetime.strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%m-%Y").date()
     slack_message_sender(channel="#random", text=market_trading_date)
     if market_trading_date == today_date:
         for sector, url in urls.items():
             response = requests.get(url, headers=settings.NSE_HEADERS)
+            sleep(3)
             if response.status_code == 200:
                 response_data = response.json().get("data")
                 bulk_data_upload = []
@@ -159,7 +168,7 @@ def import_premarket_stocks_data():
                             pre_market_stock.change_percent = convert_price(data.get("perChn"))
                             pre_market_stock.total_trade_qty = convert_price(data.get("trdQnty"))
                             pre_market_stock.save()
-                    return "Premarket Data Saved Successfully"
+        return "Premarket Data Saved Successfully"
     return f"No Trading Day on {today_date}"
 
 @shared_task(queue="medium_priority")
@@ -183,7 +192,7 @@ def import_daily_losers_gainers():
             if "," in open_price:
                 open_price = open_price.replace(",","")
             open_price = float(open_price)
-            if open_price >= 100 and open_price <= 300 and change >= 1.2:
+            if open_price >= 100 and open_price < 300 and change >= 1.2:
                 return obj
             
         
@@ -192,8 +201,10 @@ def import_daily_losers_gainers():
             if import_urls:
                 for url in import_urls:
                     response = requests.get(url, headers=settings.NSE_HEADERS)
+                    sleep(4)
                     if response.status_code == 200:
                         responses = filter(response_filter, response.json().get("data"))
+                        sleep(1)
                         for symbol in responses:
                             try:
                                 stock = Symbol.objects.get(symbol=symbol.get("symbol").lower())
@@ -201,8 +212,8 @@ def import_daily_losers_gainers():
                                 stock = None
                             if stock:
                                 SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_movement, created_at__date=datetime.now().date())
-                        return f"Data imported successfully! from {url}"
-                    return slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")
+                    else:
+                        slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")
                 return "All Urls Data Imported Succefully"
     return f"{current_time} Time is greater or lower than {start_time} {end_time}"
 

@@ -22,7 +22,7 @@ def update_current_earning_balance():
 @shared_task(queue="low_priority")
 def stop_trading_on_profit_loss():
     """This Function will run in every morning to check if user is in loss or in profit then stop trading accordingly"""
-    for user_profile in UserProfile.objects.filter(for_trade=True).prefetch_related("bank"):
+    for user_profile in UserProfile.objects.filter(for_trade=True).select_related("bank"):
         current_balance = user_profile.bank.current_balance
         initial_balance = user_profile.bank.initial_balance
         bearable_loss = initial_balance * 80 /100
