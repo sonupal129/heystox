@@ -176,9 +176,13 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
 
 @shared_task(queue="high_priority")
 def find_update_macd_stochastic_crossover_in_stocks():
-    redis_cache = cache
+    redis_cache = cache 
+    movement_on_entry = {
+        "BUY" : 1.2,
+        "SELL": -1.2,
+    }
     for stock in redis_cache.get("todays_sorted_stocks"):
-        if (stock.symbol.is_stock_moved_good_for_trading(movement_percent=-1.2), stock.symbol.is_stock_moved_good_for_trading(movement_percent=1.2)):
+        if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
             # slack_message_sender(text=f"Stock ID {stock.id}")
             get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
             get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})

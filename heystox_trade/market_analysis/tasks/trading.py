@@ -6,6 +6,7 @@ from django.db.models import Max, Min
 from django.core.cache import cache, caches
 from .notification_tasks import slack_message_sender
 from celery import shared_task
+from .intraday_functions_strategies import get_macd_crossover, get_stochastic_crossover
 # Codes Starts Below
 
 def get_upstox_user(email):
@@ -84,6 +85,8 @@ def add_today_movement_stocks(movement_percent:float=1.2):
                 stock.delete()
             else:
                 cached_stocks.append(stock)
+                # get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id}) # Stochastic Crossover Check
+                # get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})# Macd Crossover Check
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
         redis_cache.set("todays_sorted_stocks", cached_stocks)

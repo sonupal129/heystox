@@ -1,4 +1,4 @@
-
+from market_analysis.tasks.intraday_functions_strategies import get_stochastic_crossover, get_macd_crossover
 from django.core.cache import cache, caches
 from django.shortcuts import redirect, render, get_object_or_404, resolve_url
 from django.http import HttpResponse
@@ -110,7 +110,11 @@ class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListVi
         sorted_stock_id = []
         
         if self.request.GET.get("sara"):
-            return SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+            sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+            for stock in sorted_stocks:
+                get_stochastic_crossover.delay(stock.id)
+                get_macd_crossover.delay(stock.id)
+            return sorted_stocks
                    
         for stamp in timestamps:
             if stamp.is_last_timestamp():

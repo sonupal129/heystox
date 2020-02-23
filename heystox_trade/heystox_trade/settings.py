@@ -186,9 +186,9 @@ UPSTOX_REDIRECT_URL = "http://127.0.0.1:8000/"
 
 # CELERY STUFF
 # CELERY_BROKER_URL = 'redis://localhost:6379/0'
-# CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 CELERY_BROKER_URL = 'pyamqp://guest@localhost//'
-CELERY_RESULT_BACKEND = 'pyamqp://guest@localhost//'
+# CELERY_RESULT_BACKEND = 'pyamqp://guest@localhost//'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -196,7 +196,10 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_BACKEND = 'redis'
 CELERY_IMPORTS = ('market_analysis.tasks')
 CELERY_DEFAULT_QUEUE = "low_priority"
+
+
 CELERY_WORKER_POOL_RESTARTS = True
+CELERYD_POOL_RESTARTS = True
 
 CELERY_QUEUES = (
     Queue("low_priority"),
