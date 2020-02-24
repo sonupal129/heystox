@@ -496,3 +496,18 @@ class PreMarketOrderData(models.Model):
 #     price = models.FloatField(blank=True, null=True)
 #     buy_qty = models.IntegerField(blank=True, null=True)
 #     sell_qty = models.IntegerField(blank=True, null=True)
+
+class SortedStockDashboardReport(models.Model):
+    name = models.CharField(blank=True, null=True, max_length=50)
+    entry_time = models.DateTimeField(blank=True, null=True)
+    exit_time = models.DateTimeField(blank=True, null=True)
+    entry_type = models.CharField(blank=True, null=True, max_length=10)
+    entry_price = models.FloatField(blank=True, null=True)
+    exit_price = models.FloatField(blank=True, null=True)
+    current_price = models.FloatField(blank=True, null=True)
+    pl = models.FloatField(blank=True, null=True)
+    
+    def __str__(self):
+        return self.name
+    
+    

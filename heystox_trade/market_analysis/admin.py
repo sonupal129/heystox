@@ -49,6 +49,8 @@ class PreMarketOrderDataAdmin(admin.ModelAdmin):
     list_dispaly = ["symbol__symbol", "sector", "created_at"]
     search_fields = ["symbol__symbol"]
 
+class SortedStockDashboardReportAdmin(admin.ModelAdmin):
+    list_dispaly = ["name", "entry_type", "entry_price"]
 
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
 admin.site.register(Candle, CandleAdmin)
@@ -61,7 +63,7 @@ admin.site.register(Earning)
 admin.site.register(Indicator)
 admin.site.register(SortedStocksList, SortedStocksListAdmin)
 admin.site.register(PreMarketOrderData, PreMarketOrderDataAdmin)
-
+admin.site.register(SortedStockDashboardReport, SortedStockDashboardReportAdmin)
 # TEST
 
 

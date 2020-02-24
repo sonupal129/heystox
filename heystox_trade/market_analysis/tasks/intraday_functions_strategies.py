@@ -30,8 +30,8 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
         elif sorted_stock.entry_type == "BUY":
             last_crossover = new_df[new_df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
-        last_crossover = None
-    if last_crossover is not None:
+        pass
+    if last_crossover.any():
         # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
         # slack_message_sender.delay(text=f"Last Crossover MACD {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
@@ -42,15 +42,15 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
                 crossover_signal = df_after_last_crossover.loc[(df.macd_diff >= 0.070)].iloc[0]
             # slack_message_sender.delay(text=f"Crossover Signal MACD {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
-            crossover_signal = None
-        if crossover_signal is not None:
+            pass
+        if crossover_signal.any():
             try:
-                stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=macd_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date]).order_by("timestamp")
+                stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=macd_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date + timedelta(minutes=10)]).order_by("timestamp")
             except:
                 stamp = None
             if not stamp.exists():
                 stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=macd_indicator, timestamp=crossover_signal.date)
-                stamp.diff=crossover_signal.macd_diff
+                stamp.diff = crossover_signal.macd_diff
                 stamp.save()
             elif stamp.count() > 1:
                 stamp.exclude(id=stamp.first().id).delete()
@@ -81,8 +81,8 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
         elif sorted_stock.entry_type == "BUY":
             last_crossover = new_df[new_df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
-        last_crossover = None
-    if last_crossover is not None:
+        pass
+    if last_crossover.any():
         # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
         # slack_message_sender.delay(text=f"Last Crossover STOCHASTIC {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
@@ -93,10 +93,10 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
                 crossover_signal = df_after_last_crossover.loc[(df.stoch_diff >= 22.80)].iloc[0]
             # slack_message_sender.delay(text=f"Crossover Signal STOCHASTIC {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
-            crossover_signal = None
-        if crossover_signal is not None:
+            pass
+        if crossover_signal.any():
             try:
-                stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=stoch_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date]).order_by("timestamp")
+                stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=stoch_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date + timedelta(minutes=10)]).order_by("timestamp")
             except:
                 stamp = None
             if not stamp.exists():

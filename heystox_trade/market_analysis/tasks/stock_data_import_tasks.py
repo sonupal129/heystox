@@ -88,7 +88,7 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_emai
 def update_stocks_candle_data(days=0):
     """Update all stocks candles data after trading day"""
     for q in Symbol.objects.all():
-        fetch_candles_data.s(symbol=q.symbol, days=days).delay()
+        fetch_candles_data.delay(symbol=q.symbol, days=days)
     return "All Stocks Candle Data Imported Successfully"
 
 

@@ -3,7 +3,7 @@ from django.db.models.signals import post_save
 from market_analysis.models import UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp
 from django.dispatch import receiver
 from datetime import datetime
-from market_analysis.tasks.day_trading_tasks import order_on_macd_verification, find_pdhl_stocks, take_entry_for_long_short
+from market_analysis.tasks.day_trading_tasks import order_on_macd_verification, take_entry_for_long_short, is_stock_pdhl
 from rest_framework.authtoken.models import Token
 from market_analysis.tasks.notification_tasks import slack_message_sender
 # Code Below
@@ -33,7 +33,7 @@ def verify_macd_signal(instance, **kwargs):
 
 @receiver(post_save, sender=SortedStocksList)
 def verify_stock_pdhl_longshort(sender, instance, **kwargs):
-    if instance:
-        find_pdhl_stocks.delay(instance.id)
-        take_entry_for_long_short.delay(instance.id)
+    # is_stock_pdhl.delay(instance.id)
+    # take_entry_for_long_short.delay(instance.id)
+    pass
 

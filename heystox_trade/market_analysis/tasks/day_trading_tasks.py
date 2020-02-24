@@ -4,7 +4,7 @@ from django.core.cache import cache, caches
 from upstox_api.api import *
 from django.contrib.auth.models import User
 from .notification_tasks import slack_message_sender
-from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle, Indicator)
+from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle, Indicator, SortedStockDashboardReport)
 from celery import shared_task
 from .trading import *
 from .intraday_functions_strategies import *
@@ -59,6 +59,7 @@ def find_ohl_stocks():
     start_time = time(9,25)
     if current_time > start_time:
         sorted_stocks = redis_cache.get("todays_sorted_stocks")
+        ohl_indicator = Indicator.objects.get(name="OHL")
         if sorted_stocks:
             todays_timestamps = StrategyTimestamp.objects.select_related("stock", "indicator").filter(indicator__name="OHL", timestamp__date=datetime.now().date())
             for stock in sorted_stocks:
@@ -75,19 +76,21 @@ def find_ohl_stocks():
     return "OHL Not Updated"
 
 @shared_task(queue="low_priority")
-def find_pdhl_stocks(obj_id):
+def is_stock_pdhl(obj_id):
     stock = SortedStocksList.objects.get(id=obj_id)
-    pdhl_indicator = Indicator.objects.get(name="PDHL")
     if stock.symbol.is_stock_pdhl() == stock.entry_type:
+        pdhl_indicator = Indicator.objects.get(name="PDHL")
         pdhl, is_created = StrategyTimestamp.objects.get_or_create(indicator=pdhl_indicator, stock=stock)
         pdhl.timestamp = datetime.now()
         pdhl.save()
+        return "Stamp Created"
+
 
 @shared_task(queue="low_priority")
 def take_entry_for_long_short(obj_id):
     stock = SortedStocksList.objects.get(id=obj_id)
-    long_short_entry = Indicator.objects.get(name="LONGSHORT")
     if stock.symbol.has_entry_for_long_short() == stock.entry_type:
+        long_short_entry = Indicator.objects.get(name="LONGSHORT")
         long_short, is_created = StrategyTimestamp.objects.get_or_create(indicator=long_short_entry, stock=stock)
         long_short.timestamp = datetime.now()
         long_short.save()
@@ -162,7 +165,7 @@ def create_nifty_50_realtime_candle():
     return f"nifty_50 Data Cached Successfully"
 
 
-@shared_task(queue="low_priority")
+@shared_task(queue="low_priority", autoretry_for=(Exception,), retry_kwargs={'max_retries': 2})
 def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to work more on current entry price
     macd_timestamp = StrategyTimestamp.objects.get(pk=macd_stamp_id)
     stoch_timestamp = StrategyTimestamp.objects.get(pk=stochastic_stamp_id)
@@ -172,6 +175,8 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
         macd_timestamp.stock.entry_price = entry_price
         macd_timestamp.stock.save()
         slack_message_sender.delay(text=f"{entry_price} Signal {macd_timestamp.stock.entry_type} Stock Name {macd_timestamp.stock.symbol.symbol} Time {macd_timestamp.timestamp.time()}", channel="#random")
+        obj = SortedStockDashboardReport.objects.create(name=macd_timestamp.stock.symbol.symbol,
+                entry_time=macd_timestamp.timestamp, entry_type=macd_timestamp.stock.entry_type, entry_price=entry_price)
 
 
 @shared_task(queue="high_priority")
