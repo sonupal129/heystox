@@ -1,16 +1,17 @@
 from market_analysis.serializers import UserSerializer, UserProfileSerializer, SortedStockDashboardSerializer
 from django.contrib.auth.models import User
 from rest_framework.permissions import IsAuthenticated
-from .models import UserProfile, SortedStocksList
+from .models import UserProfile, SortedStocksList, Symbol
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from rest_framework import status
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from datetime import datetime
+from django.shortcuts import get_object_or_404
 # Code Starts Below
 
 class UsersListView(APIView):
@@ -66,3 +67,12 @@ class SortedStocksListView(APIView):
             sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.today().date()).order_by("symbol__symbol")
         serializer = SortedStockDashboardSerializer(sorted_stocks, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# class LiveStockDataView(APIView):
+#     http_method_names = ["get"]
+
+#     def get(self, request, symbol_name):
+#         obj = get_object_or_404(Symbol, symbol=symbol_name)
+#         data = obj.get_stock_live_data().to_json()
+#         return HttpResponse(data, content_type = 'application/json')

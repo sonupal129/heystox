@@ -63,21 +63,6 @@ class StockDashboardView(ListView):
         filters = SymbolFilters(self.request.GET, queryset=Symbol.objects.filter(id__in=get_cached_liquid_stocks()))
         return filters
 
-class LiveStockDataView(View):
-    template_name = "stock_live_data.html"
-
-    def get_template(self):
-        if self.template_name:
-            return self.template_name
-        raise ImproperlyConfigured("Attribute template_name not found, please define attribute first")
-
-    def get(self, request, pk):
-        obj = get_object_or_404(Symbol, pk=pk)
-        context = {}
-        context["obj"] = obj
-        context["data"] = obj.get_stock_live_data().to_html()
-        template = self.get_template()
-        return render(request, template, context)
 
 # class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListView):
 #     template_name = "sorted_stocks_dashboard.html"

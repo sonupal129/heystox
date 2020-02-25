@@ -60,20 +60,21 @@ def find_ohl_stocks():
     if current_time > start_time:
         sorted_stocks = redis_cache.get("todays_sorted_stocks")
         if sorted_stocks:
-            ohl_indicator = Indicator.objects.get(name="OHL")
             todays_timestamps = StrategyTimestamp.objects.select_related("stock", "indicator").filter(indicator__name="OHL", timestamp__date=datetime.now().date())
             for stock in sorted_stocks:
                 timestamps = todays_timestamps.filter(stock=stock)
                 ohl_condition = stock.symbol.is_stock_ohl()
                 if ohl_condition:
-                    if ohl_condition == stock.entry_type and not timestamps.exists():
+                    if stock.entry_type == ohl_condition and not timestamps.exists():
+                        ohl_indicator = Indicator.objects.get(name="OHL")
                         StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=datetime.now())
-                    elif ohl_condition != stock.entry_type:
+                    elif stock.entry_type != ohl_condition:
                         timestamps.delete()
-                    elif timestamps.count() >= 1:
+                    elif timestamps.count() > 1:
                         timestamps.exclude(id=timestamps.first().id).delete()
             return "OHL Updated"
-    return "OHL Not Updated"
+        return "No Sorted Stocks Cached"
+    return f"Time {current_time} not > 9:25"
 
 @shared_task(queue="low_priority")
 def is_stock_pdhl(obj_id):
@@ -186,11 +187,16 @@ def find_update_macd_stochastic_crossover_in_stocks():
         "BUY" : 1.2,
         "SELL": -1.2,
     }
-    for stock in redis_cache.get("todays_sorted_stocks"):
-        if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
-            # slack_message_sender(text=f"Stock ID {stock.id}")
-            get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-            get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+    current_time = datetime.now().time()
+    start_time = time(9,25)
+    if current_time > start_time:
+        for stock in redis_cache.get("todays_sorted_stocks"):
+            if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
+                # slack_message_sender(text=f"Stock ID {stock.id}")
+                get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+                get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+        return "Celery request sent for stock"
+    return f"Current time {current_time} not > 9:25"
 
 @shared_task(queue="medium_priority")
 def todays_movement_stocks_add_on_sideways():

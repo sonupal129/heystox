@@ -8,7 +8,6 @@ urlpatterns = [
     path('heystox/login/', views.upstox_login, name="upstox-login"),
     path('', views.get_access_token_from_upstox, name='login-upstox-done'),
     path('dashboard/', views.StockDashboardView.as_view(), name="dashboard"),
-    path('dashboard/<int:pk>/', views.LiveStockDataView.as_view(), name="live-data"),
     path('dashboard/sorted-stocks/', views.SortedStocksDashBoardView.as_view(), name="sorted-dashboard"),
     path('login/', views.UserLoginRegisterView.as_view(), name="login-register"),
 ]
