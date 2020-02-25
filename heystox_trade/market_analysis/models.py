@@ -122,7 +122,7 @@ class Symbol(models.Model):
             candles = cached_value
         else:
             candles = Candle.objects.filter(candle_type=candle_type, date__range=[end_date - timedelta(5), end_date + timedelta(1)], symbol=self)
-            redis_cache.set(cache_id, candles, 300)
+            redis_cache.set(cache_id, candles)
         day_count = None
         if days == 0:
             day_count = days
@@ -176,13 +176,13 @@ class Symbol(models.Model):
             "close_price": current_ticker.get("close"),
             "low_price": min(data.get("low") for data in cached_data),
             "volume": sum(data.get("volume") for data in cached_data),
-            "atp": current_ticker.get("atp"),
+            # "atp": current_ticker.get("atp"),
             "total_buy_quantity": current_ticker.get("total_buy_quantity"),
             "total_sell_quantity": current_ticker.get("total_sell_quantity"),
-            "lower_circuit": current_ticker.get("lower_circuit"),
-            "upper_circuit": current_ticker.get("upper_circuit"),
-            "bids": {},
-            "asks": {},
+            # "lower_circuit": current_ticker.get("lower_circuit"),
+            # "upper_circuit": current_ticker.get("upper_circuit"),
+            # "bids": {},
+            # "asks": {},
             "date": datetime.fromtimestamp(int(current_ticker.get("timestamp")[:10]))
         }
         return df_ticker
@@ -192,22 +192,24 @@ class Symbol(models.Model):
         cache_id = str(today_date) + "_stock_live_data_" + self.symbol
         redis_cache = cache
         cached_value = redis_cache.get(cache_id)
-        if is_cache and cached_value is not None:
-            df = cached_value
+        if is_cache and cached_value != None:
+            df = pd.read_json(cached_value)
         else:
-            stock_data = self.get_stock_data()
-            df = pd.DataFrame(list(stock_data.values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")))
-            redis_cache.set(cache_id, df, 300)
+            stock_data = self.get_stock_data().values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
+            df = pd.DataFrame(list(stock_data))
+            redis_cache.set(cache_id, df.to_json())
         try:
             current_candle_data = self.get_stock_current_candle()
         except:
             current_candle_data = None
-        if df is not None:
-            if current_candle_data:
-                df2 = pd.DataFrame(current_candle_data, index=[0])
-                df = pd.concat([df, df2], ignore_index=True)
-                return df
+        if df is not None and current_candle_data != None:
+            df2 = pd.DataFrame(current_candle_data, index=[0])
+            df1 = pd.concat([df, df2], ignore_index=True, sort=False)
+            return df1
+        elif df is not None and current_candle_data == None:
             return df
+        else:
+            return "No Data Frame Available"
 
     def get_stock_movement(self, date=datetime.now().date()):    
         """Return Movement of stock in %"""

@@ -31,7 +31,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             last_crossover = new_df[new_df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         pass
-    if last_crossover.any():
+    if last_crossover.to_json():
         # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
         # slack_message_sender.delay(text=f"Last Crossover MACD {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
@@ -43,7 +43,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             # slack_message_sender.delay(text=f"Crossover Signal MACD {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             pass
-        if crossover_signal.any():
+        if crossover_signal.to_json():
             try:
                 stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=macd_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date + timedelta(minutes=10)]).order_by("timestamp")
             except:
@@ -82,7 +82,7 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             last_crossover = new_df[new_df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         pass
-    if last_crossover.any():
+    if last_crossover.to_json():
         # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
         # slack_message_sender.delay(text=f"Last Crossover STOCHASTIC {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
@@ -94,7 +94,7 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             # slack_message_sender.delay(text=f"Crossover Signal STOCHASTIC {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             pass
-        if crossover_signal.any():
+        if crossover_signal.to_json():
             try:
                 stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=stoch_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date + timedelta(minutes=10)]).order_by("timestamp")
             except:

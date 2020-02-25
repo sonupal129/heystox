@@ -16,8 +16,8 @@ from .intraday_functions_strategies import *
 @shared_task(queue="low_priority")
 def subscribe_today_trading_stocks():
     """Fetch todays liquid stocks from cache then register those stock for live feed"""
-    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
-    message = "Today's Subscribed Stocks:\n" + "| ".join(stock.symbol.upper() for stock in liquid_stocks)
+    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True)
+    message = "Today's Subscribed Stocks:\n" + "| ".join(stock.upper() for stock in liquid_stocks)
     slack_message_sender.delay(text=message)
     # upstox_user = get_upstox_user("sonupal129@gmail.com")
     # upstox_user.set_on_quote_update(parse_stock_response_data)
@@ -32,8 +32,8 @@ def subscribe_today_trading_stocks():
 
 @shared_task(queue="low_priority")
 def unsubscribe_today_trading_stocks():
-    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
-    message = "Stocks Unsubscribed for Today:\n" + "| ".join(stock.symbol.upper() for stock in liquid_stocks)
+    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True)
+    message = "Stocks Unsubscribed for Today:\n" + "| ".join(stock.upper() for stock in liquid_stocks)
     slack_message_sender.delay(text=message)
     # upstox_user = get_upstox_user("sonupal129@gmail.com")
     # upstox_user.get_master_contract("NSE_EQ")
@@ -59,8 +59,8 @@ def find_ohl_stocks():
     start_time = time(9,25)
     if current_time > start_time:
         sorted_stocks = redis_cache.get("todays_sorted_stocks")
-        ohl_indicator = Indicator.objects.get(name="OHL")
         if sorted_stocks:
+            ohl_indicator = Indicator.objects.get(name="OHL")
             todays_timestamps = StrategyTimestamp.objects.select_related("stock", "indicator").filter(indicator__name="OHL", timestamp__date=datetime.now().date())
             for stock in sorted_stocks:
                 timestamps = todays_timestamps.filter(stock=stock)
@@ -138,24 +138,24 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
 @shared_task(queue="high_priority")
 def create_market_hour_candles(days, fetch_last_candle_number):
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()):
-        fetch_candles_data.apply_async(kwargs={"symbol":stock.symbol, "days":days, "fetch_last_candle":fetch_last_candle_number}) # By Defautl Fetching 5 Minute Candle
+    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
+        fetch_candles_data.apply_async(kwargs={"symbol":stock, "days":days, "fetch_last_candle":fetch_last_candle_number}) # By Defautl Fetching 5 Minute Candle
     # Now Create Nifty 50 Candle
     fetch_candles_data(symbol="nifty_50", days=days, fetch_last_candle=fetch_last_candle_number)
 
 @shared_task(queue="medium_priority")
 def delete_last_cached_candles_data():
     redis_cache = cache
-    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()):
-        redis_cache.delete(stock.symbol)
+    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
+        redis_cache.delete(stock)
     redis_cache.delete("nifty_50")
     return "All Cached Candles Deleted Successfully"
 
 @shared_task(queue="medium_priority")
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()):
-        cache_candles_data.apply_async(kwargs={"stock_name":stock.symbol}) #By default one minute is set
+    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
+        cache_candles_data.apply_async(kwargs={"stock_name":stock}) #By default one minute is set
     return "All Candles data cached"
 
 @shared_task(queue="low_priority")

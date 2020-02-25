@@ -30,8 +30,8 @@ def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_pri
                     bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
                         last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
     Symbol.objects.bulk_create(bulk_symbol)
-    Symbol.objects.filter(last_day_closing_price__lt=min_share_price).delete()
-    Symbol.objects.filter(last_day_closing_price__gt=max_share_price).delete()
+    Symbol.objects.filter(last_day_closing_price__lt=min_share_price, exchange__name="NSE_EQ").delete()
+    Symbol.objects.filter(last_day_closing_price__gt=max_share_price, exchange__name="NSE_EQ").delete()
     return "All Stocks Data Updated Sucessfully"
 
 @shared_task(queue="medium_priority")
