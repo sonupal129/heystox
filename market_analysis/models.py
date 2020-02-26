@@ -1,27 +1,30 @@
 from django.db import models
 from django.contrib.postgres.fields import JSONField
-from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db.models import Max, Min
 import pandas as pd
 from django.contrib.auth.models import User
 from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
 from ta.momentum import stoch, stoch_signal
-from django.core.cache import cache, caches
 from upstox_api.api import *
-from heystox_trade import settings
+from django.conf import settings
 from django.core.cache import caches, cache
 # Create your models here.
 
-class MasterContract(models.Model):
-    name = models.CharField(max_length=50)
+class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now=True, editable=False)
     modified_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    class Meta:
+        abstract = True
+
+class MasterContract(BaseModel):
+    name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.name
 
-class Symbol(models.Model):
+class Symbol(BaseModel):
     exchange = models.ForeignKey(MasterContract, related_name="symbols", on_delete=models.DO_NOTHING)
     token = models.IntegerField(blank=True, null=True)
     symbol = models.CharField(max_length=100)
@@ -35,8 +38,6 @@ class Symbol(models.Model):
     vtt = models.IntegerField("Total Traded Volume", blank=True, null=True)
     total_buy_quantity = models.IntegerField("Total Buy Quantity", blank=True, null=True)
     total_sell_quantity = models.IntegerField("Total Sell Quantity", blank=True, null=True)
-    created_at = models.DateTimeField(auto_now=True, editable=False)
-    modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
         return self.symbol
@@ -72,8 +73,7 @@ class Symbol(models.Model):
     
     def is_stock_pdhl(self, date=datetime.now().date(), candle_type="M5"):
         """Finds stocks is fall under previous day high low conditions"""
-        candles = self.get_stock_data(end_date=date).values()
-        df = pd.DataFrame(list(candles))
+        df = self.get_stock_live_data()
         previous_trading_day = date - timedelta(self.get_last_trading_day_count(date))
         last_day_candles = df[(df["date"].dt.date.astype(str) == previous_trading_day.strftime("%Y-%m-%d"))]
         last_day_closing_price = float(last_day_candles.iloc[[-1]].close_price)
@@ -206,10 +206,7 @@ class Symbol(models.Model):
             df2 = pd.DataFrame(current_candle_data, index=[0])
             df1 = pd.concat([df, df2], ignore_index=True, sort=False)
             return df1
-        elif df is not None and current_candle_data == None:
-            return df
-        else:
-            return "No Data Frame Available"
+        return df
 
     def get_stock_movement(self, date=datetime.now().date()):    
         """Return Movement of stock in %"""
@@ -249,7 +246,7 @@ class CandleManager(models.Manager):
             return self.get_queryset.get_by_candle_type(candle_type, date__gte=date)
         return self.get_queryset().get_by_candle_type(candle_type)
 
-class Candle(models.Model):
+class Candle(BaseModel):
     candle_type_choice = {
         ("M5", "5 Minute"),
         ("M10", "10 Minute"),
@@ -272,21 +269,17 @@ class Candle(models.Model):
     bids = JSONField(default=dict)
     asks = JSONField(default=dict)
     date = models.DateTimeField()
-    created_at = models.DateTimeField(auto_now=True, editable=False)
-    modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     objects = CandleManager()
 
     def __str__(self):
         return self.symbol.symbol
 
-class UserProfile(models.Model):
+class UserProfile(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="user_profile")
     mobile = models.IntegerField(blank=True, null=True)
     bearable_loss = models.IntegerField("Bearable loss in percent", blank=True, null=False, default=0)
     expected_profit = models.IntegerField("Expected profit in percent", blank=True, null=False, default=0)
-    created_at = models.DateTimeField(auto_now=True, editable=False)
-    modified_at = models.DateTimeField(auto_now_add=True, editable=False)
     for_trade = models.BooleanField(default=False)
     subscribed_historical_api = models.BooleanField(default=False)
     subscribed_live_api = models.BooleanField(default=False)
@@ -341,25 +334,21 @@ class UserProfile(models.Model):
             login_url = session.get_login_url()
             return login_url
 
-class BankDetail(models.Model):
+class BankDetail(BaseModel):
     user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name="bank")
     bank_name = models.CharField(max_length=200)
     bank_account_number = models.CharField(max_length=50)
     initial_balance = models.DecimalField(decimal_places=2, max_digits=10, help_text='Initial balance at the starting of month')
     current_balance = models.DecimalField(decimal_places=2, max_digits=10)
-    created_at = models.DateTimeField(auto_now=True, editable=False)
-    modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
         return "{} | {}".format(self.user_profile.__str__(), self.bank_name)
 
-class Credentials(models.Model):
+class Credentials(BaseModel):
     user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name="credential", null=True)
     api_key = models.CharField(max_length=150, null=True, blank=True)
     secret_key = models.CharField(max_length=150, null=True, blank=True)
     access_token = models.CharField(max_length=200, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now=True, editable=False)
-    modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     class Meta:
         verbose_name_plural = "Credentials"
@@ -367,13 +356,11 @@ class Credentials(models.Model):
     def __str__(self):
         return str(self.user_profile)
 
-class Earning(models.Model):
+class Earning(BaseModel):
     user = models.ForeignKey(UserProfile, on_delete=models.PROTECT, related_name="earnings", null=True)
     date = models.DateField()
     opening_balance = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     profit_loss = models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Profit & Loss', null=True, blank=True)
-    created_at = models.DateTimeField(auto_now=True, editable=False)
-    modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
         return "{} | {}".format(self.user.user.get_full_name(), self.date)
@@ -384,7 +371,7 @@ class Earning(models.Model):
                 self.opening_balance = self.user.bank.current_balance
         super().save(*args, **kwargs)
 
-class SortedStocksList(models.Model):
+class SortedStocksList(BaseModel):
     entry_choices = {
         ("BUY", "BUY"),
         ("SELL", "SELL"),
@@ -392,11 +379,9 @@ class SortedStocksList(models.Model):
         ("SS", "SIDEWAYS_SELL"),
     }
 
-    symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE)
+    symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="sorted_stocks")
     entry_price = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     entry_type = models.CharField(max_length=20, choices=entry_choices, default="BUY")
-    created_at = models.DateTimeField(auto_now=True, editable=False)
-    modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
         return "{} | {}".format(self.symbol.__str__(), self.created_at.date())
@@ -413,18 +398,16 @@ class SortedStocksList(models.Model):
     def get_indicator_timestamp(self, indicator_name=None):
         return self.timestamps.filter(indicator__name=indicator_name).order_by("timestamp").last() or None
 
-class Indicator(models.Model):
+class Indicator(BaseModel):
     name = models.CharField(max_length=50)
     description = models.TextField(null=True, blank=True)
     value = models.IntegerField()
-    created_at = models.DateTimeField(auto_now=True, editable=False)
-    modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
         return self.name
 
 
-class StrategyTimestamp(models.Model):
+class StrategyTimestamp(BaseModel):
     stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE, related_name="timestamps")
     indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE)
     timestamp = models.DateTimeField()
@@ -447,7 +430,7 @@ class MarketHolidayManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().order_by("date")
 
-class MarketHoliday(models.Model):
+class MarketHoliday(BaseModel):
     type_of_holiday = {
         ("PU", "Public Holiday"),
     }
@@ -467,7 +450,7 @@ class MarketHoliday(models.Model):
     #     return False
 
 
-class PreMarketOrderData(models.Model):
+class PreMarketOrderData(BaseModel):
     sector_choices = {
         ("NFTYBNK", "Nifty Bank"),
         ("NFTY", "Nifty")
@@ -484,14 +467,12 @@ class PreMarketOrderData(models.Model):
     total_buy_qty = models.IntegerField(blank=True, null=True)
     total_sell_qty = models.IntegerField(blank=True, null=True)
     total_trade_qty = models.IntegerField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now=True, editable=False)
-    modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
         return self.symbol.symbol + " | " + str(self.created_at.date())
 
 
-# class PreMarketSymbolOrderBook(models.Model):
+# class PreMarketSymbolOrderBook(BaseModel):
 #     created_at = models.DateTimeField(auto_now=True, editable=False)
 #     modified_at = models.DateTimeField(auto_now_add=True, editable=False)
 #     symbol = models.ForeignKey(PreMarketSymbol, on_delete=models.CASCADE, related_name="order_book")
@@ -499,7 +480,7 @@ class PreMarketOrderData(models.Model):
 #     buy_qty = models.IntegerField(blank=True, null=True)
 #     sell_qty = models.IntegerField(blank=True, null=True)
 
-class SortedStockDashboardReport(models.Model):
+class SortedStockDashboardReport(BaseModel):
     name = models.CharField(blank=True, null=True, max_length=50)
     entry_time = models.DateTimeField(blank=True, null=True)
     exit_time = models.DateTimeField(blank=True, null=True)

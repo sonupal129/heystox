@@ -10,9 +10,8 @@ from market_analysis.tasks.notification_tasks import slack_message_sender
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, created, **kwargs):
-    if created:
-        user_profile = UserProfile.objects.get_or_create(user=instance)
-        Token.objects.get_or_create(user=instance)
+    user_profile = UserProfile.objects.get_or_create(user=instance)
+    Token.objects.get_or_create(user=instance)
 
 @receiver(post_save, sender=BankDetail)
 def create_earning_object(sender, instance, update_fields, **kwargs):
