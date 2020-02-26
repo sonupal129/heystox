@@ -1,19 +1,19 @@
 from .notification_tasks import slack_message_sender
 from datetime import datetime, timedelta, time
 from django.core.cache import cache, caches
-from celery.schedules import crontab
+
 from upstox_api.api import *
 from django.contrib.auth.models import User
 from market_analysis.models import Symbol, MasterContract, Candle, PreMarketOrderData
 from django.db.models import Sum
 import requests
 from django.conf import settings
-from celery import shared_task
+from heystox_trade.celery import app as celery_app
 from .trading import get_upstox_user
 from time import sleep
 # START CODE BELOW  
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_price:int=40, upstox_user_email="sonupal129@gmail.com"):
     """Update all stocks data after trading day"""
     user = get_upstox_user(email=upstox_user_email)
@@ -34,7 +34,18 @@ def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_pri
     Symbol.objects.filter(last_day_closing_price__gt=max_share_price, exchange__name="NSE_EQ").delete()
     return "All Stocks Data Updated Sucessfully"
 
-@shared_task(queue="medium_priority")
+
+@celery_app.task(queue="low_priority")
+def invalidate_stocks_cached_data(symbol:str):
+    today_date = str(datetime.today().date())
+    stock_data_id = today_date + "_stock_data_" + symbol
+    stock_live_data_id = today_date + "_stock_live_data_" + symbol
+    cache.delete(stock_data_id)
+    cache.delete(stock_live_data_id)
+    return f"cache invalidated for {stock_data_id} and {stock_live_data_id}"
+
+
+@celery_app.task(queue="medium_priority")
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_email="sonupal129@gmail.com", fetch_last_candle:int=None):
     end_date = datetime.now().date()
     user = get_upstox_user(email=upstox_user_email)
@@ -84,7 +95,7 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, upstox_user_emai
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 
-@shared_task(queue="high_priority")
+@celery_app.task(queue="high_priority")
 def update_stocks_candle_data(days=0):
     """Update all stocks candles data after trading day"""
     for q in Symbol.objects.all():
@@ -92,7 +103,7 @@ def update_stocks_candle_data(days=0):
     return "All Stocks Candle Data Imported Successfully"
 
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def update_stocks_volume():
     """Update total traded volume in stock"""
     for stock in Symbol.objects.exclude(exchange__name="NSE_INDEX"):
@@ -102,7 +113,7 @@ def update_stocks_volume():
             stock.save(update_fields=["last_day_vtt"])
     return "All Stocks Volume Updated"
 
-@shared_task(queue="low_priority")    
+@celery_app.task(queue="low_priority")    
 def update_nifty_50_price_data():
     nifty = Symbol.objects.get(symbol="nifty_50", exchange__name="NSE_INDEX")
     todays_candles = nifty.get_stock_data(days=0, cached=False)
@@ -112,7 +123,7 @@ def update_nifty_50_price_data():
         nifty.save()
         return "Updated Nifty_50 Data"
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
     updated_stocks = []
@@ -125,7 +136,7 @@ def update_symbols_closing_opening_price():
     return "Updated Symbols Closing Price"
 
 
-@shared_task(queue="medium_priority")
+@celery_app.task(queue="medium_priority")
 def import_premarket_stocks_data():
     urls = {"NFTY": "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/nifty.json",
             "NFTYBNK": "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/niftybank.json"}
@@ -171,7 +182,7 @@ def import_premarket_stocks_data():
         return "Premarket Data Saved Successfully"
     return f"No Trading Day on {today_date}"
 
-@shared_task(queue="medium_priority")
+@celery_app.task(queue="medium_priority")
 def import_daily_losers_gainers():
     current_time = datetime.now().time()
     start_time = time(9,30)
@@ -216,13 +227,3 @@ def import_daily_losers_gainers():
                         slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")
                 return "All Urls Data Imported Succefully"
     return f"{current_time} Time is greater or lower than {start_time} {end_time}"
-
-
-@shared_task(queue="low_priority")
-def invalidate_stocks_cached_data(symbol:str):
-    today_date = str(datetime.today().date())
-    stock_data_id = today_date + "_stock_data_" + symbol
-    stock_live_data_id = today_date + "_stock_live_data_" + symbol
-    cache.delete(stock_data_id)
-    cache.delete(stock_live_data_id)
-    return f"cache invalidated for {stock_data_id} and {stock_live_data_id}"

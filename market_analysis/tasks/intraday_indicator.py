@@ -4,10 +4,10 @@ from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
 from ta.momentum import stoch, stoch_signal
 import numpy as np
 from market_analysis.tasks.notification_tasks import slack_message_sender
-from celery import shared_task
+from heystox_trade.celery import app as celery_app
 # Start code below
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     """This function find crossover between macd and macd signal and return signal as buy or sell"""
     # slack_message_sender(text=f"Sorted Stock ID in MACD {sorted_stock_id}")
@@ -59,7 +59,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     return "last_crossover not found"
 
 
-@shared_task(queue="medium_priority")
+@celery_app.task(queue="medium_priority")
 def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     # slack_message_sender(text=f"Sorted Stock ID in Stochastic {sorted_stock_id}")
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")

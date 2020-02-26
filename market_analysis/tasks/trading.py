@@ -5,8 +5,9 @@ from time import sleep
 from django.db.models import Max, Min
 from django.core.cache import cache, caches
 from .notification_tasks import slack_message_sender
-from celery import shared_task
-from .intraday_functions_strategies import get_macd_crossover, get_stochastic_crossover
+from heystox_trade.celery import app as celery_app
+
+from .intraday_indicator import get_macd_crossover, get_stochastic_crossover
 # Codes Starts Below
 
 def get_upstox_user(email):
@@ -27,7 +28,12 @@ def get_upstox_user(email):
             sleep(180)
     return user.get_upstox_user()
 
+def select_stocks_for_trading(min_price:int, max_price:int):
+      return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price)).exclude(exchange__name="NSE_INDEX")
 
+def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
+    stocks = select_stocks_for_trading(min_price, max_price)
+    return stocks.filter(last_day_vtt__gte=trade_volume)
 
 def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
     cache_id = str(datetime.now().date()) + "_today_liquid_stocks"
@@ -36,13 +42,6 @@ def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
         cache.set(cache_id, liquid_stocks_id)
         return liquid_stocks_id
     return cache.get(cache_id)
-
-def select_stocks_for_trading(min_price:int, max_price:int):
-      return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price)).exclude(exchange__name="NSE_INDEX")
-
-def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
-    stocks = select_stocks_for_trading(min_price, max_price)
-    return stocks.filter(last_day_vtt__gte=trade_volume)
 
 def get_stocks_for_trading(date=datetime.now().date()):
     f"""Get stocks whose movement is greater or lower then"""
@@ -57,7 +56,7 @@ def get_stocks_for_trading(date=datetime.now().date()):
     else:
         return None
     
-@shared_task(queue="high_priority")
+@celery_app.task(queue="high_priority")
 def add_today_movement_stocks(movement_percent:float=1.2):
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     # sorted_stocks_name = []
@@ -85,8 +84,9 @@ def add_today_movement_stocks(movement_percent:float=1.2):
                 stock.delete()
             else:
                 cached_stocks.append(stock)
-                # get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id}) # Stochastic Crossover Check
-                # get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})# Macd Crossover Check
+                get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id}) # Stochastic Crossover Check
+                get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})# Macd Crossover Check
+                slack_message_sender.delay(text=str(stock.symbol.get_stock_live_data()), channel="#celery")
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
         redis_cache.set("todays_sorted_stocks", cached_stocks)
@@ -110,7 +110,7 @@ def find_sideways_direction():
         elif nifty_low_variation > -30:
             return nifty_low_variation
  
-@shared_task(queue="high_priority")
+@celery_app.task(queue="high_priority")
 def add_stock_on_market_sideways():
     date = datetime.now().date()
     nifty_50_point = find_sideways_direction()

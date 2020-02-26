@@ -59,61 +59,6 @@ class Symbol(BaseModel):
             return  1
         return (today - previous_day).days
 
-    def is_stock_ohl(self, date=datetime.now().date(), candle_type="M5"):
-        """Find Stock falls in open high low strategy"""
-        stock_open_price = self.get_day_opening_price()
-        stock_high_price = self.get_days_high_low_price(price_type="HIGH")
-        stock_low_price = self.get_days_high_low_price(price_type="LOW")
-        if stock_open_price == stock_high_price:
-            return "SELL"
-        elif stock_open_price == stock_low_price:
-            return "BUY"
-        else:
-            return None
-    
-    def is_stock_pdhl(self, date=datetime.now().date(), candle_type="M5"):
-        """Finds stocks is fall under previous day high low conditions"""
-        df = self.get_stock_live_data()
-        previous_trading_day = date - timedelta(self.get_last_trading_day_count(date))
-        last_day_candles = df[(df["date"].dt.date.astype(str) == previous_trading_day.strftime("%Y-%m-%d"))]
-        last_day_closing_price = float(last_day_candles.iloc[[-1]].close_price)
-        last_day_opening_price = float(last_day_candles.iloc[[0]].open_price)
-        today_open_price = float(df[(df["date"].dt.date.astype(str) == date.strftime("%Y-%m-%d"))].iloc[[0]].open_price)
-        if last_day_opening_price > last_day_closing_price > today_open_price:
-            return "SELL"
-        elif last_day_opening_price < last_day_closing_price < today_open_price:
-            return "BUY"
-        else:
-            return None
-
-    def get_days_high_low_price(self, start_date=None, end_date=datetime.now().date(), price_type="HIGH", candle_type="M5"):
-        start_date = start_date or end_date
-        if start_date == end_date:
-            candles = self.get_stock_data(days=0)
-        else:
-            candles = self.get_stock_data(days=(end_date - start_date).days)
-        if price_type == "HIGH":
-            return candles.aggregate(Max("high_price")).get("high_price__max")
-        elif price_type == "LOW":
-            return candles.aggregate(Min("low_price")).get("low_price__min")
-
-
-    def has_entry_for_long_short(self, date=datetime.now().date(), candle_type="M5"):
-        stock_date = date
-        if self.is_stock_ohl(date=stock_date, candle_type=candle_type) == "BUY":
-            if self.get_days_high_low_price(start_date=stock_date - timedelta(1), price_type="HIGH", candle_type=candle_type)\
-                < self.get_days_high_low_price(start_date=stock_date, price_type="HIGH", candle_type=candle_type):
-                return "BUY"
-        elif self.is_stock_ohl(date=stock_date, candle_type=candle_type) == "SELL":
-            if self.get_days_high_low_price(start_date=stock_date - timedelta(1), price_type="LOW", candle_type=candle_type)\
-                < self.get_days_high_low_price(start_date=stock_date, price_type="LOW", candle_type=candle_type):
-                return "SELL"
-
-    def get_day_opening_price(self, date=datetime.now().date()):
-        stock_data = self.get_stock_data(end_date=date, days=0)
-        if stock_data:
-            return stock_data.first().open_price or None
-
     def get_stock_data(self, days=None, end_date=datetime.now().date(), candle_type="M5", cached=True):
         cache_id = str(end_date) + "_stock_data_" + self.symbol
         redis_cache = cache
@@ -134,30 +79,6 @@ class Symbol(BaseModel):
         else:
             candles = candles.filter(candle_type=candle_type, date__date=end_date, symbol=self)
         return candles
-
-    def get_day_closing_price(self, date=datetime.now().date()):
-        """function will return last candle closing price"""
-        stock_data = self.get_stock_data(end_date=date, days=0)
-        if stock_data:
-            return stock_data.last().close_price or None
-
-    def get_last_day_closing_price(self):
-        return self.last_day_closing_price or None
-
-    def get_last_day_opening_price(self):
-        return self.last_day_opening_price or None
-
-    def get_nifty_movement(self, bull_point=32, bear_point=-22 ):
-        if self.symbol == "nifty_50":
-            movement = self.get_stock_movement()
-            if movement >= bull_point:
-                return "BUY"
-            elif movement <= bear_point:
-                return "SELL"
-            else:
-                return "SIDEWAYS"
-        else:
-            raise TypeError("This Function is limited to nifty 50 only")
 
     def get_stock_current_candle(self):
         redis_cache = cache
@@ -191,13 +112,9 @@ class Symbol(BaseModel):
         today_date = datetime.today().date()
         cache_id = str(today_date) + "_stock_live_data_" + self.symbol
         redis_cache = cache
-        cached_value = redis_cache.get(cache_id)
-        if is_cache and cached_value != None:
-            df = pd.read_json(cached_value)
-        else:
-            stock_data = self.get_stock_data().values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
-            df = pd.DataFrame(list(stock_data))
-            redis_cache.set(cache_id, df.to_json())
+        stock_data = self.get_stock_data().values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
+        df = pd.DataFrame(list(stock_data))
+        redis_cache.set(cache_id, df)
         try:
             current_candle_data = self.get_stock_current_candle()
         except:
@@ -208,6 +125,46 @@ class Symbol(BaseModel):
             return df1
         return df
 
+    def get_day_opening_price(self, date=datetime.now().date()):
+        stock_data = self.get_stock_data(end_date=date, days=0)
+        if stock_data:
+            return stock_data.first().open_price or None
+
+    def get_day_closing_price(self, date=datetime.now().date()):
+        """function will return last candle closing price"""
+        stock_data = self.get_stock_data(end_date=date, days=0)
+        if stock_data:
+            return stock_data.last().close_price or None
+
+    def get_last_day_closing_price(self):
+        return self.last_day_closing_price or None
+
+    def get_last_day_opening_price(self):
+        return self.last_day_opening_price or None
+    
+    def get_days_high_low_price(self, start_date=None, end_date=datetime.now().date(), price_type="HIGH", candle_type="M5"):
+        start_date = start_date or end_date
+        if start_date == end_date:
+            candles = self.get_stock_data(days=0)
+        else:
+            candles = self.get_stock_data(days=(end_date - start_date).days)
+        if price_type == "HIGH":
+            return candles.aggregate(Max("high_price")).get("high_price__max")
+        elif price_type == "LOW":
+            return candles.aggregate(Min("low_price")).get("low_price__min")
+
+    def is_stock_ohl(self, date=datetime.now().date(), candle_type="M5"):
+        """Find Stock falls in open high low strategy"""
+        stock_open_price = self.get_day_opening_price()
+        stock_high_price = self.get_days_high_low_price(price_type="HIGH")
+        stock_low_price = self.get_days_high_low_price(price_type="LOW")
+        if stock_open_price == stock_high_price:
+            return "SELL"
+        elif stock_open_price == stock_low_price:
+            return "BUY"
+        else:
+            return None
+    
     def get_stock_movement(self, date=datetime.now().date()):    
         """Return Movement of stock in %"""
         try:
@@ -216,6 +173,18 @@ class Symbol(BaseModel):
             return variation
         except:
             return None
+
+    def get_nifty_movement(self, bull_point=32, bear_point=-22 ):
+        if self.symbol == "nifty_50":
+            movement = self.get_stock_movement()
+            if movement >= bull_point:
+                return "BUY"
+            elif movement <= bear_point:
+                return "SELL"
+            else:
+                return "SIDEWAYS"
+        else:
+            raise TypeError("This Function is limited to nifty 50 only")
 
     def is_stock_moved_good_for_trading(self, movement_percent:float=1.2, date=datetime.now().date()): #Need to work more on this function
         stock_movement = self.get_stock_movement(date=date)
@@ -231,6 +200,33 @@ class Symbol(BaseModel):
                     return True
                 else:
                     return False
+
+    def is_stock_pdhl(self, date=datetime.now().date(), candle_type="M5"):
+        """Finds stocks is fall under previous day high low conditions"""
+        df = self.get_stock_live_data()
+        previous_trading_day = date - timedelta(self.get_last_trading_day_count(date))
+        last_day_candles = df[(df["date"].dt.date.astype(str) == previous_trading_day.strftime("%Y-%m-%d"))]
+        last_day_closing_price = float(last_day_candles.iloc[[-1]].close_price)
+        last_day_opening_price = float(last_day_candles.iloc[[0]].open_price)
+        today_open_price = float(df[(df["date"].dt.date.astype(str) == date.strftime("%Y-%m-%d"))].iloc[[0]].open_price)
+        if last_day_opening_price > last_day_closing_price > today_open_price:
+            return "SELL"
+        elif last_day_opening_price < last_day_closing_price < today_open_price:
+            return "BUY"
+        else:
+            return None
+
+    def has_entry_for_long_short(self, date=datetime.now().date(), candle_type="M5"):
+        stock_date = date
+        if self.is_stock_ohl(date=stock_date, candle_type=candle_type) == "BUY":
+            if self.get_days_high_low_price(start_date=stock_date - timedelta(1), price_type="HIGH", candle_type=candle_type)\
+                < self.get_days_high_low_price(start_date=stock_date, price_type="HIGH", candle_type=candle_type):
+                return "BUY"
+        elif self.is_stock_ohl(date=stock_date, candle_type=candle_type) == "SELL":
+            if self.get_days_high_low_price(start_date=stock_date - timedelta(1), price_type="LOW", candle_type=candle_type)\
+                < self.get_days_high_low_price(start_date=stock_date, price_type="LOW", candle_type=candle_type):
+                return "SELL"
+
 
 class CandleQuerySet(models.QuerySet):
     def get_by_candle_type(self, type_of_candle):

@@ -5,15 +5,14 @@ from upstox_api.api import *
 from django.contrib.auth.models import User
 from .notification_tasks import slack_message_sender
 from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle, Indicator, SortedStockDashboardReport)
-from celery import shared_task
+from heystox_trade.celery import app as celery_app
 from .trading import *
-from .intraday_functions_strategies import *
 
 
 
 # CODE STARTS BELOW
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def subscribe_today_trading_stocks():
     """Fetch todays liquid stocks from cache then register those stock for live feed"""
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True)
@@ -30,7 +29,7 @@ def subscribe_today_trading_stocks():
     return message
 
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def unsubscribe_today_trading_stocks():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True)
     message = "Stocks Unsubscribed for Today:\n" + "| ".join(stock.upper() for stock in liquid_stocks)
@@ -43,7 +42,7 @@ def unsubscribe_today_trading_stocks():
     # upstox_user.unsubscribe(upstox_user.get_instrument_by_symbol("NSE_INDEX", "nifty_50"), LiveFeedType.Full)
     return message
 
-@shared_task(queue="high_priority") #Check more for minute how to start-stop after specific time
+@celery_app.task(queue="high_priority") #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
     current_time = datetime.now().time()
     start_time = time(9,20)
@@ -52,7 +51,7 @@ def todays_movement_stocks_add():
         return "Function Called"
     return "Function Not Called"
 
-@shared_task(queue="low_priority") 
+@celery_app.task(queue="low_priority") 
 def find_ohl_stocks():
     redis_cache = cache
     current_time = datetime.now().time()
@@ -76,7 +75,7 @@ def find_ohl_stocks():
         return "No Sorted Stocks Cached"
     return f"Time {current_time} not > 9:25"
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def is_stock_pdhl(obj_id):
     stock = SortedStocksList.objects.get(id=obj_id)
     if stock.symbol.is_stock_pdhl() == stock.entry_type:
@@ -87,7 +86,7 @@ def is_stock_pdhl(obj_id):
         return "Stamp Created"
 
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def take_entry_for_long_short(obj_id):
     stock = SortedStocksList.objects.get(id=obj_id)
     if stock.symbol.has_entry_for_long_short() == stock.entry_type:
@@ -99,7 +98,7 @@ def take_entry_for_long_short(obj_id):
         StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp__date=datetime.now().date()).delete()
 
 
-@shared_task(queue="high_priority")
+@celery_app.task(queue="high_priority")
 def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com", interval:str="1 Minute"):
     try:
         stock = Symbol.objects.get(symbol=stock_name)
@@ -136,7 +135,7 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
     return "Data Not Cached"
 
 
-@shared_task(queue="high_priority")
+@celery_app.task(queue="high_priority")
 def create_market_hour_candles(days, fetch_last_candle_number):
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
@@ -144,7 +143,7 @@ def create_market_hour_candles(days, fetch_last_candle_number):
     # Now Create Nifty 50 Candle
     fetch_candles_data(symbol="nifty_50", days=days, fetch_last_candle=fetch_last_candle_number)
 
-@shared_task(queue="medium_priority")
+@celery_app.task(queue="medium_priority")
 def delete_last_cached_candles_data():
     redis_cache = cache
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
@@ -152,21 +151,21 @@ def delete_last_cached_candles_data():
     redis_cache.delete("nifty_50")
     return "All Cached Candles Deleted Successfully"
 
-@shared_task(queue="medium_priority")
+@celery_app.task(queue="medium_priority")
 def create_stocks_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
         cache_candles_data.apply_async(kwargs={"stock_name":stock}) #By default one minute is set
     return "All Candles data cached"
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def create_nifty_50_realtime_candle():
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     cache_candles_data.delay(stock_name="nifty_50")
     return f"nifty_50 Data Cached Successfully"
 
 
-@shared_task(queue="low_priority", autoretry_for=(Exception,), retry_kwargs={'max_retries': 2})
+@celery_app.task(queue="low_priority", autoretry_for=(Exception,), retry_kwargs={'max_retries': 2})
 def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to work more on current entry price
     macd_timestamp = StrategyTimestamp.objects.get(pk=macd_stamp_id)
     stoch_timestamp = StrategyTimestamp.objects.get(pk=stochastic_stamp_id)
@@ -180,25 +179,25 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
                 entry_time=macd_timestamp.timestamp, entry_type=macd_timestamp.stock.entry_type, entry_price=entry_price)
 
 
-@shared_task(queue="high_priority")
-def find_update_macd_stochastic_crossover_in_stocks():
-    redis_cache = cache 
-    movement_on_entry = {
-        "BUY" : 1.2,
-        "SELL": -1.2,
-    }
-    current_time = datetime.now().time()
-    start_time = time(9,25)
-    if current_time > start_time:
-        for stock in redis_cache.get("todays_sorted_stocks"):
-            if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
-                # slack_message_sender(text=f"Stock ID {stock.id}")
-                get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-                get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-        return "Celery request sent for stock"
-    return f"Current time {current_time} not > 9:25"
+# @celery_app.task(queue="high_priority")
+# def find_update_macd_stochastic_crossover_in_stocks():
+#     redis_cache = cache 
+#     movement_on_entry = {
+#         "BUY" : 1.2,
+#         "SELL": -1.2,
+#     }
+#     current_time = datetime.now().time()
+#     start_time = time(9,25)
+#     if current_time > start_time:
+#         for stock in redis_cache.get("todays_sorted_stocks"):
+#             if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
+#                 # slack_message_sender(text=f"Stock ID {stock.id}")
+#                 get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+#                 get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+#         return "Celery request sent for stock"
+#     return f"Current time {current_time} not > 9:25"
 
-@shared_task(queue="medium_priority")
+@celery_app.task(queue="medium_priority")
 def todays_movement_stocks_add_on_sideways():
     current_time = datetime.now().time()
     start_time = time(9,25)

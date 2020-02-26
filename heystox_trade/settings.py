@@ -183,9 +183,9 @@ NSE_HEADERS = {"Host": "www1.nseindia.com", "Cache-Control": "max-age=0", "Upgra
 UPSTOX_REDIRECT_URL = "http://127.0.0.1:8000/"
 
 # CELERY STUFF
-# CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
-CELERY_BROKER_URL = 'pyamqp://guest@localhost//'
+# CELERY_BROKER_URL = 'pyamqp://guest@localhost//'
 # CELERY_RESULT_BACKEND = 'pyamqp://guest@localhost//'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'

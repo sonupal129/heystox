@@ -1,9 +1,9 @@
-from celery import shared_task
+from heystox_trade.celery import app as celery_app
 import slack
 from heystox_trade import settings
 # Code Starts Below
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def slack_message_sender(channel='#heystox', text='Message', attachments=None):
     """Send Slack notification to user"""
     client = slack.WebClient(token=settings.SLACK_TOKEN)

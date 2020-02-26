@@ -8,7 +8,6 @@ __pycache__/
 *.log
 *.pot
 **.pyc
-*.md
 **.DS_Store
 *.csv
 *.ipynb

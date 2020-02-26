@@ -3,23 +3,23 @@ from django.contrib.auth.models import User
 from market_analysis.models import Earning, UserProfile
 from datetime import timedelta, datetime
 from market_analysis.tasks.notification_tasks import slack_message_sender
-from celery import shared_task
+from heystox_trade.celery import app as celery_app
 
 # START CODE BELOW
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def update_initial_balance():
     """This function will run on 1st of every month and update balance of user"""
     for user_profile in UserProfile.objects.filter(for_trade=True).prefetch_related("bank"):
         user_profile.update_initial_balance()
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def update_current_earning_balance():
     """This function will update daily earnings and current balance of user"""
     for user_profile in UserProfile.objects.filter(for_trade=True).prefetch_related("bank"):
         user_profile.update_current_earning_balance()
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def stop_trading_on_profit_loss():
     """This Function will run in every morning to check if user is in loss or in profit then stop trading accordingly"""
     for user_profile in UserProfile.objects.filter(for_trade=True).select_related("bank"):
@@ -34,7 +34,7 @@ def stop_trading_on_profit_loss():
         user_profile.save()
     return "Trading Data Updated"
 
-@shared_task(queue="low_priority")
+@celery_app.task(queue="low_priority")
 def authenticate_users_in_morning():
     for user_profile in UserProfile.objects.filter(for_trade=True):
         message = "Login URL for " + user_profile.user.get_full_name() + ": " + user_profile.get_authentication_url()
