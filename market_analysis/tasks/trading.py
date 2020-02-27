@@ -37,21 +37,31 @@ def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
 
 def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
     cache_id = str(datetime.now().date()) + "_today_liquid_stocks"
-    if not cached or not cache.get(cache_id):
-        liquid_stocks_id = get_liquid_stocks(trade_volume=trade_volume, max_price=max_price).values_list("id", flat=True)
-        cache.set(cache_id, liquid_stocks_id)
-        return liquid_stocks_id
-    return cache.get(cache_id)
+    redis_cache = caches["redis"]
+    if cached and redis_cache.get(cache_id):
+        return redis_cache.get(cache_id)
+    liquid_stocks_id = list(get_liquid_stocks(trade_volume=trade_volume, max_price=max_price).values_list("id", flat=True))
+    redis_cache.set(cache_id, liquid_stocks_id, 60*30*48)
+    return liquid_stocks_id
+    
 
-def get_stocks_for_trading(date=datetime.now().date()):
+def get_stocks_for_trading():
     f"""Get stocks whose movement is greater or lower then"""
+    today_date = datetime.today().date()
     stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
+    redis_cache = caches["redis"]
     if nifty_50 == "BUY":
-        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=1.2)]
+        if redis_cache.get("BUY_stocks_for_trading"):
+            return redis_cache.get("BUY_stocks_for_trading")
+        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(date=today_date, movement_percent=1.2)]
+        redis_cache.set("BUY_stocks_for_trading", stocks_for_trade, 60*7)
         return stocks_for_trade
     elif nifty_50 == "SELL":
-        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(date=date, movement_percent=-1.2)]
+        if redis_cache.get("SELL_stocks_for_trading"):
+            return redis_cache.get("SELL_stocks_for_trading")
+        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(date=today_date, movement_percent=-1.2)]
+        redis_cache.set("SELL_stocks_for_trading", stocks_for_trade, 60*7)
         return stocks_for_trade
     else:
         return None
@@ -74,7 +84,7 @@ def add_today_movement_stocks(movement_percent:float=1.2):
                 continue
         # slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date).select_related("symbol").prefetch_related("timestamps")
-    redis_cache = cache
+    redis_cache = caches["redis"]
     if sorted_stocks:
         cached_stocks = []
         deleted_stocks = []
@@ -84,12 +94,12 @@ def add_today_movement_stocks(movement_percent:float=1.2):
                 stock.delete()
             else:
                 cached_stocks.append(stock)
-                get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id}) # Stochastic Crossover Check
-                get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})# Macd Crossover Check
-                slack_message_sender.delay(text=str(stock.symbol.get_stock_live_data()), channel="#celery")
+                # get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id}) # Stochastic Crossover Check
+                # get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})# Macd Crossover Check
+                # slack_message_sender.delay(text=str(stock.symbol.get_stock_live_data()), channel="#celery")
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
-        redis_cache.set("todays_sorted_stocks", cached_stocks)
+        redis_cache.set("todays_sorted_stocks", cached_stocks, 60*30)
 
 
 # Market Sideways Functions - Need To Work More on below functions

@@ -1,6 +1,5 @@
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from heystox_trade import settings
-from django.core.exceptions import ImproperlyConfigured
+from market_analysis.imports import *
+
 # Codes
 
 class BasePermissionMixin(LoginRequiredMixin):

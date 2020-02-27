@@ -1,17 +1,6 @@
 from market_analysis.serializers import UserSerializer, UserProfileSerializer, SortedStockDashboardSerializer
-from django.contrib.auth.models import User
-from rest_framework.permissions import IsAuthenticated
+from market_analysis.imports import *
 from .models import UserProfile, SortedStocksList, Symbol
-from rest_framework.response import Response
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.views import APIView
-from rest_framework import status
-from django.http import JsonResponse, HttpResponse
-from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
-from datetime import datetime
-from django.shortcuts import get_object_or_404
 # Code Starts Below
 
 class UsersListView(APIView):
@@ -54,7 +43,7 @@ class SortedStocksListView(APIView):
         date = request.GET.get("created_at")
         requested_date = None
         if date:
-            requested_date = datetime.strptime(date, "%Y-%m-%d").date()
+            requested_date = get_local_time.strptime(date, "%Y-%m-%d").date()
         if symbol and requested_date:
             sorted_stocks = SortedStocksList.objects.get(symbol__symbol=symbol, created_at__date=requested_date)
             serializer = SortedStockDashboardSerializer(sorted_stocks)
@@ -64,7 +53,7 @@ class SortedStocksListView(APIView):
         elif requested_date:
             sorted_stocks = SortedStocksList.objects.filter(created_at__date=requested_date).order_by("symbol__symbol")
         else:
-            sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.today().date()).order_by("symbol__symbol")
+            sorted_stocks = SortedStocksList.objects.filter(created_at__date=get_local_time.date()).order_by("symbol__symbol")
         serializer = SortedStockDashboardSerializer(sorted_stocks, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

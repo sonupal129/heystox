@@ -1,6 +1,5 @@
 from django.urls import path
 from market_analysis import api_views
-from rest_framework.authtoken import views
 from market_analysis.api_views import CustomTokenAuthentication
 # Code Below
 app_name = 'market_analysis_api_urls'

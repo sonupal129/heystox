@@ -1,4 +1,4 @@
-import django_filters
+from market_analysis.imports import *
 from market_analysis.models import SortedStocksList
 # Code Starts
 

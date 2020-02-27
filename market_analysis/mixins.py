@@ -1,8 +1,4 @@
-from django.core.exceptions import PermissionDenied
-from django.contrib.auth.models import Group, Permission
-from django.http import HttpResponseForbidden
-
-
+from market_analysis.imports import *
 # CODE BELOW
 
 class GroupRequiredMixins(object):

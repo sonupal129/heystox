@@ -1,5 +1,4 @@
-from rest_framework import serializers
-from django.contrib.auth.models import User
+from market_analysis.imports import *
 from .models import UserProfile, StrategyTimestamp, SortedStocksList, Symbol
 
 

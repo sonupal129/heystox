@@ -1,7 +1,6 @@
 from django import forms
 from market_analysis.models import Symbol, User
-from django.contrib.auth import authenticate, login
-from django.core.exceptions import ValidationError
+from market_analysis.imports import *
 # Code Starts
 
 class UserLoginRegisterForm(forms.Form):

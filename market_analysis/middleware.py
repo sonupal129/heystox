@@ -1,6 +1,6 @@
-from django.http import HttpResponseRedirect
-from django.conf import settings
+from market_analysis.imports import *
 from .tasks.notification_tasks import slack_message_sender
+
 #  CODE 
 
 class UserAuthRequired(object):

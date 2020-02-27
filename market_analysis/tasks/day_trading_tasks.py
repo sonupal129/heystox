@@ -15,7 +15,7 @@ from .trading import *
 @celery_app.task(queue="low_priority")
 def subscribe_today_trading_stocks():
     """Fetch todays liquid stocks from cache then register those stock for live feed"""
-    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True)
+    liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks(cached=False)).values_list("symbol", flat=True)
     message = "Today's Subscribed Stocks:\n" + "| ".join(stock.upper() for stock in liquid_stocks)
     slack_message_sender.delay(text=message)
     # upstox_user = get_upstox_user("sonupal129@gmail.com")
@@ -53,7 +53,7 @@ def todays_movement_stocks_add():
 
 @celery_app.task(queue="low_priority") 
 def find_ohl_stocks():
-    redis_cache = cache
+    redis_cache = caches["redis"]
     current_time = datetime.now().time()
     start_time = time(9,25)
     if current_time > start_time:
@@ -113,7 +113,7 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
         "10 Minute": OHLCInterval.Minute_10,
         "15 Minute": OHLCInterval.Minute_15,
         }
-    redis_cache = cache
+    redis_cache = caches["redis"]
     stock_data = user.get_ohlc(user.get_instrument_by_symbol(stock.exchange.name, stock.symbol), interval_dic.get(interval), today_date, today_date)
     if stock_data:
         last_candle = stock_data[-1]
@@ -145,7 +145,7 @@ def create_market_hour_candles(days, fetch_last_candle_number):
 
 @celery_app.task(queue="medium_priority")
 def delete_last_cached_candles_data():
-    redis_cache = cache
+    redis_cache = caches["redis"]
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
         redis_cache.delete(stock)
     redis_cache.delete("nifty_50")
@@ -165,7 +165,7 @@ def create_nifty_50_realtime_candle():
     return f"nifty_50 Data Cached Successfully"
 
 
-@celery_app.task(queue="low_priority", autoretry_for=(Exception,), retry_kwargs={'max_retries': 2})
+@celery_app.task(queue="low_priority")
 def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to work more on current entry price
     macd_timestamp = StrategyTimestamp.objects.get(pk=macd_stamp_id)
     stoch_timestamp = StrategyTimestamp.objects.get(pk=stochastic_stamp_id)
@@ -179,23 +179,23 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
                 entry_time=macd_timestamp.timestamp, entry_type=macd_timestamp.stock.entry_type, entry_price=entry_price)
 
 
-# @celery_app.task(queue="high_priority")
-# def find_update_macd_stochastic_crossover_in_stocks():
-#     redis_cache = cache 
-#     movement_on_entry = {
-#         "BUY" : 1.2,
-#         "SELL": -1.2,
-#     }
-#     current_time = datetime.now().time()
-#     start_time = time(9,25)
-#     if current_time > start_time:
-#         for stock in redis_cache.get("todays_sorted_stocks"):
-#             if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
-#                 # slack_message_sender(text=f"Stock ID {stock.id}")
-#                 get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-#                 get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-#         return "Celery request sent for stock"
-#     return f"Current time {current_time} not > 9:25"
+@celery_app.task(queue="high_priority")
+def find_update_macd_stochastic_crossover_in_stocks():
+    redis_cache = cache 
+    movement_on_entry = {
+        "BUY" : 1.2,
+        "SELL": -1.2,
+    }
+    current_time = datetime.now().time()
+    start_time = time(9,25)
+    if current_time > start_time:
+        for stock in redis_cache.get("todays_sorted_stocks"):
+            if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
+                # slack_message_sender(text=f"Stock ID {stock.id}")
+                get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+                get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+        return "Celery request sent for stock"
+    return f"Current time {current_time} not > 9:25"
 
 @celery_app.task(queue="medium_priority")
 def todays_movement_stocks_add_on_sideways():

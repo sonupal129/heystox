@@ -1,24 +1,11 @@
-
-from django.core.cache import cache, caches
-from django.shortcuts import redirect, render, get_object_or_404, resolve_url
-from django.http import HttpResponse
+from market_analysis.imports import *
 from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol, StrategyTimestamp
-from datetime import datetime, timedelta
-from upstox_api.api import *
-from heystox_trade import settings
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView
-from django.views.generic import ListView, View, TemplateView
 from market_analysis.filters import SymbolFilters, SortedStocksFilter
 from market_analysis.tasks.trading import get_cached_liquid_stocks
-from django.core.exceptions import ImproperlyConfigured
 from market_analysis.view_mixins import BasePermissionMixin
 from .forms import UserLoginRegisterForm
-from django.contrib.auth import authenticate, login
 from .mixins import GroupRequiredMixins
 # Create your views here.
-
-
 
 
 @login_required
@@ -40,7 +27,7 @@ def get_access_token_from_upstox(request):
     user_profile = request.user.user_profile
     session = cache.get(request.user.email + "_upstox_user_session")
     if upstox_response_code != cache.get(request.user.email + "_upstox_user_response_code"):
-        cache.set(request.user.email + "_upstox_user_response_code", upstox_response_code)
+        cache.set(request.user.email + "_upstox_user_response_code", upstox_response_code, 30*60*48)
     if upstox_response_code is not None:
         session.set_code(upstox_response_code)
         try:
@@ -48,7 +35,7 @@ def get_access_token_from_upstox(request):
             user_profile.credential.access_token = access_token
             user_profile.credential.save()
             upstox_user = Upstox(user_profile.credential.api_key, access_token)
-            cache.set(request.user.email + "_upstox_login_user", upstox_user)
+            cache.set(request.user.email + "_upstox_login_user", upstox_user, 30*60*48)
             return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
         except SystemError:
             return redirect("market_analysis_urls:upstox-login")
@@ -86,16 +73,16 @@ class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListVi
     def get_queryset(self):
         date = self.request.GET.get("created_at")
         if date:
-            requested_date = datetime.strptime(date, "%Y-%m-%d").date()
+            requested_date = get_local_time.strptime(date, "%Y-%m-%d").date()
             # filtered_qs = SortedStocksList.objects.filter(created_at__date=requested_date)
             timestamps = StrategyTimestamp.objects.filter(timestamp__date=requested_date, indicator__name="MACD")
         else:
             # filtered_qs = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
-            timestamps = StrategyTimestamp.objects.filter(timestamp__date=datetime.now().date(), indicator__name="MACD")
+            timestamps = StrategyTimestamp.objects.filter(timestamp__date=get_local_time.date(), indicator__name="MACD")
         sorted_stock_id = []
         
         if self.request.GET.get("sara"):
-            sorted_stocks = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
+            sorted_stocks = SortedStocksList.objects.filter(created_at__date=get_local_time.date())
             return sorted_stocks
                    
         for stamp in timestamps:
