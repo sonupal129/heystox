@@ -7,5 +7,6 @@ from market_analysis.tasks.notification_tasks import *
 from market_analysis.tasks.trading import *
 
 
+# BEAT SCHEDULE
 
 from market_analysis.tasks.beat_schedule import *

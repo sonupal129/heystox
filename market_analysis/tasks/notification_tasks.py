@@ -1,6 +1,5 @@
-from heystox_trade.celery import app as celery_app
+from market_analysis.imports import *
 import slack
-from heystox_trade import settings
 # Code Starts Below
 
 @celery_app.task(queue="low_priority")

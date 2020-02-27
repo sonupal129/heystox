@@ -62,7 +62,7 @@ class Symbol(BaseModel):
             candles = cached_value
         else:
             candles = Candle.objects.filter(candle_type=candle_type, date__range=[end_date - timedelta(5), end_date + timedelta(1)], symbol=self)
-            redis_cache.set(cache_id, candles)
+            redis_cache.set(cache_id, candles, 300)
         day_count = None
         if days == 0:
             day_count = days
@@ -102,11 +102,10 @@ class Symbol(BaseModel):
         }
         return df_ticker
       
-    def get_stock_live_data(self, is_cache=True, date_obj=None):
+    def get_stock_live_data(self, is_cache=True, date_obj=None): # Currently caching is for testing only, later will remove it
         if date_obj == None:
             date_obj = get_local_time.date()
         cache_id = str(date_obj) + "_stock_live_data_" + self.symbol
-        redis_cache = caches["redis"]
         stock_data = self.get_stock_data(end_date=date_obj).values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
         df = pd.DataFrame(list(stock_data))
         redis_cache.set(cache_id, df)

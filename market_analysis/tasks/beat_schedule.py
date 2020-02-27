@@ -1,7 +1,5 @@
-from celery.schedules import crontab
-from heystox_trade.celery import app
+from market_analysis.imports import *
 from market_analysis.models import SortedStocksList
-from datetime import datetime
 # Code Starts Below
 
 
@@ -120,6 +118,6 @@ day_trading_tasks = {
 }
 # CRON JOB SCHEDULES
 
-app.conf.beat_schedule = {
+celery_app.conf.beat_schedule = {
     **misc_tasks, **users_tasks, **stock_data_import_tasks, **day_trading_tasks
 }

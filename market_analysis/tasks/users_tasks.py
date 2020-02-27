@@ -1,9 +1,6 @@
-from django.core.cache import cache
-from django.contrib.auth.models import User
 from market_analysis.models import Earning, UserProfile
-from datetime import timedelta, datetime
 from market_analysis.tasks.notification_tasks import slack_message_sender
-from heystox_trade.celery import app as celery_app
+from market_analysis.imports import *
 
 # START CODE BELOW
 

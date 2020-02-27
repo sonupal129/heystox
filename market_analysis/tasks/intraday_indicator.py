@@ -1,10 +1,7 @@
 from market_analysis.models import SortedStocksList, Indicator, StrategyTimestamp, Symbol
-from datetime import datetime, timedelta
-from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
-from ta.momentum import stoch, stoch_signal
-import numpy as np
+from market_analysis.imports import *
 from market_analysis.tasks.notification_tasks import slack_message_sender
-from heystox_trade.celery import app as celery_app
+
 # Start code below
 
 @celery_app.task(queue="low_priority")
@@ -13,7 +10,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     # slack_message_sender(text=f"Sorted Stock ID in MACD {sorted_stock_id}")
     macd_indicator = Indicator.objects.get(name="MACD")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
-    today_date = datetime.today().date()
+    today_date = get_local_time.date()
     df = sorted_stock.symbol.get_stock_live_data()
     df["macd"] = macd(df.close_price)
     df["macd_signal"] = macd_signal(df.close_price)
@@ -63,7 +60,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
 def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     # slack_message_sender(text=f"Sorted Stock ID in Stochastic {sorted_stock_id}")
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")
-    today_date = datetime.today().date()
+    today_date = get_local_time.date()
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     df = sorted_stock.symbol.get_stock_live_data()
     df["stoch"] = stoch(high=df.high_price, close=df.close_price, low=df.low_price)
