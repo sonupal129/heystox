@@ -1,5 +1,6 @@
 from django.db import models
 from market_analysis.imports import *
+
 # Create your models here.
 
 class BaseModel(models.Model):
@@ -36,7 +37,9 @@ class Symbol(BaseModel):
     def get_last_trading_day_count(self, date_obj=None):
         """date_obj should be date only, return last trading day count from today"""
         if date_obj == None:
-            date_obj = get_local_time.date()     
+            date_obj = get_local_time.date()
+        msg = get_last_day_closing_price.__name__ + str(date_obj) # DEBUG
+        slack_message_sender.delay(text=msg, channel="#test1") # DEBUG   
         yesterday = date_obj - timedelta(1)
         weekend = ["Sunday", "Saturday"]
         holiday = MarketHoliday.objects.filter(date__lte=date_obj).last().date
@@ -108,7 +111,7 @@ class Symbol(BaseModel):
         cache_id = str(date_obj) + "_stock_live_data_" + self.symbol
         stock_data = self.get_stock_data(end_date=date_obj).values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
         df = pd.DataFrame(list(stock_data))
-        redis_cache.set(cache_id, df)
+        redis_cache.set(cache_id, df, 300)
         try:
             current_candle_data = self.get_stock_current_candle()
         except:

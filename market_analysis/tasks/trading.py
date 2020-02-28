@@ -19,7 +19,7 @@ def get_upstox_user(email):
             profile = user.get_upstox_user().get_profile()
         except:
             slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
-            sleep(180)
+            sleep(120)
     return user.get_upstox_user()
 
 def select_stocks_for_trading(min_price:int, max_price:int):
@@ -41,6 +41,8 @@ def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
 def get_stocks_for_trading():
     f"""Get stocks whose movement is greater or lower then"""
     today_date = get_local_time.date()
+    msg = get_stocks_for_trading.__name__ + str(today_date) # DEBUG
+    slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     if nifty_50 == "BUY":
@@ -63,6 +65,8 @@ def add_today_movement_stocks(movement_percent:float=1.2):
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     # sorted_stocks_name = []
     today_date = get_local_time.date()
+    msg = add_today_movement_stocks.__name__ + str(today_date) # DEBUG
+    slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     movement_on_entry = {
         "BUY" : 1.2,
         "SELL": -1.2,
@@ -79,6 +83,7 @@ def add_today_movement_stocks(movement_percent:float=1.2):
     if sorted_stocks:
         cached_stocks = []
         deleted_stocks = []
+        counter = 0
         for stock in sorted_stocks:
             if stock.created_at <= get_local_time.now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all():
                 deleted_stocks.append(stock)
@@ -87,7 +92,9 @@ def add_today_movement_stocks(movement_percent:float=1.2):
                 cached_stocks.append(stock)
                 # get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id}) # Stochastic Crossover Check
                 # get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})# Macd Crossover Check
-                slack_message_sender.delay(text=str(stock.symbol.get_stock_live_data()), channel="#celery")
+                counter += 1 #DEBUG
+                if counter == 1:#DEBUG
+                    slack_message_sender.delay(text=str(stock.symbol.get_stock_live_data()), channel="#celery")#DEBUG
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
         redis_cache.set("todays_sorted_stocks", cached_stocks, 60*30)

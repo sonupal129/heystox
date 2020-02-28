@@ -40,6 +40,8 @@ def invalidate_stocks_cached_data(symbol:str):
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, upstox_user_email="sonupal129@gmail.com", fetch_last_candle:int=None):
     if end_date == None:
         end_date = get_local_time.date()
+    msg = fetch_candles_data.__name__ + str(end_date) # DEBUG
+    slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     user = get_upstox_user(email=upstox_user_email)
     interval_dic = {
         "5 Minute": OHLCInterval.Minute_5,
@@ -145,7 +147,7 @@ def import_premarket_stocks_data():
     web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS)
     sleep(5)
     market_trading_date = get_local_time.strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%m-%Y").date()
-    slack_message_sender(channel="#random", text=market_trading_date)
+    slack_message_sender.delay(channel="#random", text=market_trading_date)
     if market_trading_date == today_date:
         for sector, url in urls.items():
             response = requests.get(url, headers=settings.NSE_HEADERS)
@@ -154,7 +156,7 @@ def import_premarket_stocks_data():
                 response_data = response.json().get("data")
                 bulk_data_upload = []
                 if response_data:
-                    slack_message_sender(channel="#random", text=response)
+                    slack_message_sender.delay(channel="#random", text=response)
                     for data in response_data:
                         context = {}
                         symbol = Symbol.objects.get(symbol=data.get("symbol").lower())

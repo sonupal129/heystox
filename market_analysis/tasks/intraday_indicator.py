@@ -11,6 +11,8 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     macd_indicator = Indicator.objects.get(name="MACD")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time.date()
+    msg = get_macd_crossover.__name__ + str(today_date) # DEBUG
+    slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     df = sorted_stock.symbol.get_stock_live_data()
     df["macd"] = macd(df.close_price)
     df["macd_signal"] = macd_signal(df.close_price)
@@ -28,7 +30,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             last_crossover = new_df[new_df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         last_crossover = None
-    if last_crossover.to_json():
+    if last_crossover is not None:
         # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
         # slack_message_sender.delay(text=f"Last Crossover MACD {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
@@ -40,7 +42,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
             # slack_message_sender.delay(text=f"Crossover Signal MACD {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
-        if crossover_signal.to_json():
+        if crossover_signal is not None:
             try:
                 stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=macd_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date + timedelta(minutes=10)]).order_by("timestamp")
             except:
@@ -61,6 +63,8 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     # slack_message_sender(text=f"Sorted Stock ID in Stochastic {sorted_stock_id}")
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")
     today_date = get_local_time.date()
+    msg = get_stochastic_crossover.__name__ + str(today_date) # DEBUG
+    slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     df = sorted_stock.symbol.get_stock_live_data()
     df["stoch"] = stoch(high=df.high_price, close=df.close_price, low=df.low_price)
@@ -79,7 +83,7 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             last_crossover = new_df[new_df.signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         last_crossover = None
-    if last_crossover.to_json():
+    if last_crossover is not None:
         # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
         # slack_message_sender.delay(text=f"Last Crossover STOCHASTIC {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
@@ -91,7 +95,7 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
             # slack_message_sender.delay(text=f"Crossover Signal STOCHASTIC {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
-        if crossover_signal.to_json():
+        if crossover_signal is not None:
             try:
                 stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=stoch_indicator, timestamp__range=[crossover_signal.date - timedelta(minutes=10), crossover_signal.date + timedelta(minutes=10)]).order_by("timestamp")
             except:

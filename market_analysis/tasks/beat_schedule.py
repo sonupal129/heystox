@@ -68,54 +68,107 @@ stock_data_import_tasks = {
 }
 
 
+# day_trading_tasks = {
+#     "subscribe_today_trading_stocks": {
+#         "task": "market_analysis.tasks.day_trading_tasks.subscribe_today_trading_stocks",
+#         "schedule": crontab(day_of_week="1-5", hour=9, minute=14),
+#     },
+#     "unsubscribe_today_trading_stocks": {
+#         "task": "market_analysis.tasks.day_trading_tasks.unsubscribe_today_trading_stocks",
+#         "schedule": crontab(day_of_week="1-5", hour=15, minute=45),
+#     },
+#     "todays_movement_stocks_add": {
+#         "task": "market_analysis.tasks.day_trading_tasks.todays_movement_stocks_add",
+#         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
+#     },
+#     "find_ohl_stocks": {
+#         "task": "market_analysis.tasks.day_trading_tasks.find_ohl_stocks",
+#         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/6"),
+#     },
+#     "create_market_hour_candles_every_five_minute": {
+#         "task": "market_analysis.tasks.day_trading_tasks.create_market_hour_candles",
+#         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="1-59/5"),
+#         "kwargs": {"days": 0, "fetch_last_candle_number": 2},
+#     },
+#     "create_market_hour_candles_every_two_hour": {
+#         "task": "market_analysis.tasks.day_trading_tasks.create_market_hour_candles",
+#         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/118"),
+#         "kwargs": {"days": 0, "fetch_last_candle_number": None},
+#     },
+#     "delete_last_cached_candles_data": {
+#         "task": "market_analysis.tasks.day_trading_tasks.delete_last_cached_candles_data",
+#         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="1-59/5"),
+#     },
+#     "create_stocks_realtime_candle": {
+#         "task": "market_analysis.tasks.day_trading_tasks.create_stocks_realtime_candle",
+#         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
+#     },
+#     "create_nifty_50_realtime_candle": {
+#         "task": "market_analysis.tasks.day_trading_tasks.create_nifty_50_realtime_candle",
+#         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
+#     },
+#     "find_update_macd_stochastic_crossover_in_stocks": {
+#         "task": "market_analysis.tasks.day_trading_tasks.find_update_macd_stochastic_crossover_in_stocks",
+#         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
+#     },
+#     "todays_movement_stocks_add_on_sideways": {
+#         "task": "market_analysis.tasks.day_trading_tasks.todays_movement_stocks_add_on_sideways",
+#         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
+#     },
+# }
+
+# DEBUG TASKS VERSION
+
 day_trading_tasks = {
     "subscribe_today_trading_stocks": {
         "task": "market_analysis.tasks.day_trading_tasks.subscribe_today_trading_stocks",
-        "schedule": crontab(day_of_week="1-5", hour=9, minute=14),
+        "schedule": crontab(hour=9, minute=14),
     },
     "unsubscribe_today_trading_stocks": {
         "task": "market_analysis.tasks.day_trading_tasks.unsubscribe_today_trading_stocks",
-        "schedule": crontab(day_of_week="1-5", hour=15, minute=45),
+        "schedule": crontab(hour=15, minute=45),
     },
     "todays_movement_stocks_add": {
         "task": "market_analysis.tasks.day_trading_tasks.todays_movement_stocks_add",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
+        "schedule": crontab(hour="9-15", minute="*/3"),
     },
     "find_ohl_stocks": {
         "task": "market_analysis.tasks.day_trading_tasks.find_ohl_stocks",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/6"),
+        "schedule": crontab(hour="9-15", minute="*/6"),
     },
     "create_market_hour_candles_every_five_minute": {
         "task": "market_analysis.tasks.day_trading_tasks.create_market_hour_candles",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="1-59/5"),
+        "schedule": crontab(hour="9-15", minute="1-59/5"),
         "kwargs": {"days": 0, "fetch_last_candle_number": 2},
     },
     "create_market_hour_candles_every_two_hour": {
         "task": "market_analysis.tasks.day_trading_tasks.create_market_hour_candles",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/118"),
+        "schedule": crontab(hour="9-15", minute="*/118"),
         "kwargs": {"days": 0, "fetch_last_candle_number": None},
     },
     "delete_last_cached_candles_data": {
         "task": "market_analysis.tasks.day_trading_tasks.delete_last_cached_candles_data",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="1-59/5"),
+        "schedule": crontab(hour="9-15", minute="1-59/5"),
     },
     "create_stocks_realtime_candle": {
         "task": "market_analysis.tasks.day_trading_tasks.create_stocks_realtime_candle",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
+        "schedule": crontab(hour="9-15", minute="*/1"),
     },
     "create_nifty_50_realtime_candle": {
         "task": "market_analysis.tasks.day_trading_tasks.create_nifty_50_realtime_candle",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
+        "schedule": crontab(hour="9-15", minute="*/1"),
     },
     "find_update_macd_stochastic_crossover_in_stocks": {
         "task": "market_analysis.tasks.day_trading_tasks.find_update_macd_stochastic_crossover_in_stocks",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
+        "schedule": crontab(hour="9-15", minute="*/1"),
     },
     "todays_movement_stocks_add_on_sideways": {
         "task": "market_analysis.tasks.day_trading_tasks.todays_movement_stocks_add_on_sideways",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
+        "schedule": crontab(hour="9-15", minute="*/3"),
     },
 }
+
+
 # CRON JOB SCHEDULES
 
 celery_app.conf.beat_schedule = {

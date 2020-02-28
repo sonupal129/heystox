@@ -63,5 +63,6 @@ default_timezone = pytz.timezone(settings.TIME_ZONE)
 
 get_local_time = default_timezone.localize(datetime.now())
 redis_cache = caches["redis"]
+print(get_local_time)
 
 

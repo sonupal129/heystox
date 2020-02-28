@@ -1,5 +1,5 @@
 from market_analysis.models import Earning, UserProfile
-from market_analysis.tasks.notification_tasks import slack_message_sender
+from .notification_tasks import slack_message_sender
 from market_analysis.imports import *
 
 # START CODE BELOW
