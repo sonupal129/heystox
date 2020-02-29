@@ -151,5 +151,5 @@ day_trading_tasks = {
 # }
 
 celery_app.conf.beat_schedule = {
-    **misc_tasks
+    **day_trading_tasks
 }
