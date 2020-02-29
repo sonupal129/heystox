@@ -73,16 +73,16 @@ class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListVi
     def get_queryset(self):
         date = self.request.GET.get("created_at")
         if date:
-            requested_date = get_local_time.strptime(date, "%Y-%m-%d").date()
+            requested_date = get_local_time().strptime(date, "%Y-%m-%d").date()
             # filtered_qs = SortedStocksList.objects.filter(created_at__date=requested_date)
             timestamps = StrategyTimestamp.objects.filter(timestamp__date=requested_date, indicator__name="MACD")
         else:
             # filtered_qs = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
-            timestamps = StrategyTimestamp.objects.filter(timestamp__date=get_local_time.date(), indicator__name="MACD")
+            timestamps = StrategyTimestamp.objects.filter(timestamp__date=get_local_time().date(), indicator__name="MACD")
         sorted_stock_id = []
         
         if self.request.GET.get("sara"):
-            sorted_stocks = SortedStocksList.objects.filter(created_at__date=get_local_time.date())
+            sorted_stocks = SortedStocksList.objects.filter(created_at__date=get_local_time().date())
             return sorted_stocks
                    
         for stamp in timestamps:

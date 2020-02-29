@@ -43,7 +43,7 @@ class SortedStocksListView(APIView):
         date = request.GET.get("created_at")
         requested_date = None
         if date:
-            requested_date = get_local_time.strptime(date, "%Y-%m-%d").date()
+            requested_date = datetime.strptime(date, "%Y-%m-%d").date()
         if symbol and requested_date:
             sorted_stocks = SortedStocksList.objects.get(symbol__symbol=symbol, created_at__date=requested_date)
             serializer = SortedStockDashboardSerializer(sorted_stocks)
@@ -53,7 +53,7 @@ class SortedStocksListView(APIView):
         elif requested_date:
             sorted_stocks = SortedStocksList.objects.filter(created_at__date=requested_date).order_by("symbol__symbol")
         else:
-            sorted_stocks = SortedStocksList.objects.filter(created_at__date=get_local_time.date()).order_by("symbol__symbol")
+            sorted_stocks = SortedStocksList.objects.filter(created_at__date=get_local_time().date()).order_by("symbol__symbol")
         serializer = SortedStockDashboardSerializer(sorted_stocks, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

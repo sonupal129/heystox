@@ -37,7 +37,7 @@ class Symbol(BaseModel):
     def get_last_trading_day_count(self, date_obj=None):
         """date_obj should be date only, return last trading day count from today"""
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         msg = get_last_day_closing_price.__name__ + str(date_obj) # DEBUG
         slack_message_sender.delay(text=msg, channel="#test1") # DEBUG   
         yesterday = date_obj - timedelta(1)
@@ -58,7 +58,7 @@ class Symbol(BaseModel):
 
     def get_stock_data(self, days=None, end_date=None, candle_type="M5", cached=True):
         if end_date == None:
-            end_date = get_local_time.date()
+            end_date = get_local_time().date()
         cache_id = str(end_date) + "_stock_data_" + self.symbol
         cached_value = redis_cache.get(cache_id)
         if cached_value != None and cached:
@@ -101,13 +101,13 @@ class Symbol(BaseModel):
             # "upper_circuit": current_ticker.get("upper_circuit"),
             # "bids": {},
             # "asks": {},
-            "date": get_local_time.fromtimestamp(int(current_ticker.get("timestamp")[:10]))
+            "date": get_local_time().fromtimestamp(int(current_ticker.get("timestamp")[:10]))
         }
         return df_ticker
       
     def get_stock_live_data(self, is_cache=True, date_obj=None): # Currently caching is for testing only, later will remove it
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         cache_id = str(date_obj) + "_stock_live_data_" + self.symbol
         stock_data = self.get_stock_data(end_date=date_obj).values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
         df = pd.DataFrame(list(stock_data))
@@ -124,7 +124,7 @@ class Symbol(BaseModel):
 
     def get_day_opening_price(self, date_obj=None):
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         stock_data = self.get_stock_data(end_date=date_obj, days=0)
         if stock_data:
             return stock_data.first().open_price or None
@@ -132,7 +132,7 @@ class Symbol(BaseModel):
     def get_day_closing_price(self, date_obj=None):
         """function will return last candle closing price"""
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         stock_data = self.get_stock_data(end_date=date_obj, days=0)
         if stock_data:
             return stock_data.last().close_price or None
@@ -145,10 +145,10 @@ class Symbol(BaseModel):
     
     def get_days_high_low_price(self, date_obj=None, price_type="HIGH", candle_type="M5"):
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         days = 0
-        if date_obj != get_local_time.date():
-            days = (get_local_time.date() - date_obj).days
+        if date_obj != get_local_time().date():
+            days = (get_local_time().date() - date_obj).days
         candles = self.get_stock_data(days=days, end_date=date_obj)
         if price_type == "HIGH":
             return candles.aggregate(Max("high_price")).get("high_price__max")
@@ -158,7 +158,7 @@ class Symbol(BaseModel):
     def is_stock_ohl(self, date_obj=None, candle_type="M5"):
         """Find Stock falls in open high low strategy"""
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         stock_open_price = self.get_day_opening_price(date_obj=date_obj)
         stock_high_price = self.get_days_high_low_price(price_type="HIGH", date_obj=date_obj)
         stock_low_price = self.get_days_high_low_price(price_type="LOW", date_obj=date_obj)
@@ -172,9 +172,9 @@ class Symbol(BaseModel):
     def get_stock_movement(self, date_obj=None):    
         """Return Movement of stock in %"""
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         try:
-            if date_obj != get_local_time.date():
+            if date_obj != get_local_time().date():
                 day_closing_price = self.get_day_closing_price(date_obj=date_obj)
                 trading_day = self.get_last_trading_day_count(date_obj=date_obj)
                 previous_day_closing_price = self.get_day_closing_price(date_obj=date_obj-timedelta(trading_day))
@@ -188,7 +188,7 @@ class Symbol(BaseModel):
 
     def get_nifty_movement(self, bull_point=32, bear_point=-22, date_obj=None):
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         if self.symbol == "nifty_50":
             movement = self.get_stock_movement(date_obj=date_obj)
             if movement >= bull_point:
@@ -219,7 +219,7 @@ class Symbol(BaseModel):
     def is_stock_pdhl(self, date_obj=None, candle_type="M5"):
         """Finds stocks is fall under previous day high low conditions"""
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         df = self.get_stock_live_data()
         previous_trading_day = date_obj - timedelta(self.get_last_trading_day_count(date_obj))
         last_day_candles = df[(df["date"].dt.date.astype(str) == previous_trading_day.strftime("%Y-%m-%d"))]
@@ -235,7 +235,7 @@ class Symbol(BaseModel):
 
     def has_entry_for_long_short(self, date_obj=None, candle_type="M5"):
         if date_obj == None:
-            date_obj = get_local_time.date()
+            date_obj = get_local_time().date()
         if self.is_stock_ohl(date_obj=date_obj, candle_type=candle_type) == "BUY":
             if self.get_days_high_low_price(start_date=date_obj - timedelta(1), price_type="HIGH", candle_type=candle_type)\
                 < self.get_days_high_low_price(start_date=date_obj, price_type="HIGH", candle_type=candle_type):
@@ -326,9 +326,9 @@ class UserProfile(BaseModel):
             if self.bank.current_balance != current_balance:
                 pl = None
                 try:
-                    pl = Earning.objects.get(user=self, date=get_local_time.date() - timedelta(1))
+                    pl = Earning.objects.get(user=self, date=get_local_time().date() - timedelta(1))
                 except:
-                    pl = Earning.objects.create(user=self, date=get_local_time.date() - timedelta(1), opening_balance=self.bank.current_balance)
+                    pl = Earning.objects.create(user=self, date=get_local_time().date() - timedelta(1), opening_balance=self.bank.current_balance)
                 pl.profit_loss = float(current_balance) - float(pl.opening_balance)
                 pl.save()
                 self.bank.current_balance = current_balance

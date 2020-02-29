@@ -28,7 +28,7 @@ def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_pri
 
 @celery_app.task(queue="low_priority")
 def invalidate_stocks_cached_data(symbol:str):
-    today_date = str(get_local_time.date())
+    today_date = str(get_local_time().date())
     stock_data_id = today_date + "_stock_data_" + symbol
     stock_live_data_id = today_date + "_stock_live_data_" + symbol
     cache.delete(stock_data_id)
@@ -39,7 +39,7 @@ def invalidate_stocks_cached_data(symbol:str):
 @celery_app.task(queue="medium_priority")
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, upstox_user_email="sonupal129@gmail.com", fetch_last_candle:int=None):
     if end_date == None:
-        end_date = get_local_time.date()
+        end_date = get_local_time().date()
     msg = fetch_candles_data.__name__ + str(end_date) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     user = get_upstox_user(email=upstox_user_email)
@@ -143,10 +143,10 @@ def import_premarket_stocks_data():
         return obj_price
     
     market_date_url = "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/pomMktStatus.jsp"
-    today_date = get_local_time.date()
+    today_date = get_local_time().date()
     web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS)
     sleep(5)
-    market_trading_date = get_local_time.strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%m-%Y").date()
+    market_trading_date = get_local_time().strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%m-%Y").date()
     slack_message_sender.delay(channel="#random", text=market_trading_date)
     if market_trading_date == today_date:
         for sector, url in urls.items():
@@ -161,9 +161,9 @@ def import_premarket_stocks_data():
                         context = {}
                         symbol = Symbol.objects.get(symbol=data.get("symbol").lower())
                         try:
-                            pre_market_stock = PreMarketOrderData.objects.get(symbol=symbol, created_at__date=get_local_time.date())
+                            pre_market_stock = PreMarketOrderData.objects.get(symbol=symbol, created_at__date=get_local_time().date())
                         except:
-                            pre_market_stock = PreMarketOrderData.objects.create(symbol=symbol, created_at=get_local_time.now())
+                            pre_market_stock = PreMarketOrderData.objects.create(symbol=symbol, created_at=get_local_time().now())
                         if pre_market_stock:
                             pre_market_stock.sector = sector
                             pre_market_stock.open_price = convert_price(data.get("iep"))
@@ -178,7 +178,7 @@ def import_premarket_stocks_data():
 
 @celery_app.task(queue="medium_priority")
 def import_daily_losers_gainers():
-    current_time = get_local_time.time()
+    current_time = get_local_time().time()
     start_time = time(9,30)
     end_time = time(15,30)
     if current_time > start_time and current_time < end_time:
@@ -216,7 +216,7 @@ def import_daily_losers_gainers():
                             except:
                                 stock = None
                             if stock:
-                                SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_movement, created_at__date=get_local_time.date())
+                                SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_movement, created_at__date=get_local_time().date())
                     else:
                         slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")
                 return "All Urls Data Imported Succefully"

@@ -30,7 +30,7 @@ def get_liquid_stocks(trade_volume=10000000, min_price=3, max_price=250):
     return stocks.filter(last_day_vtt__gte=trade_volume)
 
 def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
-    cache_id = str(get_local_time.date()) + "_today_liquid_stocks"
+    cache_id = str(get_local_time().date()) + "_today_liquid_stocks"
     if cached and redis_cache.get(cache_id):
         return redis_cache.get(cache_id)
     liquid_stocks_id = list(get_liquid_stocks(trade_volume=trade_volume, max_price=max_price).values_list("id", flat=True))
@@ -40,7 +40,7 @@ def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
 
 def get_stocks_for_trading():
     f"""Get stocks whose movement is greater or lower then"""
-    today_date = get_local_time.date()
+    today_date = get_local_time().date()
     msg = get_stocks_for_trading.__name__ + str(today_date) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
@@ -64,7 +64,7 @@ def get_stocks_for_trading():
 def add_today_movement_stocks(movement_percent:float=1.2):
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     # sorted_stocks_name = []
-    today_date = get_local_time.date()
+    today_date = get_local_time().date()
     msg = add_today_movement_stocks.__name__ + str(today_date) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     movement_on_entry = {
@@ -85,7 +85,7 @@ def add_today_movement_stocks(movement_percent:float=1.2):
         deleted_stocks = []
         counter = 0
         for stock in sorted_stocks:
-            if stock.created_at <= get_local_time.now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all():
+            if stock.created_at <= get_local_time().now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all():
                 deleted_stocks.append(stock)
                 stock.delete()
             else:
@@ -120,7 +120,7 @@ def find_sideways_direction():
  
 @celery_app.task(queue="high_priority")
 def add_stock_on_market_sideways():
-    today_date = get_local_time.date()
+    today_date = get_local_time().date()
     nifty_50_point = find_sideways_direction()
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())

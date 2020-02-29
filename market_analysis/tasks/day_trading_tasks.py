@@ -39,7 +39,7 @@ def unsubscribe_today_trading_stocks():
 
 @celery_app.task(queue="high_priority") #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
-    current_time = get_local_time.time()
+    current_time = get_local_time().time()
     msg = todays_movement_stocks_add.__name__ + str(current_time) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     start_time = time(9,20)
@@ -50,21 +50,21 @@ def todays_movement_stocks_add():
 
 @celery_app.task(queue="low_priority") 
 def find_ohl_stocks():
-    current_time = get_local_time.time()
+    current_time = get_local_time().time()
     msg = find_ohl_stocks.__name__ + str(current_time) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     start_time = time(9,25)
     if current_time > start_time:
         sorted_stocks = redis_cache.get("todays_sorted_stocks")
         if sorted_stocks:
-            todays_timestamps = StrategyTimestamp.objects.select_related("stock", "indicator").filter(indicator__name="OHL", timestamp__date=get_local_time.date())
+            todays_timestamps = StrategyTimestamp.objects.select_related("stock", "indicator").filter(indicator__name="OHL", timestamp__date=get_local_time().date())
             for stock in sorted_stocks:
                 timestamps = todays_timestamps.filter(stock=stock)
                 ohl_condition = stock.symbol.is_stock_ohl()
                 if ohl_condition:
                     if stock.entry_type == ohl_condition and not timestamps.exists():
                         ohl_indicator = Indicator.objects.get(name="OHL")
-                        StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=get_local_time.now())
+                        StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=get_local_time().now())
                     elif stock.entry_type != ohl_condition:
                         timestamps.delete()
                     elif timestamps.count() > 1:
@@ -79,7 +79,7 @@ def is_stock_pdhl(obj_id):
     if stock.symbol.is_stock_pdhl() == stock.entry_type:
         pdhl_indicator = Indicator.objects.get(name="PDHL")
         pdhl, is_created = StrategyTimestamp.objects.get_or_create(indicator=pdhl_indicator, stock=stock)
-        pdhl.timestamp = get_local_time.now()
+        pdhl.timestamp = get_local_time().now()
         pdhl.save()
         return "Stamp Created"
 
@@ -104,7 +104,7 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
         raise Symbol.DoesNotExist(f"{stock_name} Not Found in Data")
     user = get_upstox_user(email=upstox_user_email)
     user.get_master_contract(stock.exchange.name.upper())
-    today_date = get_local_time.date()
+    today_date = get_local_time().date()
     interval_dic = {
         "1 Minute": OHLCInterval.Minute_1,
         "5 Minute": OHLCInterval.Minute_5,
@@ -134,7 +134,7 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
 
 @celery_app.task(queue="high_priority")
 def create_market_hour_candles(days, fetch_last_candle_number):
-    msg = create_market_hour_candles.__name__ + str(get_local_time.date()) # DEBUG
+    msg = create_market_hour_candles.__name__ + str(get_local_time().date()) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
@@ -183,7 +183,7 @@ def find_update_macd_stochastic_crossover_in_stocks():
         "BUY" : 1.2,
         "SELL": -1.2,
     }
-    current_time = get_local_time.time()
+    current_time = get_local_time().time()
     msg = find_update_macd_stochastic_crossover_in_stocks.__name__ + str(current_time) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     start_time = time(9,25)
@@ -198,7 +198,7 @@ def find_update_macd_stochastic_crossover_in_stocks():
 
 @celery_app.task(queue="medium_priority")
 def todays_movement_stocks_add_on_sideways():
-    current_time = get_local_time.time()
+    current_time = get_local_time().time()
     msg = todays_movement_stocks_add_on_sideways.__name__ + str(current_time) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     start_time = time(9,25)

@@ -10,7 +10,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     # slack_message_sender(text=f"Sorted Stock ID in MACD {sorted_stock_id}")
     macd_indicator = Indicator.objects.get(name="MACD")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
-    today_date = get_local_time.date()
+    today_date = get_local_time().date()
     msg = get_macd_crossover.__name__ + str(today_date) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     df = sorted_stock.symbol.get_stock_live_data()
@@ -62,7 +62,7 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
 def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     # slack_message_sender(text=f"Sorted Stock ID in Stochastic {sorted_stock_id}")
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")
-    today_date = get_local_time.date()
+    today_date = get_local_time().date()
     msg = get_stochastic_crossover.__name__ + str(today_date) # DEBUG
     slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
