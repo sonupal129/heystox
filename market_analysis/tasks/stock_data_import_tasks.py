@@ -40,8 +40,8 @@ def invalidate_stocks_cached_data(symbol:str):
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, upstox_user_email="sonupal129@gmail.com", fetch_last_candle:int=None):
     if end_date == None:
         end_date = get_local_time().date()
-    msg = fetch_candles_data.__name__ + str(end_date) # DEBUG
-    slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
+    # msg = fetch_candles_data.__name__ + str(end_date) # DEBUG
+    # slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     user = get_upstox_user(email=upstox_user_email)
     interval_dic = {
         "5 Minute": OHLCInterval.Minute_5,

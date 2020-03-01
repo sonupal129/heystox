@@ -38,8 +38,8 @@ class Symbol(BaseModel):
         """date_obj should be date only, return last trading day count from today"""
         if date_obj == None:
             date_obj = get_local_time().date()
-        msg = get_last_day_closing_price.__name__ + str(date_obj) # DEBUG
-        slack_message_sender.delay(text=msg, channel="#test1") # DEBUG   
+        # msg = get_last_day_closing_price.__name__ + str(date_obj) # DEBUG
+        # slack_message_sender.delay(text=msg, channel="#test1") # DEBUG   
         yesterday = date_obj - timedelta(1)
         weekend = ["Sunday", "Saturday"]
         holiday = MarketHoliday.objects.filter(date__lte=date_obj).last().date
