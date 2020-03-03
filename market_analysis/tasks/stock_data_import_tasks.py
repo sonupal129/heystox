@@ -40,8 +40,6 @@ def invalidate_stocks_cached_data(symbol:str):
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, upstox_user_email="sonupal129@gmail.com", fetch_last_candle:int=None):
     if end_date == None:
         end_date = get_local_time().date()
-    # msg = fetch_candles_data.__name__ + str(end_date) # DEBUG
-    # slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     user = get_upstox_user(email=upstox_user_email)
     interval_dic = {
         "5 Minute": OHLCInterval.Minute_5,
@@ -200,24 +198,25 @@ def import_daily_losers_gainers():
             if open_price >= 100 and open_price < 300 and change >= 1.2:
                 return obj
             
-        
+        proxies = {'http': 'http://165.22.223.235:8118'} # Modify Function And Create rotating proxy mechanism
         if nifty_movement in ("BUY", "SELL"):
             import_urls = urls.get(nifty_movement)
             if import_urls:
+                created_stocks = []
                 for url in import_urls:
-                    response = requests.get(url, headers=settings.NSE_HEADERS)
-                    sleep(4)
+                    response = requests.get(url, headers=settings.NSE_HEADERS, proxies=proxies)
+                    sleep(2)
                     if response.status_code == 200:
                         responses = filter(response_filter, response.json().get("data"))
-                        sleep(1)
                         for symbol in responses:
                             try:
                                 stock = Symbol.objects.get(symbol=symbol.get("symbol").lower())
                             except:
                                 stock = None
                             if stock:
-                                SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_movement, created_at__date=get_local_time().date())
+                                stock = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_movement, created_at__date=get_local_time().date())
+                                created_stocks.append(stock.symbol)
                     else:
                         slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")
-                return "All Urls Data Imported Succefully"
+                return f"Added Stocks {created_stocks}"
     return f"{current_time} Time is greater or lower than {start_time} {end_time}"

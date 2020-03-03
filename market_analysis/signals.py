@@ -23,7 +23,6 @@ def verify_macd_signal(instance, **kwargs):
         except:
             secondlast_timestamp = None
         if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
-            slack_message_sender.delay(text=f"STOCHASTIC and MACD Found for Stock {instance.stock}", channel="#random")
             order_on_macd_verification.delay(instance.id, secondlast_timestamp.id)
 
 @receiver(post_save, sender=SortedStocksList)

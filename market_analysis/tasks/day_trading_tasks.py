@@ -40,8 +40,6 @@ def unsubscribe_today_trading_stocks():
 @celery_app.task(queue="high_priority") #Check more for minute how to start-stop after specific time
 def todays_movement_stocks_add():
     current_time = get_local_time().time()
-    # msg = todays_movement_stocks_add.__name__ + str(current_time) # DEBUG
-    # slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     start_time = time(9,20)
     if current_time > start_time:
         add_today_movement_stocks.apply_async()
@@ -51,8 +49,6 @@ def todays_movement_stocks_add():
 @celery_app.task(queue="low_priority") 
 def find_ohl_stocks():
     current_time = get_local_time().time()
-    # msg = find_ohl_stocks.__name__ + str(current_time) # DEBUG
-    # slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     start_time = time(9,25)
     if current_time > start_time:
         sorted_stocks = redis_cache.get("todays_sorted_stocks")
@@ -134,8 +130,6 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
 
 @celery_app.task(queue="high_priority")
 def create_market_hour_candles(days, fetch_last_candle_number):
-    # msg = create_market_hour_candles.__name__ + str(get_local_time().date()) # DEBUG
-    # slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
         fetch_candles_data.apply_async(kwargs={"symbol":stock, "days":days, "fetch_last_candle":fetch_last_candle_number}) # By Defautl Fetching 5 Minute Candle
@@ -168,13 +162,13 @@ def order_on_macd_verification(macd_stamp_id, stochastic_stamp_id): #Need to wor
     macd_timestamp = StrategyTimestamp.objects.get(pk=macd_stamp_id)
     stoch_timestamp = StrategyTimestamp.objects.get(pk=stochastic_stamp_id)
     if macd_timestamp.timestamp - stoch_timestamp.timestamp < timedelta(minutes=30):
-        stock_current_candle = macd_timestamp.stock.symbol.get_stock_current_candle()
-        entry_price = stock_current_candle.get("open_price")
+        entry_price = macd_timestamp.stock.symbol.get_stock_live_price(price_type="open")
         macd_timestamp.stock.entry_price = entry_price
         macd_timestamp.stock.save()
         slack_message_sender.delay(text=f"{entry_price} Signal {macd_timestamp.stock.entry_type} Stock Name {macd_timestamp.stock.symbol.symbol} Time {macd_timestamp.timestamp.time()}", channel="#random")
-        obj = SortedStockDashboardReport.objects.create(name=macd_timestamp.stock.symbol.symbol,
+        obj, is_created = SortedStockDashboardReport.objects.get_or_create(name=macd_timestamp.stock.symbol.symbol,
                 entry_time=macd_timestamp.timestamp, entry_type=macd_timestamp.stock.entry_type, entry_price=entry_price)
+        return is_created
 
 
 @celery_app.task(queue="high_priority")
@@ -184,8 +178,6 @@ def find_update_macd_stochastic_crossover_in_stocks():
         "SELL": -1.2,
     }
     current_time = get_local_time().time()
-    # msg = find_update_macd_stochastic_crossover_in_stocks.__name__ + str(current_time) # DEBUG
-    # slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     start_time = time(9,25)
     if current_time > start_time:
         for stock in redis_cache.get("todays_sorted_stocks"):
@@ -199,8 +191,6 @@ def find_update_macd_stochastic_crossover_in_stocks():
 @celery_app.task(queue="medium_priority")
 def todays_movement_stocks_add_on_sideways():
     current_time = get_local_time().time()
-    # msg = todays_movement_stocks_add_on_sideways.__name__ + str(current_time) # DEBUG
-    # slack_message_sender.delay(text=msg, channel="#test1") # DEBUG
     start_time = time(9,25)
     if current_time > start_time:
         add_stock_on_market_sideways.apply_async()

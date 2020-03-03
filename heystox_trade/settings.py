@@ -83,29 +83,29 @@ WSGI_APPLICATION = 'heystox_trade.wsgi.application'
 # Use ssh -i heystox_makki -L 9211:localhost:5432 heystox@139.59.90.114 for tunneling with remote data
 # heystox_makki = ssh key, 9211 is local machine port, 5432 is server machine psql port, then user then ip address
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-#         'NAME': 'heystox',                      # Or path to database file if using sqlite3.
-#         'USER': 'heystox',                      # Not used with sqlite3.
-#         'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
-#         'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
-#         'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': 'heystox',                      # Or path to database file if using sqlite3.
+        'USER': 'heystox',                      # Not used with sqlite3.
+        'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
+        'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
+    }
+}
 
 # Local Data Base
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'testdb',
-        'USER': 'testdb',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'testdb',
+#         'USER': 'testdb',
+#         'PASSWORD': '123456',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
 
 
 
@@ -169,10 +169,13 @@ APPEND_SLASH = True
 
 
 # NSE HEADERS 
-NSE_HEADERS = {"Host": "www1.nseindia.com", "Cache-Control": "max-age=0", "Upgrade-Insecure-Requests": "1", 
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
-            }
+NSE_HEADERS = {'Accept': '*/*',
+           'Accept-Encoding': 'gzip, deflate, sdch, br',
+           'Accept-Language': 'en-GB,en-US;q=0.8,en;q=0.6',
+           'Connection': 'keep-alive',
+           'Host': 'www1.nseindia.com',
+           'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
+           'X-Requested-With': 'XMLHttpRequest'}
 
 
 

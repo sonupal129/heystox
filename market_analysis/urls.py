@@ -9,6 +9,7 @@ urlpatterns = [
     path('', views.get_access_token_from_upstox, name='login-upstox-done'),
     path('dashboard/', views.StockDashboardView.as_view(), name="dashboard"),
     path('dashboard/sorted-stocks/', views.SortedStocksDashBoardView.as_view(), name="sorted-dashboard"),
+    path('dashboard/sorted-stocks/report/', views.SortedStocksDashBoardReportView.as_view(), name="sorted-dashboard-report"),
     path('login/', views.UserLoginRegisterView.as_view(), name="login-register"),
 ]
 

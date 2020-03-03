@@ -65,7 +65,7 @@
                 <td>{% get_day_high_low symbol "HIGH" %}</td>
                 <td>{% get_day_high_low symbol "LOW" %}</td>
                 <td>{{ symbol.is_stock_ohl }}</td>
-                <td><a href={% url 'market_analysis_urls:live-data' symbol.id %}>Data</a></td>
+                
             </tr>
         {% endfor %}
     </table>

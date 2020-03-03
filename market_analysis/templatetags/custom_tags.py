@@ -13,7 +13,7 @@ def get_timestamp_by_indicator(sorted_stock, indicator_name):
 
 @register.simple_tag
 def get_sorted_stock_closing_price(sorted_stock):
-    closing_price = sorted_stock.symbol.get_day_closing_price(date=sorted_stock.created_at.date())
+    closing_price = sorted_stock.symbol.get_day_closing_price(date_obj=sorted_stock.created_at.date())
     if closing_price:
         return closing_price
     return None

@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol, StrategyTimestamp
+from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol, StrategyTimestamp, SortedStockDashboardReport
 from market_analysis.filters import SymbolFilters, SortedStocksFilter
 from market_analysis.tasks.trading import get_cached_liquid_stocks
 from market_analysis.view_mixins import BasePermissionMixin
@@ -95,6 +95,37 @@ class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListVi
                     if stamp.timestamp - secondlast_timestamp.timestamp < timedelta(minutes=50):
                         sorted_stock_id.append(stamp.stock.id)
         return SortedStocksList.objects.filter(id__in=sorted_stock_id)
+
+
+
+class SortedStocksDashBoardReportView(BasePermissionMixin, GroupRequiredMixins, ListView):
+    template_name = "sorted_stocks_dashboard_report.html"
+    context_object_name = "symbols"
+    group_required = ["trader"]
+    movement = {
+        "BUY" : "HIGH",
+        "SELL" : "LOW"
+    }
+
+
+    def get_queryset(self): 
+        requested_date = self.request.GET.get("created_at", None)
+        if requested_date:
+            date_obj = get_local_time().strptime(date, "%Y-%m-%d").date()
+        else:
+            date_obj = get_local_time().date()
+        qs = SortedStockDashboardReport.objects.filter(created_at__date=date_obj)
+        # for q in qs:
+        #     if not q.exit_price or not q.pl:
+        #         symbol = Symbol.objects.get(symbol=q.name)
+        #         df = symbol.get_stock_live_data(date_obj=date_obj)
+        return qs
+                
+                # Fixed 1% Exit Strategy
+
+
+
+
 
 
 class UserLoginRegisterView(LoginView):
