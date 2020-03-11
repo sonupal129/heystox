@@ -111,7 +111,7 @@ class SortedStocksDashBoardReportView(BasePermissionMixin, GroupRequiredMixins, 
     def get_queryset(self): 
         requested_date = self.request.GET.get("created_at", None)
         if requested_date:
-            date_obj = get_local_time().strptime(date, "%Y-%m-%d").date()
+            date_obj = get_local_time().strptime(requested_date, "%Y-%m-%d").date()
         else:
             date_obj = get_local_time().date()
         qs = SortedStockDashboardReport.objects.filter(created_at__date=date_obj)

@@ -15,15 +15,16 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
         Earning.objects.get_or_create(user=instance.user_profile, date=get_local_time().date(), opening_balance=instance.current_balance)
 
 @receiver(post_save, sender=StrategyTimestamp)
-def verify_macd_signal(instance, **kwargs):
-    if instance.indicator.name == "MACD" and instance.is_last_timestamp():
-        stock = instance.stock
-        try:
-            secondlast_timestamp = stock.get_second_last_timestamp()
-        except:
-            secondlast_timestamp = None
-        if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
-            order_on_macd_verification.delay(instance.id, secondlast_timestamp.id)
+def verify_macd_signal(sender, instance, created, **kwargs):
+    if created:
+        if instance.indicator.name == "MACD" and instance.is_last_timestamp():
+            stock = instance.stock
+            try:
+                secondlast_timestamp = stock.get_second_last_timestamp()
+            except:
+                secondlast_timestamp = None
+            if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
+                order_on_macd_verification.delay(instance.id, secondlast_timestamp.id)
 
 @receiver(post_save, sender=SortedStocksList)
 def verify_stock_pdhl_longshort(sender, instance, **kwargs):

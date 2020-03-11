@@ -520,3 +520,4 @@ class OrderBook(BaseModel):
     entry_price = models.FloatField(blank=True, null=True)
     exit_price = models.FloatField(blank=True, null=True)
     pl = models.FloatField(blank=True, null=True)
+    strength = models.CharField(blank=True, max_length=50, null=True)

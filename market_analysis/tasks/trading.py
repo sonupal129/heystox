@@ -70,7 +70,7 @@ def add_today_movement_stocks(movement_percent:float=1.2):
     if nifty_50 == "BUY" or nifty_50 == "SELL":
         for stock in get_stocks_for_trading():
             try:
-                obj, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50,created_at__date=today_date)
+                obj, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50, created_at__date=today_date)
                 # sorted_stocks_name.append(obj.symbol.symbol)
             except:
                 continue
