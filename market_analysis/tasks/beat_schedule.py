@@ -8,6 +8,10 @@ misc_tasks = {
         "task": "market_analysis.tasks.misc_tasks.delete_stocks_candles",
         "schedule": crontab(hour=5, minute=50),
     },
+    "create_stocks_report": {
+        "task": "market_analysis.tasks.misc_tasks.create_stocks_report",
+        "schedule": crontab(day_of_week="2-6", hour=21, minute=0),
+    },
     # "add_together": {
     #     "task": "market_analysis.tasks.misc_tasks.add_together",
     #     "schedule": crontab(minute="*/1"),
@@ -82,7 +86,7 @@ day_trading_tasks = {
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
     },
     "find_ohl_stocks": {
-        "task": "market_analysis.tasks.day_trading_tasks.find_ohl_stocks",
+        "task": "market_analysis.tasks.intraday_indicator.find_ohl_stocks",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/6"),
     },
     "create_market_hour_candles_every_five_minute": {

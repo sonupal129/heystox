@@ -7,7 +7,6 @@ from market_analysis.tasks.notification_tasks import slack_message_sender
 @celery_app.task(queue="low_priority")
 def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     """This function find crossover between macd and macd signal and return signal as buy or sell"""
-    # slack_message_sender(text=f"Sorted Stock ID in MACD {sorted_stock_id}")
     macd_indicator = Indicator.objects.get(name="MACD")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time().date()
@@ -29,15 +28,12 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
     except:
         last_crossover = None
     if last_crossover is not None:
-        # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
-        # slack_message_sender.delay(text=f"Last Crossover MACD {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
         try:
             if last_crossover.signal == "SELL_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.macd_diff <= -0.070)].iloc[0]
             elif last_crossover.signal == "BUY_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.macd_diff >= 0.070)].iloc[0]
-            # slack_message_sender.delay(text=f"Crossover Signal MACD {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
         if crossover_signal is not None:
@@ -58,7 +54,6 @@ def get_macd_crossover(sorted_stock_id): # Macd Crossover Strategy
 
 @celery_app.task(queue="medium_priority")
 def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
-    # slack_message_sender(text=f"Sorted Stock ID in Stochastic {sorted_stock_id}")
     stoch_indicator = Indicator.objects.get(name="STOCHASTIC")
     today_date = get_local_time().date()
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
@@ -80,15 +75,12 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
     except:
         last_crossover = None
     if last_crossover is not None:
-        # slack_message_sender.delay(text=f"Sorted Stock ID {sorted_stock_id}")
-        # slack_message_sender.delay(text=f"Last Crossover STOCHASTIC {sorted_stock.symbol.symbol}    " + str(last_crossover))
         df_after_last_crossover = df.loc[df["date"] > last_crossover.date]
         try:
             if last_crossover.signal == "SELL_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.stoch_diff <= -20.05)].iloc[0]
             elif last_crossover.signal == "BUY_CROSSOVER":
                 crossover_signal = df_after_last_crossover.loc[(df.stoch_diff >= 22.80)].iloc[0]
-            # slack_message_sender.delay(text=f"Crossover Signal STOCHASTIC {sorted_stock.symbol.symbol}    " + str(crossover_signal))
         except:
             crossover_signal = None
         if crossover_signal is not None:
@@ -106,3 +98,48 @@ def get_stochastic_crossover(sorted_stock_id): # Stochastic crossover strategy
         return "Crossover Signal Not Found"
     return "last_crossover not found"
 
+
+@celery_app.task(queue="low_priority") 
+def find_ohl_stocks():
+    current_time = get_local_time().time()
+    start_time = time(9,25)
+    if current_time > start_time:
+        sorted_stocks = redis_cache.get("todays_sorted_stocks")
+        if sorted_stocks:
+            todays_timestamps = StrategyTimestamp.objects.select_related("stock", "indicator").filter(indicator__name="OHL", timestamp__date=get_local_time().date())
+            for stock in sorted_stocks:
+                timestamps = todays_timestamps.filter(stock=stock)
+                ohl_condition = stock.symbol.is_stock_ohl()
+                if ohl_condition:
+                    if stock.entry_type == ohl_condition and not timestamps.exists():
+                        ohl_indicator = Indicator.objects.get(name="OHL")
+                        StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=get_local_time().now())
+                    elif stock.entry_type != ohl_condition:
+                        timestamps.delete()
+                    elif timestamps.count() > 1:
+                        timestamps.exclude(id=timestamps.first().id).delete()
+            return "OHL Updated"
+        return "No Sorted Stocks Cached"
+    return f"Time {current_time} not > 9:25"
+
+
+@celery_app.task(queue="low_priority") # Will Work on These Functions Later
+def is_stock_pdhl(obj_id):
+    stock = SortedStocksList.objects.get(id=obj_id)
+    if stock.symbol.is_stock_pdhl() == stock.entry_type:
+        pdhl_indicator = Indicator.objects.get(name="PDHL")
+        pdhl, is_created = StrategyTimestamp.objects.get_or_create(indicator=pdhl_indicator, stock=stock)
+        pdhl.timestamp = get_local_time().now()
+        pdhl.save()
+        return "Stamp Created"
+
+@celery_app.task(queue="low_priority") # Will Work on These Functions Later
+def has_entry_for_long_short(obj_id):
+    stock = SortedStocksList.objects.get(id=obj_id)
+    if stock.symbol.has_entry_for_long_short() == stock.entry_type:
+        long_short_entry = Indicator.objects.get(name="LONGSHORT")
+        long_short, is_created = StrategyTimestamp.objects.get_or_create(indicator=long_short_entry, stock=stock)
+        long_short.timestamp = get_local_time().now()
+        long_short.save()
+    else:
+        StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp__date=datetime.now().date()).delete()

@@ -83,29 +83,29 @@ WSGI_APPLICATION = 'heystox_trade.wsgi.application'
 # Use ssh -i heystox_makki -L 9211:localhost:5432 heystox@139.59.90.114 for tunneling with remote data
 # heystox_makki = ssh key, 9211 is local machine port, 5432 is server machine psql port, then user then ip address
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'heystox',                      # Or path to database file if using sqlite3.
-        'USER': 'heystox',                      # Not used with sqlite3.
-        'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
-        'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+#         'NAME': 'heystox',                      # Or path to database file if using sqlite3.
+#         'USER': 'heystox',                      # Not used with sqlite3.
+#         'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
+#         'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
+#         'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
+#     }
+# }
 
 # Local Data Base
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'testdb',
-#         'USER': 'testdb',
-#         'PASSWORD': '123456',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'testdb',
+        'USER': 'testdb',
+        'PASSWORD': '123456',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 
 
 
@@ -146,7 +146,11 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(os.path.dirname(os.getcwd()),'static/')
+STATIC_ROOT = os.path.join(BASE_DIR,'static/')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR,'media/')
+
 # Cache
 
 CACHES = {
@@ -231,6 +235,18 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ]
 }
+
+
+# Market Default Variables
+MARKET_BULLISH_MOVEMENT = 1.2
+MARKET_BEARISH_MOVEMENT = -1.2
+DEFAULT_STOPLOSS = 1  # Stoploss is in percentage
+DEFAULT_TARGET = 2 # Target is in percentage
+
+
+
+
+
 
 # Imports Additional Settings File
 try:

@@ -1,7 +1,9 @@
 from market_analysis.imports import *
 from market_analysis.models import UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp
-from market_analysis.tasks.day_trading_tasks import order_on_macd_verification, take_entry_for_long_short, is_stock_pdhl
+
 from market_analysis.tasks.notification_tasks import slack_message_sender
+from market_analysis.tasks.indicator_signals import macd_stochastic_signal
+from market_analysis.tasks.intraday_indicator import is_stock_pdhl, has_entry_for_long_short
 # Code Below
 
 @receiver(post_save, sender=User)
@@ -24,11 +26,11 @@ def verify_macd_signal(sender, instance, created, **kwargs):
             except:
                 secondlast_timestamp = None
             if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
-                order_on_macd_verification.delay(instance.id, secondlast_timestamp.id)
+                macd_stochastic_signal.delay(instance.id, secondlast_timestamp.id)
 
 @receiver(post_save, sender=SortedStocksList)
 def verify_stock_pdhl_longshort(sender, instance, **kwargs):
-    # is_stock_pdhl.delay(instance.id)
-    # take_entry_for_long_short.delay(instance.id)
-    pass
+    if kwargs.get("created"):
+        is_stock_pdhl.delay(instance.id)
+        has_entry_for_long_short.delay(instance.id)
 

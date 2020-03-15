@@ -20,6 +20,7 @@ from ta.momentum import stoch, stoch_signal
 from upstox_api.api import *
 
 # Python Django Core Libraries
+import hashlib
 from django.core.cache import caches, cache
 from django.contrib.auth import authenticate, login
 from django.core.exceptions import ValidationError, PermissionDenied, ImproperlyConfigured
@@ -67,3 +68,47 @@ def get_local_time():
 redis_cache = caches["redis"]
 
 
+# Upstox Dictionary
+
+transaction_types = {
+    "BUY" : TransactionType.Buy,
+    "SELL" : TransactionType.Sell
+}
+
+order_types = {
+    "MARKET" : OrderType.Market,
+    "LIMIT" : OrderType.Limit,
+    "SL" : OrderType.StopLossLimit,
+    "SLM" : OrderType.StopLossMarket
+}
+
+product_types = {
+    "INTRADAY": ProductType.Intraday,
+    "DELIVERY": ProductType.Delivery
+}
+
+duration_types = {
+    "DAY" : DurationType.DAY,
+    "IOC" : DurationType.IOC #Immidiate or Cancel Order
+}
+
+## Upstox Event Handler
+### Quote Update, Order Update, Trade Update
+
+def event_handler_on_quote_update(message, func=None):
+    if func:
+        func(message)
+        return "Quote Updated"
+    print(str(message))
+
+def event_handler_on_order_update(message, func=None):
+    if func:
+        func(message)
+        return "Order Updated"
+    print(str(message))
+
+def event_handler_on_trade_update(message, func=None):
+    if func:
+        func(message)
+        return "Trade Updated"
+    print(str(message))

@@ -15,6 +15,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+
+# CODE BELOW
 
 
 admin.site.site_header = 'Heystox Admin'
@@ -25,5 +29,4 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include("market_analysis.urls", namespace="market_analysis_urls")),
     path('api/v1/', include("market_analysis.api_urls", namespace="market_analysis_api_urls")),
-
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

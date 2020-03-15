@@ -30,7 +30,7 @@ class SortedStocksListAdmin(admin.ModelAdmin):
     search_fields = ["symbol__symbol"]
 
 class UserProfileAdmin(admin.ModelAdmin):
-    list_dispaly = ["get_user_email"]
+    list_display = ["get_user_email"]
     actions = ["get_upstox_login_url"]
 
     def get_upstox_login_url(self, request, obj):
@@ -46,11 +46,11 @@ class MarketHolidayAdmin(admin.ModelAdmin):
 
 
 class PreMarketOrderDataAdmin(admin.ModelAdmin):
-    list_dispaly = ["symbol__symbol", "sector", "created_at"]
+    list_display = ["symbol", "sector", "created_at"]
     search_fields = ["symbol__symbol"]
 
 class SortedStockDashboardReportAdmin(admin.ModelAdmin):
-    list_dispaly = ["name", "entry_type", "entry_price"]
+    list_display = ["name", "entry_type", "entry_price"]
 
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
 admin.site.register(Candle, CandleAdmin)
@@ -64,7 +64,3 @@ admin.site.register(Indicator)
 admin.site.register(SortedStocksList, SortedStocksListAdmin)
 admin.site.register(PreMarketOrderData, PreMarketOrderDataAdmin)
 admin.site.register(SortedStockDashboardReport, SortedStockDashboardReportAdmin)
-# TEST
-
-
-# admin.site.register(StrategyTimestamp)

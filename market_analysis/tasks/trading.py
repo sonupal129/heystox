@@ -46,26 +46,26 @@ def get_stocks_for_trading():
     if nifty_50 == "BUY":
         if redis_cache.get("BUY_stocks_for_trading"):
             return redis_cache.get("BUY_stocks_for_trading")
-        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(movement_percent=1.2)]
+        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(movement_percent=settings.MARKET_BULLISH_MOVEMENT)]
         redis_cache.set("BUY_stocks_for_trading", stocks_for_trade, 60*7)
         return stocks_for_trade
     elif nifty_50 == "SELL":
         if redis_cache.get("SELL_stocks_for_trading"):
             return redis_cache.get("SELL_stocks_for_trading")
-        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(movement_percent=-1.2)]
+        stocks_for_trade  = [stock for stock in stocks if stock.is_stock_moved_good_for_trading(movement_percent=settings.MARKET_BEARISH_MOVEMENT)]
         redis_cache.set("SELL_stocks_for_trading", stocks_for_trade, 60*7)
         return stocks_for_trade
     else:
         return None
     
 @celery_app.task(queue="high_priority")
-def add_today_movement_stocks(movement_percent:float=1.2):
+def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOVEMENT):
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     # sorted_stocks_name = []
     today_date = get_local_time().date()
     movement_on_entry = {
-        "BUY" : 1.2,
-        "SELL": -1.2,
+        "BUY" : settings.MARKET_BULLISH_MOVEMENT,
+        "SELL": settings.MARKET_BEARISH_MOVEMENT,
     }
     if nifty_50 == "BUY" or nifty_50 == "SELL":
         for stock in get_stocks_for_trading():
@@ -119,8 +119,8 @@ def add_stock_on_market_sideways():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     if nifty_50 == "SIDEWAYS" and nifty_50_point:
         if nifty_50_point > 22:
-            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SELL", created_at__date=today_date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(movement_percent=-1.2)]
+            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="SELL", created_at__date=today_date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(movement_percent=settings.MARKET_BEARISH_MOVEMENT)]
             slack_message_sender.delay(text=f"List of Sideways Sell Stocks: " +  ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))
         if nifty_50_point < -30:
-            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY", created_at__date=today_date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(movement_percent=1.2)]
+            stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY", created_at__date=today_date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(movement_percent=settings.MARKET_BULLISH_MOVEMENT)]
             slack_message_sender.delay(text=f"List of Sideways Buy Stocks: " + ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))

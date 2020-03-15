@@ -195,7 +195,7 @@ def import_daily_losers_gainers():
             if "," in open_price:
                 open_price = open_price.replace(",","")
             open_price = float(open_price)
-            if open_price >= 100 and open_price < 300 and change >= 1.2:
+            if open_price >= 100 and open_price < 300 and change >= settings.MARKET_BULLISH_MOVEMENT:
                 return obj
             
         proxies = {'http': 'http://165.22.223.235:8118'} # Modify Function And Create rotating proxy mechanism

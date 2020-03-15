@@ -204,7 +204,7 @@ class Symbol(BaseModel):
         else:
             raise TypeError("This Function is limited to nifty 50 only")
 
-    def is_stock_moved_good_for_trading(self, movement_percent:float=1.2): #Need to work more on this function
+    def is_stock_moved_good_for_trading(self, movement_percent:float): #Need to work more on this function
         """This function will check if stock moved good for trading or not, work on current data only"""
         stock_movement = self.get_stock_movement()
         stock_closing_price_movement_percent = self.get_last_day_closing_price() * movement_percent / 100
