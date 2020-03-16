@@ -123,6 +123,28 @@ def todays_movement_stocks_add_on_sideways():
         return "Function Called"
     return "Function Not Called"
 
+@celery_app.task(queue="high_priority")
+def calculate_profit_loss_on_entry_stocks():
+    reports = SortedStockDashboardReport.objects.all()
+    if reports:
+        for report in reports:
+            stock = Symbol.objects.get(symbol=name.lower())
+            if stock.get_days_high_low_price(price_type="HIGH") >= report.target_price:
+                profit = report.target_price - report.entry_price
+                if profit < 0:
+                    report.pl = profit - profit * 2
+                else:
+                    report.pl = profit
+                report.save()
+            elif stock.get_days_high_low_price(price_type="LOW") <= report.stoploss_price:
+                loss = report.stoploss_price - report.entry_price
+                if loss > 0:
+                    report.pl = loss + loss * 2
+                else:
+                    report.pl = loss 
+                report.save()
+
+
 # @task(name="testing_function_two")
 # def raju_mera_name(run_every=None, run=False):
 #     while run:

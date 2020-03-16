@@ -50,7 +50,7 @@ class PreMarketOrderDataAdmin(admin.ModelAdmin):
     search_fields = ["symbol__symbol"]
 
 class SortedStockDashboardReportAdmin(admin.ModelAdmin):
-    list_display = ["name", "entry_type", "entry_price"]
+    list_display = ["name", "entry_type", "entry_price", "entry_time"]
 
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
 admin.site.register(Candle, CandleAdmin)

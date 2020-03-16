@@ -35,8 +35,9 @@
             <th>Date</th>
             <th>Entry Type</th>
             <th>Entry Price</th>
-            <th>Fixed Exit Price</th>
-            <th>Auto Exit Price</th>
+            <th>Stoploss</th>
+            <th>Target</th>
+            <th>Auto Exit</th>
             <th>Profit/Loss</th>
         </tr>
         {% if symbols %}
@@ -46,7 +47,8 @@
                 <td>{{ symbol.entry_time }}</td>
                 <td>{{ symbol.entry_type }}</td>
                 <td>{{ symbol.entry_price }}</td>
-                <td>{{ symbol.exit_price }}</td>
+                <td>{{ symbol.stoploss_price }}</td>
+                <td>{{ symbol.target_price }}</td>
                 <td>Working</td>
                 <td>{{ symbol.pl }}</td>
             </tr>
