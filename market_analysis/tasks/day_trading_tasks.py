@@ -3,7 +3,7 @@ from .notification_tasks import slack_message_sender
 from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle, Indicator, SortedStockDashboardReport)
 from .trading import *
 from market_analysis.imports import *
-
+from .intraday_indicator import get_macd_crossover, get_stochastic_crossover
 
 # CODE STARTS BELOW
 
@@ -109,8 +109,8 @@ def find_update_macd_stochastic_crossover_in_stocks():
     if current_time > start_time:
         for stock in redis_cache.get("todays_sorted_stocks"):
             if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
-                get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-                get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+                get_stochastic_crossover.delay(kwargs={"sorted_stock_id": stock.id})
+                get_macd_crossover.delay(kwargs={"sorted_stock_id": stock.id})
         return "Celery request sent for stock"
     return f"Current time {current_time} not > 9:25"
 
@@ -131,17 +131,11 @@ def calculate_profit_loss_on_entry_stocks():
             stock = Symbol.objects.get(symbol=name.lower())
             if stock.get_days_high_low_price(price_type="HIGH") >= report.target_price:
                 profit = report.target_price - report.entry_price
-                if profit < 0:
-                    report.pl = profit - profit * 2
-                else:
-                    report.pl = profit
+                report.pl = abs(profit)
                 report.save()
             elif stock.get_days_high_low_price(price_type="LOW") <= report.stoploss_price:
                 loss = report.stoploss_price - report.entry_price
-                if loss > 0:
-                    report.pl = loss + loss * 2
-                else:
-                    report.pl = loss 
+                report.pl = abs(loss)
                 report.save()
 
 

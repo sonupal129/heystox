@@ -518,6 +518,7 @@ class OrderBook(BaseModel):
     }
 
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="orders")
+    order_id = models.CharField(blank=True, null=True, max_length=150)
     entry_time = models.DateTimeField(blank=True, null=True)
     entry_type = models.CharField(blank=True, null=True, max_length=10, choices=entry_choices)
     entry_price = models.FloatField(blank=True, null=True)

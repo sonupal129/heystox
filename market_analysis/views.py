@@ -42,15 +42,6 @@ def get_access_token_from_upstox(request):
     return redirect("market_analysis_urls:upstox-login")
 
 
-class StockDashboardView(ListView):
-    template_name = 'dashboard.html'
-    context_object_name = "symbols"
-
-    def get_queryset(self):
-        filters = SymbolFilters(self.request.GET, queryset=Symbol.objects.filter(id__in=get_cached_liquid_stocks()))
-        return filters
-
-
 # class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListView):
 #     template_name = "sorted_stocks_dashboard.html"
 #     context_object_name = "symbols"

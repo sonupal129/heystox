@@ -1,6 +1,6 @@
 from market_analysis.imports import *
 from .trading import get_upstox_user
-from market_analysis.models import Symbol, SortedStockDashboardReport
+from market_analysis.models import Symbol, SortedStockDashboardReport, OrderBook
 from market_analysis.tasks.notification_tasks import slack_message_sender
 # Code Below
 
@@ -37,6 +37,19 @@ def get_stock_target_price(price, entry_type):
         target = price + (price * tg /100)
     return roundup(target)
 
+def calculate_order_quantity(share_price, entry_type):
+    user = get_upstox_user()
+    balance = user.get_balance()
+    if balance["code"] == 200:
+        available_margin = balance["data"]["equity"].get("available_margin")
+        bearable_loss = available_margin * settings.DEFAULT_STOPLOSS / 100
+        stoploss = get_stock_stoploss_price(share_price, entry_type)
+        diff = abs(share_price - stoploss)
+        if diff < 1:
+            diff = round(diff)
+        qty = int(bearable_loss / diff)
+        return abs(qty)
+
 def get_stock_auto_exit_price():
     pass
 
@@ -55,7 +68,8 @@ def send_order_place_request(signal_detail:dict=None):
     entry_type = signal_detail.get("entry_type")
     name = signal_detail.get("name")
     entry_time = get_local_time().strptime(signal_detail.get("entry_time"), "%Y-%m-%dT%H:%M:%S.%f")
-    if entry_time.time() >= order_place_start_time and entry_time.time() <= order_place_end_time:
+    user = get_upstox_user()
+    if entry_time.time() > order_place_start_time and entry_time.time() <= order_place_end_time:
         obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
         slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time.now()}", channel="#random")
         add_expected_profit_loss.delay(obj.id)
@@ -72,7 +86,7 @@ def add_expected_profit_loss(stock_report_id):
     report.target_price = get_stock_target_price(price)
     report.save()
 
-
+@celery_app.task(queue="high_priority")
 def send_order_request(order_details:dict):
     user = get_upstox_user()
     symbol = Symbol.objects.get(symbol=order_details.get("symbol"))
@@ -88,5 +102,7 @@ def send_order_request(order_details:dict):
         price,
         duration_types.get(duration_type)
     )
+    OrderBook.objects.create(symbol=symbol, order_id=order.get("order_id"))
+
 
 

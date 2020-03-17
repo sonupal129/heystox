@@ -52,6 +52,9 @@ class PreMarketOrderDataAdmin(admin.ModelAdmin):
 class SortedStockDashboardReportAdmin(admin.ModelAdmin):
     list_display = ["name", "entry_type", "entry_price", "entry_time"]
 
+class OrderBookAdmin(admin.ModelAdmin):
+    list_display = ["symbol", "order_id", "entry_time", "entry_type", "entry_price"]
+
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
 admin.site.register(Candle, CandleAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)
@@ -64,3 +67,4 @@ admin.site.register(Indicator)
 admin.site.register(SortedStocksList, SortedStocksListAdmin)
 admin.site.register(PreMarketOrderData, PreMarketOrderDataAdmin)
 admin.site.register(SortedStockDashboardReport, SortedStockDashboardReportAdmin)
+admin.site.register(OrderBook, OrderBookAdmin)
