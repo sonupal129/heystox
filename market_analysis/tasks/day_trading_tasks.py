@@ -109,8 +109,8 @@ def find_update_macd_stochastic_crossover_in_stocks():
     if current_time > start_time:
         for stock in redis_cache.get("todays_sorted_stocks"):
             if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
-                get_stochastic_crossover.delay(kwargs={"sorted_stock_id": stock.id})
-                get_macd_crossover.delay(kwargs={"sorted_stock_id": stock.id})
+                get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+                get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
         return "Celery request sent for stock"
     return f"Current time {current_time} not > 9:25"
 
