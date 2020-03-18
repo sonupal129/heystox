@@ -19,7 +19,7 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 @receiver(post_save, sender=StrategyTimestamp)
 def verify_macd_signal(sender, instance, created, **kwargs):
     if created:
-        if instance.indicator.name == "MACD" and instance.is_last_timestamp():
+        if instance.indicator.name == "MACD" and instance.is_last_timestamp(): 
             stock = instance.stock
             try:
                 secondlast_timestamp = stock.get_second_last_timestamp()
