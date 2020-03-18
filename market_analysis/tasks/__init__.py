@@ -6,7 +6,7 @@ from market_analysis.tasks.intraday_indicator import *
 from market_analysis.tasks.notification_tasks import *
 from market_analysis.tasks.trading import *
 from market_analysis.tasks.orders import *
-
+from market_analysis.tasks.indicator_signals import *
 # BEAT SCHEDULE
 
 from market_analysis.tasks.beat_schedule import *

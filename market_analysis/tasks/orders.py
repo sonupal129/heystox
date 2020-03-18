@@ -67,8 +67,8 @@ def send_order_place_request(signal_detail:dict=None):
     entry_price = signal_detail.get("entry_price")
     entry_type = signal_detail.get("entry_type")
     name = signal_detail.get("name")
-    entry_time = get_local_time().strptime(signal_detail.get("entry_time"), "%Y-%m-%dT%H:%M:%S.%f")
-    user = get_upstox_user()
+    entry_time = get_local_time().strptime(signal_detail.get("entry_time"), "%Y-%m-%dT%H:%M:%S")
+    # user = get_upstox_user()
     if entry_time.time() > order_place_start_time and entry_time.time() <= order_place_end_time:
         obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
         slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time.now()}", channel="#random")
@@ -82,8 +82,8 @@ def send_order_place_request(signal_detail:dict=None):
 def add_expected_profit_loss(stock_report_id):
     report = SortedStockDashboardReport.objects.get(id=stock_report_id)
     price = report.entry_price
-    report.stoploss_price = get_stock_stoploss_price(price)
-    report.target_price = get_stock_target_price(price)
+    report.stoploss_price = get_stock_stoploss_price(price, report.entry_type)
+    report.target_price = get_stock_target_price(price, report.entry_type)
     report.save()
 
 @celery_app.task(queue="high_priority")

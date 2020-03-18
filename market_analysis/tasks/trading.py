@@ -4,7 +4,7 @@ from .notification_tasks import slack_message_sender
 from .intraday_indicator import get_macd_crossover, get_stochastic_crossover
 # Codes Starts Below
 
-def get_upstox_user(email):
+def get_upstox_user(email="sonupal129@gmail.com"):
     try:
         user = UserProfile.objects.get(user__email=email)
     except UserProfile.DoesNotExist:
