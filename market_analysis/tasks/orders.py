@@ -72,19 +72,21 @@ def send_order_place_request(signal_detail:dict=None):
     if entry_time.time() > order_place_start_time and entry_time.time() <= order_place_end_time:
         obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
         slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time.now()}", channel="#random")
-        add_expected_profit_loss.delay(obj.id)
+        add_expected_target_stoploss.delay(obj.id)
         # Do All Function Logic Here
     pass
 
 # od = {"name": "BEL", "entry_type": "BUY", "entry_price": 123, "entry_time": get_local_time().now()}
 
 @celery_app.task(queue="low_priority")
-def add_expected_profit_loss(stock_report_id):
+def add_expected_target_stoploss(stock_report_id):
     report = SortedStockDashboardReport.objects.get(id=stock_report_id)
     price = report.entry_price
     report.stoploss_price = get_stock_stoploss_price(price, report.entry_type)
     report.target_price = get_stock_target_price(price, report.entry_type)
     report.save()
+
+
 
 @celery_app.task(queue="high_priority")
 def send_order_request(order_details:dict):
