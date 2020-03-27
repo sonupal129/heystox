@@ -136,8 +136,8 @@ def calculate_profit_loss_on_entry_stocks():
                 target_price = live_data.loc[live_data["high_price"] >= report.target_price ].iloc[0]
                 stoploss_price = live_data.loc[live_data["low_price"] <= report.stoploss_price ].iloc[0]
             elif report.entry_type == "SELL":
-                target_price = live_data.loc[live_data["high_price"] <= report.target_price ].iloc[0]
-                stoploss_price = live_data.loc[live_data["low_price"] >= report.stoploss_price ].iloc[0]
+                target_price = live_data.loc[live_data["low_price"] <= report.target_price ].iloc[0]
+                stoploss_price = live_data.loc[live_data["high_price"] >= report.stoploss_price ].iloc[0]
             earliest_time = min(target_price.date, stoploss_price.date)
             if target_price.date == earliest_time:
                 status = "TARGET_HIT"
