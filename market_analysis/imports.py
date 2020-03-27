@@ -92,6 +92,11 @@ duration_types = {
     "IOC" : DurationType.IOC #Immidiate or Cancel Order
 }
 
+stock_movement = {
+    "BUY" : settings.MARKET_BULLISH_MOVEMENT,
+    "SELL" : settings.MARKET_BEARISH_MOVEMENT
+}
+
 ## Upstox Event Handler
 ### Quote Update, Order Update, Trade Update
 
