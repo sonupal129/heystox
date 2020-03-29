@@ -224,12 +224,10 @@ class Symbol(BaseModel):
         """Finds stocks is fall under previous day high low conditions"""
         if date_obj == None:
             date_obj = get_local_time().date()
-        df = self.get_stock_live_data()
         previous_trading_day = date_obj - timedelta(self.get_last_trading_day_count(date_obj))
-        last_day_candles = df[(df["date"].dt.date.astype(str) == previous_trading_day.strftime("%Y-%m-%d"))]
-        last_day_closing_price = float(last_day_candles.iloc[[-1]].close_price)
-        last_day_opening_price = float(last_day_candles.iloc[[0]].open_price)
-        today_open_price = float(df[(df["date"].dt.date.astype(str) == date.strftime("%Y-%m-%d"))].iloc[[0]].open_price)
+        last_day_closing_price = self.get_day_closing_price(date_obj=date_obj - timedelta(previous_trading_day))
+        last_day_opening_price = self.get_day_opening_price(date_obj=date_obj - timedelta(previous_trading_day))
+        today_open_price = self.get_day_opening_price(date_obj=date_obj)
         if last_day_opening_price > last_day_closing_price > today_open_price:
             return "SELL"
         elif last_day_opening_price < last_day_closing_price < today_open_price:
@@ -241,12 +239,12 @@ class Symbol(BaseModel):
         if date_obj == None:
             date_obj = get_local_time().date()
         if self.is_stock_ohl(date_obj=date_obj, candle_type=candle_type) == "BUY":
-            if self.get_days_high_low_price(start_date=date_obj - timedelta(1), price_type="HIGH", candle_type=candle_type)\
-                < self.get_days_high_low_price(start_date=date_obj, price_type="HIGH", candle_type=candle_type):
+            if self.get_days_high_low_price(date_obj=date_obj - timedelta(1), price_type="HIGH", candle_type=candle_type)\
+                < self.get_days_high_low_price(date_obj=date_obj, price_type="HIGH", candle_type=candle_type):
                 return "BUY"
-        elif self.is_stock_ohl(date=date_obj, candle_type=candle_type) == "SELL":
-            if self.get_days_high_low_price(start_date=stock_date - timedelta(1), price_type="LOW", candle_type=candle_type)\
-                < self.get_days_high_low_price(start_date=stock_date, price_type="LOW", candle_type=candle_type):
+        elif self.is_stock_ohl(date_obj=date_obj, candle_type=candle_type) == "SELL":
+            if self.get_days_high_low_price(date_obj=stock_date - timedelta(1), price_type="LOW", candle_type=candle_type)\
+                < self.get_days_high_low_price(date_obj=stock_date, price_type="LOW", candle_type=candle_type):
                 return "SELL"
 
 
@@ -518,10 +516,26 @@ class OrderBook(BaseModel):
     }
 
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="orders")
-    order_id = models.CharField(blank=True, null=True, max_length=150)
-    entry_time = models.DateTimeField(blank=True, null=True)
     entry_type = models.CharField(blank=True, null=True, max_length=10, choices=entry_choices)
     entry_price = models.FloatField(blank=True, null=True)
     exit_price = models.FloatField(blank=True, null=True)
     pl = models.FloatField(blank=True, null=True)
     strength = models.CharField(blank=True, max_length=50, null=True)
+
+    def __str__(self):
+        return self.symbol.symbol
+
+class Orders(BaseModel):
+    status_choices = {
+        ("CA", "Cancelled"),
+        ("OP", "Open"),
+        ("CO", "Completed"),
+        ("RE", "Rejected")
+    }
+    order_book = models.ForeignKey(OrderBook, on_delete=models.CASCADE, blank=True, null=True)
+    order_id = models.IntegerField(blank=True, null=True)
+    entry_time = models.DateTimeField(blank=True, null=True)
+    price = models.FloatField(blank=True, null=True)
+    transaction_type = models.CharField(blank=True, null=True, max_length=10)
+    status = models.CharField(choices=status_choices, max_length=10, default='OP')
+
