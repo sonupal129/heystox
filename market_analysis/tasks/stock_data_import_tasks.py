@@ -30,7 +30,6 @@ def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_pri
 def invalidate_stocks_cached_data(symbol:str):
     today_date = str(get_local_time().date())
     stock_data_id = today_date + "_stock_data_" + symbol
-    stock_live_data_id = today_date + "_stock_live_data_" + symbol
     cache.delete(stock_data_id)
     cache.delete(stock_live_data_id)
     return f"cache invalidated for {stock_data_id} and {stock_live_data_id}"

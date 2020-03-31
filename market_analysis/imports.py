@@ -70,6 +70,15 @@ redis_cache = caches["redis"]
 
 # Upstox Dictionary
 
+order_schema = {
+    "transaction_type" : None,
+    "symbol" : None,
+    "order_type": None,
+    "quantity": None,
+    "price": None,
+    "duarion_type": None,
+}
+
 transaction_types = {
     "BUY" : TransactionType.Buy,
     "SELL" : TransactionType.Sell
@@ -100,11 +109,11 @@ stock_movement = {
 ## Upstox Event Handler
 ### Quote Update, Order Update, Trade Update
 
-def event_handler_on_quote_update(message, func=None):
-    if func:
-        func(message)
-        return "Quote Updated"
-    print(str(message))
+def event_handler_on_quote_update(message):
+    cache_key = message.get("symbol").lower() + "_quote_data"
+    redis_cache.set(cache_key, message)
+    print(message)
+    return message
 
 def event_handler_on_order_update(message, func=None):
     if func:
