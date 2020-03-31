@@ -539,3 +539,5 @@ class Orders(BaseModel):
     transaction_type = models.CharField(blank=True, null=True, max_length=10)
     status = models.CharField(choices=status_choices, max_length=10, default='OP')
 
+    def __str__(self):
+        return str(self.order_id)

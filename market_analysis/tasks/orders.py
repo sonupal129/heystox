@@ -77,7 +77,6 @@ def send_order_place_request(signal_detail:dict=None):
     order_schema["duarion_type"] = "DAY"
     order_schema["order_type"] = "LIMIT"
     order_schema["product_type"] = "INTRADAY"
-    # user = get_upstox_user()
     if entry_time.time() > order_place_start_time and entry_time.time() <= order_place_end_time:
         user = get_upstox_user()
         symbol = Symbol.objects.get(symbol=name)
