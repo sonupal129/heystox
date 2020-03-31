@@ -31,8 +31,7 @@ def invalidate_stocks_cached_data(symbol:str):
     today_date = str(get_local_time().date())
     stock_data_id = today_date + "_stock_data_" + symbol
     cache.delete(stock_data_id)
-    cache.delete(stock_live_data_id)
-    return f"cache invalidated for {stock_data_id} and {stock_live_data_id}"
+    return f"cache invalidated for {stock_data_id}"
 
 
 @celery_app.task(queue="medium_priority")

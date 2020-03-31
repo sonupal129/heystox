@@ -80,7 +80,7 @@ def send_order_place_request(signal_detail:dict=None):
     if entry_time.time() > order_place_start_time and entry_time.time() <= order_place_end_time:
         user = get_upstox_user()
         symbol = Symbol.objects.get(symbol=name)
-        user.get_master_contracts(symbol.exchange.name.upper())
+        user.get_master_contract(symbol.exchange.name.upper())
         data = user.get_live_feed(user.get_instrument_by_symbol(symbol.exchange.name.upper(), symbol.symbol.upper()), LiveFeedType.Full)
         slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time.now()}", channel="#random")
         obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
