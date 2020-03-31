@@ -1,5 +1,5 @@
 from .notification_tasks import slack_message_sender
-from market_analysis.models import Symbol, MasterContract, Candle, PreMarketOrderData
+from market_analysis.models import Symbol, MasterContract, Candle, PreMarketOrderData, SortedStocksList
 from .trading import get_upstox_user
 from market_analysis.imports import *
 # START CODE BELOW  
@@ -118,7 +118,7 @@ def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
     updated_stocks = []
     for symbol in Symbol.objects.exclude(exchange__name="NSE_INDEX"):
-        if symbol.get_stock_data(days=0):
+        if symbol.get_stock_data():
             symbol.last_day_closing_price = symbol.get_day_closing_price()
             symbol.last_day_opening_price = symbol.get_day_opening_price()
             symbol.save()

@@ -59,7 +59,7 @@ stock_data_import_tasks = {
     },
     "update_symbols_closing_opening_price": {
         "task": "market_analysis.tasks.stock_data_import_tasks.update_symbols_closing_opening_price",
-        "schedule": crontab(day_of_week="1-5", hour=23, minute=55),
+        "schedule": crontab(day_of_week="1-5", hour=19, minute=30),
     },
     "import_daily_losers_gainers": {
         "task": "market_analysis.tasks.stock_data_import_tasks.import_daily_losers_gainers",
@@ -122,6 +122,10 @@ day_trading_tasks = {
     "calculate_profit_loss_on_entry_stocks": {
         "task": "market_analysis.tasks.day_trading_tasks.calculate_profit_loss_on_entry_stocks",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
+    },
+    "start_upstox_websocket": {
+        "task": "market_analysis.tasks.day_trading_tasks.start_upstox_websocket",
+        "schedule": crontab(day_of_week="1-5", hour=9, minute=20),
     },
 }
 

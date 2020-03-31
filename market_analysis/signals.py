@@ -31,6 +31,7 @@ def verify_macd_signal(sender, instance, created, **kwargs):
 @receiver(post_save, sender=SortedStocksList)
 def verify_stock_pdhl_longshort(sender, instance, **kwargs):
     if kwargs.get("created"):
+        print(instance.id)
         is_stock_pdhl.delay(instance.id)
         has_entry_for_long_short.delay(instance.id)
 

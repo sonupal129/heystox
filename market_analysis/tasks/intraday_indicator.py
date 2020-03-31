@@ -124,7 +124,8 @@ def find_ohl_stocks():
 
 
 @celery_app.task(queue="low_priority") # Will Work on These Functions Later
-def is_stock_pdhl(obj_id):
+def is_stock_pdhl(obj_id): 
+    print(obj_id)
     stock = SortedStocksList.objects.get(id=obj_id)
     if stock.symbol.is_stock_pdhl() == stock.entry_type:
         pdhl_indicator = Indicator.objects.get(name="PDHL")
@@ -135,11 +136,10 @@ def is_stock_pdhl(obj_id):
 
 @celery_app.task(queue="low_priority") # Will Work on These Functions Later
 def has_entry_for_long_short(obj_id):
+    print(obj_id)
     stock = SortedStocksList.objects.get(id=obj_id)
     if stock.symbol.has_entry_for_long_short() == stock.entry_type:
         long_short_entry = Indicator.objects.get(name="LONGSHORT")
         long_short, is_created = StrategyTimestamp.objects.get_or_create(indicator=long_short_entry, stock=stock)
         long_short.timestamp = get_local_time().now()
         long_short.save()
-    else:
-        StrategyTimestamp.objects.filter(indicator=long_short_entry, stock=stock, timestamp__date=datetime.now().date()).delete()

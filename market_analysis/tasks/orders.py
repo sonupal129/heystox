@@ -82,9 +82,9 @@ def send_order_place_request(signal_detail:dict=None):
         symbol = Symbol.objects.get(symbol=name)
         user.get_master_contract(symbol.exchange.name.upper())
         data = user.get_live_feed(user.get_instrument_by_symbol(symbol.exchange.name.upper(), symbol.symbol.upper()), LiveFeedType.Full)
-        slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time.now()}", channel="#random")
         obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
         add_expected_target_stoploss.delay(obj.id)
+        slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
         percentage_calculator = lambda higher_number, lower_number : (higher_number - lower_number) / lower_number * 100
         buy_qty = data["total_buy_qty"]
         sell_qty = data["total_sell_qty"]
@@ -116,19 +116,24 @@ def send_order_request(order_details:dict):
     if orders_qty >= settings.MAX_ORDER_QUANTITY:
         slack_message_sender.delay(text="Daily Order Limit Exceed No More Order Can Be Place Using Bot, Please Place Orders Manually")
         return "Daily Order Limit Exceed"
-    symbol = Symbol.objects.get(symbol=order_details.get("symbol"))
+    symbol = Symbol.objects.get(symbol__iexact=order_details.get("symbol"))
     transaction_type = order_details.get("transaction_type")
     quantity = order_details.get("quantity")
     order_type = order_details.get("order_type")
     price = order_details.get("price")
     duration_type = order_details.get("duarion_type")
+    product_type = order_details.get("product_type")
+    user.get_master_contract(symbol.exchange.name)
     order = user.place_order(
         transaction_types.get(transaction_type),
-        user.get_instrument_by_symbol(symbol.symbol.upper(), symbol.exchange.name.upper()),
+        user.get_instrument_by_symbol(symbol.exchange.name, symbol.symbol.upper()),
+        quantity,
         order_types.get(order_type),
+        product_type,
         price,
         duration_types.get(duration_type)
     )
+    print(order)
     # OrderBook.objects.get_or_create(symbol=symbol, order_id=order.get("order_id"))
 
 

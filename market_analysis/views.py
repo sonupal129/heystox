@@ -123,7 +123,7 @@ class UserLoginRegisterView(LoginView):
     http_method_names = ["post", "get"]
     template_name = "login.html"
     form_class = UserLoginRegisterForm
-    success_url = "/dashboard/sorted-stocks/"
+    success_url = "/report/"
 
     def get_success_url(self):
         if self.success_url:

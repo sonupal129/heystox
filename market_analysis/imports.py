@@ -105,24 +105,3 @@ stock_movement = {
     "BUY" : settings.MARKET_BULLISH_MOVEMENT,
     "SELL" : settings.MARKET_BEARISH_MOVEMENT
 }
-
-## Upstox Event Handler
-### Quote Update, Order Update, Trade Update
-
-def event_handler_on_quote_update(message):
-    cache_key = message.get("symbol").lower() + "_quote_data"
-    redis_cache.set(cache_key, message)
-    print(message)
-    return message
-
-def event_handler_on_order_update(message, func=None):
-    if func:
-        func(message)
-        return "Order Updated"
-    print(str(message))
-
-def event_handler_on_trade_update(message, func=None):
-    if func:
-        func(message)
-        return "Trade Updated"
-    print(str(message))

@@ -224,7 +224,7 @@ class Symbol(BaseModel):
         """Finds stocks is fall under previous day high low conditions"""
         if date_obj == None:
             date_obj = get_local_time().date()
-        previous_trading_day = date_obj - timedelta(self.get_last_trading_day_count(date_obj))
+        previous_trading_day = self.get_last_trading_day_count(date_obj)
         last_day_closing_price = self.get_day_closing_price(date_obj=date_obj - timedelta(previous_trading_day))
         last_day_opening_price = self.get_day_opening_price(date_obj=date_obj - timedelta(previous_trading_day))
         today_open_price = self.get_day_opening_price(date_obj=date_obj)
@@ -422,7 +422,7 @@ class Indicator(BaseModel):
 class StrategyTimestamp(BaseModel):
     stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE, related_name="timestamps")
     indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE)
-    timestamp = models.DateTimeField()
+    timestamp = models.DateTimeField(null=True, blank=True)
     diff = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
 
     def __str__(self):
