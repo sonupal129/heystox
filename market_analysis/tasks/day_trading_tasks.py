@@ -157,6 +157,7 @@ def start_upstox_websocket(run_in_background=True):
     user.set_on_trade_update(event_handler_on_trade_update)
     user.set_on_order_update(event_handler_on_order_update)
     user.set_on_disconnect(event_handler_on_disconnection)
+    user.set_on_error(event_handler_on_error)
     user.start_websocket(run_in_background)
     slack_message_sender.delay(text="Websocket for Live Data Feed Started")
     return "Websocket Started"

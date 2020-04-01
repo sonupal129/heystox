@@ -515,25 +515,28 @@ class OrderBook(BaseModel):
         ("SELL", "SELL"),
     }
 
-    symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="orders")
+    symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="order_books")
+    date = models.DateTimeField(blank=True, null=True)
     entry_type = models.CharField(blank=True, null=True, max_length=10, choices=entry_choices)
+    quantity = models.IntegerField(blank=True, null=True)
     entry_price = models.FloatField(blank=True, null=True)
-    exit_price = models.FloatField(blank=True, null=True)
+    target_price = models.FloatField(blank=True, null=True)
+    stoploss = models.FloatField(blank=True, null=True)
     pl = models.FloatField(blank=True, null=True)
     strength = models.CharField(blank=True, max_length=50, null=True)
 
     def __str__(self):
         return self.symbol.symbol
 
-class Orders(BaseModel):
+class Order(BaseModel):
     status_choices = {
         ("CA", "Cancelled"),
         ("OP", "Open"),
         ("CO", "Completed"),
         ("RE", "Rejected")
     }
-    order_book = models.ForeignKey(OrderBook, on_delete=models.CASCADE, blank=True, null=True)
-    order_id = models.IntegerField(blank=True, null=True)
+    order_book = models.ForeignKey(OrderBook, on_delete=models.CASCADE, related_name="orders", null=True, blank=True)
+    order_id = models.CharField(blank=True, null=True, max_length=30)
     entry_time = models.DateTimeField(blank=True, null=True)
     price = models.FloatField(blank=True, null=True)
     transaction_type = models.CharField(blank=True, null=True, max_length=10)

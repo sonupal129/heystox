@@ -143,7 +143,6 @@ def import_premarket_stocks_data():
     web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS)
     sleep(5)
     market_trading_date = get_local_time().strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%m-%Y").date()
-    slack_message_sender.delay(channel="#random", text=market_trading_date)
     if market_trading_date == today_date:
         for sector, url in urls.items():
             response = requests.get(url, headers=settings.NSE_HEADERS)

@@ -1,6 +1,6 @@
 from market_analysis.imports import *
 from .trading import get_upstox_user
-from market_analysis.models import Symbol, SortedStockDashboardReport, OrderBook
+from market_analysis.models import Symbol, SortedStockDashboardReport, OrderBook, Order
 from market_analysis.tasks.notification_tasks import slack_message_sender
 # Code Below
 
@@ -106,10 +106,11 @@ def add_expected_target_stoploss(stock_report_id):
     report.target_price = get_stock_target_price(price, report.entry_type)
     report.save()
 
+# od = {'transaction_type': 'SELL', 'symbol': 'TATAMOTORS', 'order_type': 'LIMIT', 'quantity': 1, 'price': 74, ', duarion_type': 'DAY', 'product_type': 'INTRADAY'}
 
 
 @celery_app.task(queue="high_priority")
-def send_order_request(order_details:dict):
+def send_order_request(order_details:dict): # Don't Change This Function Format, Because This is As per Upstox Format, 
     user = get_upstox_user()
     today_date = get_local_time().date()
     orders_qty = OrderBook.objects.filter(created_at__date=today_date).count()
@@ -117,24 +118,72 @@ def send_order_request(order_details:dict):
         slack_message_sender.delay(text="Daily Order Limit Exceed No More Order Can Be Place Using Bot, Please Place Orders Manually")
         return "Daily Order Limit Exceed"
     symbol = Symbol.objects.get(symbol__iexact=order_details.get("symbol"))
-    transaction_type = order_details.get("transaction_type")
-    quantity = order_details.get("quantity")
-    order_type = order_details.get("order_type")
-    price = order_details.get("price")
-    duration_type = order_details.get("duarion_type")
-    product_type = order_details.get("product_type")
+    transaction_type = order_details.get("transaction_type", None)
+    quantity = order_details.get("quantity", None)
+    order_type = order_details.get("order_type", None)
+    price = order_details.get("price", None)
+    duration_type = order_details.get("duarion_type", None)
+    product_type = order_details.get("product_type", None)
+    trigger_price = order_details.get("trigger_price", None)
+    disclosed_quantity = order_details.get("disclosed_quantity", None)
+    stop_loss = order_details.get("stop_loss", None)
+    square_off = order_details.get("square_off", None)
+    trailing_ticks = order_details.get("trailing_ticks", None)
     user.get_master_contract(symbol.exchange.name)
-    order = user.place_order(
+    upstox_order = user.place_order(
         transaction_types.get(transaction_type),
         user.get_instrument_by_symbol(symbol.exchange.name, symbol.symbol.upper()),
         quantity,
         order_types.get(order_type),
-        product_type,
-        price,
-        duration_types.get(duration_type)
+        product_types.get(product_type),
+        float(price),
+        trigger_price,
+        disclosed_quantity,
+        duration_types.get(duration_type),
+        stop_loss,
+        square_off,
+        trailing_ticks,
     )
-    print(order)
-    # OrderBook.objects.get_or_create(symbol=symbol, order_id=order.get("order_id"))
+    if upstox_order:
+        order_book, is_created = OrderBook.objects.get_or_create(symbol=symbol, entry_type=transaction_type, entry_price=price, date__date=get_local_time().date())
+        order, is_created = Order.objects.get_or_create(order_book=order_book, order_id=str(upstox_order.get("order_id")),
+                            transaction_type = upstox_order.get("transaction_type"))
+        order.entry_time = get_local_time().now()
+        order.save()
+        order_book.quantity = quantity
+        order_book.stoploss = get_stock_stoploss_price(price, transaction_type)
+        order_book.target_price = get_stock_target_price(price, transaction_type)
+        order_book.save()
 
 
+@celery_app.task(queue="high_priority")
+def create_updated_order_on_update(order_data):
+    order_statuses = ["cancelled", "open", "completed", "rejected"]
+    if order_data.get("status") in order_statuses:
+        order_choices = {
+            "cancelled": "CA",
+            "open": "OP",
+            "completed": "CO",
+            "rejected": "RE"
+        }
+        order_id = order_data.get("order_id")
+        user = get_upstox_user()
+        user.get_master_contract(order_data.get("exchange"))
+        orders_history = user.get_order_history()
+        order, is_created = Order.objects.get_or_create(order_id=order_id)
+        exchange_time = get_local_time().strptime(order_data.get("exchange_time"), "%d-%b-%Y %H:%M:%S") if order_data.get("exchange_time") else None
+        if is_created:
+            order_book = OrderBook.objects.get(symbol__symbol__iexact=order_data.get("trading_symbol"), date__date=get_local_time().date())
+            order.price = order_data.get("price")
+            order.transaction_type = order_data.get("transaction_type")
+            order.status = order_choices.get(order_data["status"])
+            order.order_book = order_book
+            order.entry_time = exchange_time if exchange_time else None
+            order.save()
+        else:
+            order.status = order_choices.get(order_data["status"])
+            order.entry_time = exchange_time if exchange_time else None
+            order.save()
+        slack_message_sender.delay(text=str(order.order_id) + " Order Executed Please Check", channel="#random")
+    
 
