@@ -125,7 +125,19 @@ day_trading_tasks = {
     },
     "start_upstox_websocket": {
         "task": "market_analysis.tasks.day_trading_tasks.start_upstox_websocket",
-        "schedule": crontab(day_of_week="1-5", hour=9, minute=20),
+        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/58"),
+    },
+}
+
+orders = {
+    "cancel_not_executed_orders": {
+        "task": "market_analysis.tasks.orders.cancel_not_executed_orders",
+        "schedule": crontab(day_of_week="1-5", hour="10-14", minute="*/12"),
+    },
+    "cancel_not_executed_orders_all": {
+        "task": "market_analysis.tasks.orders.cancel_not_executed_orders",
+        "schedule": crontab(day_of_week="1-5", hour=14, minute=50),
+        "kwargs": {"from_last_minutes": 0},
     },
 }
 

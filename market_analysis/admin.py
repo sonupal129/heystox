@@ -59,9 +59,9 @@ class OrderInline(admin.TabularInline):
     extra = 0
 
 class OrderBookAdmin(admin.ModelAdmin):
-    list_display = ["symbol", "entry_type", "entry_price"]
+    list_display = ["symbol", "entry_type", "entry_price", "date"]
     inlines = [OrderInline]
-    readonly_fields = ["symbol", "entry_type", "entry_price", "target_price", "stoploss", "pl", "strength"]
+    readonly_fields = ["symbol", "entry_type", "entry_price", "target_price", "stoploss", "pl", "strength", "date", "quantity"]
 
 
 admin.site.register(MarketHoliday, MarketHolidayAdmin)

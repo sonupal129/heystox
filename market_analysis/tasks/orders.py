@@ -2,6 +2,7 @@ from market_analysis.imports import *
 from .trading import get_upstox_user
 from market_analysis.models import Symbol, SortedStockDashboardReport, OrderBook, Order
 from market_analysis.tasks.notification_tasks import slack_message_sender
+
 # Code Below
 
 def roundup(x, prec=2, base=.05):
@@ -24,7 +25,7 @@ def get_stock_stoploss_price(price, entry_type):
 
 def get_stock_target_price(price, entry_type):
     if price < 100:
-        tg = settings.DEFAULT_TARGET + 0.10
+        tg = settings.DEFAULT_TARGET + 0.5
     elif price < 200:
         tg = settings.DEFAULT_TARGET + 0.20
     elif price < 300:
@@ -36,6 +37,22 @@ def get_stock_target_price(price, entry_type):
     elif entry_type == "BUY":
         target = price + (price * tg /100)
     return roundup(target)
+
+def get_auto_exit_price(price, entry_type):
+    fixed_auto_exit_percentage = settings.DEFAULT_STOPLOSS / 2
+    if price < 100:
+        sl = fixed_auto_exit_percentage
+    elif price < 200:
+        sl = fixed_auto_exit_percentage + 0.10
+    elif price < 300:
+        sl = fixed_auto_exit_percentage + 0.15
+    else:
+        sl = fixed_auto_exit_percentage + 0.20
+    if entry_type == "SELL":
+        stoploss = price - (price * sl /100)
+    elif entry_type == "BUY":
+        stoploss = price + (price * sl /100)
+    return roundup(stoploss)
 
 def calculate_order_quantity(share_price, entry_type):
     user = get_upstox_user()
@@ -96,8 +113,6 @@ def send_order_place_request(signal_detail:dict=None):
             pass
         # Do All Function Logic Here
 
-# od = {"name": "BEL", "entry_type": "BUY", "entry_price": 123, "entry_time": get_local_time().now()}
-
 @celery_app.task(queue="low_priority")
 def add_expected_target_stoploss(stock_report_id):
     report = SortedStockDashboardReport.objects.get(id=stock_report_id)
@@ -106,7 +121,7 @@ def add_expected_target_stoploss(stock_report_id):
     report.target_price = get_stock_target_price(price, report.entry_type)
     report.save()
 
-# od = {'transaction_type': 'SELL', 'symbol': 'TATAMOTORS', 'order_type': 'LIMIT', 'quantity': 1, 'price': 74, ', duarion_type': 'DAY', 'product_type': 'INTRADAY'}
+# od = {'transaction_type': 'SELL', 'symbol': 'CANBK', 'order_type': 'LIMIT', 'quantity': 1, 'price': 87.20, ', duarion_type': 'DAY', 'product_type': 'INTRADAY'}
 
 
 @celery_app.task(queue="high_priority")
@@ -145,7 +160,7 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
         trailing_ticks,
     )
     if upstox_order:
-        order_book, is_created = OrderBook.objects.get_or_create(symbol=symbol, entry_type=transaction_type, entry_price=price, date__date=get_local_time().date())
+        order_book, is_created = OrderBook.objects.get_or_create(symbol=symbol, entry_type=transaction_type, entry_price=price, date=get_local_time().date())
         order, is_created = Order.objects.get_or_create(order_book=order_book, order_id=str(upstox_order.get("order_id")),
                             transaction_type = upstox_order.get("transaction_type"))
         order.entry_time = get_local_time().now()
@@ -154,36 +169,83 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
         order_book.stoploss = get_stock_stoploss_price(price, transaction_type)
         order_book.target_price = get_stock_target_price(price, transaction_type)
         order_book.save()
+        
+
+@celery_app.task(queue="high_priority")
+def create_update_order_on_update(order_data):
+    order_choices = {
+        "cancelled": "CA",
+        "open": "OP",
+        "complete": "CO",
+        "rejected": "RE"
+    }
+    order_id = order_data.get("order_id")
+    user = get_upstox_user()
+    user.get_master_contract(order_data.get("exchange"))
+    order, is_created = Order.objects.get_or_create(order_id=order_id)
+    exchange_time = get_local_time().strptime(order_data.get("exchange_time"), "%d-%b-%Y %H:%M:%S") if order_data.get("exchange_time") else get_local_time().now()
+    if is_created:
+        order_book = OrderBook.objects.get(symbol__symbol__iexact=order_data.get("symbol"), date=get_local_time().date())
+        order.price = order_data.get("price") or order_data.get("average_price")
+        order.transaction_type = order_data.get("transaction_type")
+        order.status = order_choices.get(order_data["status"])
+        order.order_book = order_book
+        order.entry_time = exchange_time if exchange_time else None
+        order.save()
+    else:
+        order.status = order_choices.get(order_data["status"])
+        order.entry_time = exchange_time if exchange_time else None
+        order.price = order_data.get("price") or order_data.get("average_price")
+        order.save()
+    if order.status == "CO":
+        # Create Logic About when to Subscribe for instrument
+        # if order.is_first_order_in_order_book("CO"):
+        cache_key = "_".join([order_data["symbol"], "cached_ticker_data"])
+        data = {
+            "target_price" : order.order_book.target_price,
+            "stoploss": order.order_book.stoploss,
+            "auto_exit_price" : get_auto_exit_price(order.order_book.entry_price, order.order_book.entry_type),
+            "entry_type" : order.order_book.entry_type,
+            "order_id" : order.order_id,
+            "stock_price" : [order_data.get("price")],
+            "entry_price" : order.order_book.entry_price
+        }
+        redis_cache.set(cache_key, data)
+        #     user.subscribe(user.get_instrument_by_symbol(order_data.get("exchange"), order_data.get("symbol")), LiveFeedType.Full)
+
+    slack_message_sender.delay(text=str(order.order_id) + " Order Status Changed to {0} Please Check".format(order_data["status"]), channel="#random")
 
 
 @celery_app.task(queue="high_priority")
-def create_updated_order_on_update(order_data):
-    order_statuses = ["cancelled", "open", "completed", "rejected"]
-    if order_data.get("status") in order_statuses:
-        order_choices = {
-            "cancelled": "CA",
-            "open": "OP",
-            "completed": "CO",
-            "rejected": "RE"
-        }
-        order_id = order_data.get("order_id")
-        user = get_upstox_user()
-        user.get_master_contract(order_data.get("exchange"))
-        orders_history = user.get_order_history()
-        order, is_created = Order.objects.get_or_create(order_id=order_id)
-        exchange_time = get_local_time().strptime(order_data.get("exchange_time"), "%d-%b-%Y %H:%M:%S") if order_data.get("exchange_time") else None
-        if is_created:
-            order_book = OrderBook.objects.get(symbol__symbol__iexact=order_data.get("trading_symbol"), date__date=get_local_time().date())
-            order.price = order_data.get("price")
-            order.transaction_type = order_data.get("transaction_type")
-            order.status = order_choices.get(order_data["status"])
-            order.order_book = order_book
-            order.entry_time = exchange_time if exchange_time else None
-            order.save()
-        else:
-            order.status = order_choices.get(order_data["status"])
-            order.entry_time = exchange_time if exchange_time else None
-            order.save()
-        slack_message_sender.delay(text=str(order.order_id) + " Order Executed Please Check", channel="#random")
-    
+def cancel_not_executed_orders(from_last_minutes=20):
+    """Cancel orders which are not executed after 20 minutes of placing"""
+    orders = Order.objects.filter(entry_time__lte=get_local_time().now() - timedelta(minutes=from_last_minutes), status="OP")
+    user = get_upstox_user()
+    for order in orders:
+        user.cancel_order(order.order_id)
 
+
+def cache_symbol_ticker_data(data:dict):
+    cache_key = "_".join([data["symbol"], "cached_ticker_data"])
+    cached_value = redis_cache.get(cache_key)
+    stock_price = cached_value["stock_price"]
+    price_type = "high" if cached_value.get("entry_type") == "BUY" else "low"
+    new_price = data[price_type]
+    if not cached_value.get(price_type):
+        cached_value[price_type] = new_price
+    old_price = cached_value.get(price_type)
+    if price_type == "high" and new_price > old_price:
+        cached_value[price_type] = new_price
+    elif price_type == "low" and new_price < old_price:
+        cached_value[price_type] = new_price
+    if new_price != stock_price[-1]:
+        stock_price.append(new_price)
+    redis_cache.set(cache_key, cached_value)
+    return cached_value
+
+
+def analyse_stock_price_place_order(data:dict):
+    cache_key = "_".join([data["symbol"], "cached_ticker_data"])
+    cached_value = redis_cache.get(cache_key)
+    price_type = "high" if cached_value.get("entry_type") == "BUY" else "low"
+    

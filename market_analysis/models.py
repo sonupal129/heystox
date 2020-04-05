@@ -516,7 +516,7 @@ class OrderBook(BaseModel):
     }
 
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="order_books")
-    date = models.DateTimeField(blank=True, null=True)
+    date = models.DateField(blank=True, null=True)
     entry_type = models.CharField(blank=True, null=True, max_length=10, choices=entry_choices)
     quantity = models.IntegerField(blank=True, null=True)
     entry_price = models.FloatField(blank=True, null=True)
@@ -527,6 +527,15 @@ class OrderBook(BaseModel):
 
     def __str__(self):
         return self.symbol.symbol
+
+    def get_first_order_by_status(self, status="CO"):
+        """return order based on order status"""
+        return self.orders.filter(status=status).first()
+
+    def get_last_order_by_status(self, status="CO"):
+        """return order based on order status"""
+        return self.orders.filter(status=status).last()
+
 
 class Order(BaseModel):
     status_choices = {
@@ -542,5 +551,18 @@ class Order(BaseModel):
     transaction_type = models.CharField(blank=True, null=True, max_length=10)
     status = models.CharField(choices=status_choices, max_length=10, default='OP')
 
+    class Meta:
+        ordering = ["entry_time"]
+
     def __str__(self):
         return str(self.order_id)
+
+    def is_first_order_in_order_book(self, status="CO"):
+        if self.order_id == self.order_book.get_first_order_by_status(status).order_id:
+            return True
+        return False
+
+    def is_last_order_in_order_book(self, status="CO"):
+        if self.order_id == self.order_book.get_last_order_by_status(status).order_id:
+            return True
+        return False
