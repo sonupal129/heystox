@@ -7,9 +7,7 @@ from market_analysis.imports import *
 ### Quote Update, Order Update, Trade Update
 
 def event_handler_on_quote_update(message):
-    cache_key = message.get("symbol").lower() + "_quote_data"
-    redis_cache.set(cache_key, message)
-    print(message)
+    cache_symbol_ticker_data(message)
     return message
 
 def event_handler_on_order_update(message):

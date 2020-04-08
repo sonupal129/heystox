@@ -544,12 +544,19 @@ class Order(BaseModel):
         ("CO", "Completed"),
         ("RE", "Rejected")
     }
+
+    order_type_choices = {
+        ("ET", "Entry"),
+        ("EX", "Exit"),
+    }
+
     order_book = models.ForeignKey(OrderBook, on_delete=models.CASCADE, related_name="orders", null=True, blank=True)
     order_id = models.CharField(blank=True, null=True, max_length=30)
     entry_time = models.DateTimeField(blank=True, null=True)
     price = models.FloatField(blank=True, null=True)
     transaction_type = models.CharField(blank=True, null=True, max_length=10)
     status = models.CharField(choices=status_choices, max_length=10, default='OP')
+    order_type = models.CharField(choices=status_choices, max_length=10, default='', blank=True)
 
     class Meta:
         ordering = ["entry_time"]

@@ -164,6 +164,12 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
         order, is_created = Order.objects.get_or_create(order_book=order_book, order_id=str(upstox_order.get("order_id")),
                             transaction_type = upstox_order.get("transaction_type"))
         order.entry_time = get_local_time().now()
+
+        previous_order = order_book.get_last_order_by_status(status="CO")
+        if previous_order and previous_order.order_type == "ET":
+            order.entry_type = "EX"
+        else:
+            order.entry_type = "ET"
         order.save()
         order_book.quantity = quantity
         order_book.stoploss = get_stock_stoploss_price(price, transaction_type)
@@ -197,23 +203,29 @@ def create_update_order_on_update(order_data):
         order.entry_time = exchange_time if exchange_time else None
         order.price = order_data.get("price") or order_data.get("average_price")
         order.save()
+    if order.status not in ["CO", "OP"]:
+        order.order_type = ""
+        order.save()
     if order.status == "CO":
         # Create Logic About when to Subscribe for instrument
-        # if order.is_first_order_in_order_book("CO"):
         cache_key = "_".join([order_data["symbol"], "cached_ticker_data"])
-        data = {
-            "target_price" : order.order_book.target_price,
-            "stoploss": order.order_book.stoploss,
-            "auto_exit_price" : get_auto_exit_price(order.order_book.entry_price, order.order_book.entry_type),
-            "entry_type" : order.order_book.entry_type,
-            "order_id" : order.order_id,
-            "stock_price" : [order_data.get("price")],
-            "entry_price" : order.order_book.entry_price
-        }
-        redis_cache.set(cache_key, data)
-        #     user.subscribe(user.get_instrument_by_symbol(order_data.get("exchange"), order_data.get("symbol")), LiveFeedType.Full)
-
-    slack_message_sender.delay(text=str(order.order_id) + " Order Status Changed to {0} Please Check".format(order_data["status"]), channel="#random")
+        if order.order_type == "ET":
+            data = {
+                "symbol": order_data.get("symbol"),
+                "target_price" : order.order_book.target_price,
+                "stoploss": order.order_book.stoploss,
+                "auto_exit_price" : get_auto_exit_price(order.order_book.entry_price, order.order_book.entry_type),
+                "entry_type" : order.order_book.entry_type,
+                "order_id" : order.order_id,
+                "stock_data" : None,
+                "entry_price" : order.order_book.entry_price
+            }
+            redis_cache.set(cache_key, data)
+            user.subscribe(user.get_instrument_by_symbol(order_data.get("exchange"), order_data.get("symbol")), LiveFeedType.Full)
+        elif order.order_type == "EX":
+            redis_cache.delete(cache_key)
+            user.unsubscribe(user.get_instrument_by_symbol(order_data.get("exchange"), order_data.get("symbol")), LiveFeedType.Full)
+        slack_message_sender.delay(text=str(order.order_id) + " Order Status Changed to {0} Please Check".format(order_data["status"]), channel="#random")
 
 
 @celery_app.task(queue="high_priority")
@@ -226,9 +238,8 @@ def cancel_not_executed_orders(from_last_minutes=20):
 
 
 def cache_symbol_ticker_data(data:dict):
-    cache_key = "_".join([data["symbol"], "cached_ticker_data"])
+    cache_key = "_".join([data["symbol"].lower(), "cached_ticker_data"])
     cached_value = redis_cache.get(cache_key)
-    stock_price = cached_value["stock_price"]
     price_type = "high" if cached_value.get("entry_type") == "BUY" else "low"
     new_price = data[price_type]
     if not cached_value.get(price_type):
@@ -238,8 +249,20 @@ def cache_symbol_ticker_data(data:dict):
         cached_value[price_type] = new_price
     elif price_type == "low" and new_price < old_price:
         cached_value[price_type] = new_price
-    if new_price != stock_price[-1]:
-        stock_price.append(new_price)
+    context = {
+            "high": data["high"],
+            "low": data["low"],
+            "open": data["open"],
+            "close": data["close"],
+            "ltp": data["ltp"],
+            "timestamp": data["timestamp"][:10],
+            "total_buy_qty": data["total_buy_qty"],
+            "total_sell_qty": data["total_sell_qty"]
+        }
+    if not cached_value.get("stock_data"):
+        cached_value["stock_data"] = [context]
+    if data["ltp"] != cached_value["stock_data"][-1]["ltp"]:
+        cached_value["stock_data"].append(context)
     redis_cache.set(cache_key, cached_value)
     return cached_value
 
