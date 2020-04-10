@@ -54,14 +54,14 @@ class SortedStockDashboardReportAdmin(admin.ModelAdmin):
 
 class OrderInline(admin.TabularInline):
     model = Order
-    fields = ('order_id', 'transaction_type', 'status', "order_type")
-    readonly_fields = ('order_id', 'transaction_type', 'status', "order_type")
+    fields = ('order_id', 'transaction_type', 'status', 'entry_type')
+    readonly_fields = ('order_id', 'transaction_type', 'status', "transaction_type", "entry_type")
     extra = 0
 
 class OrderBookAdmin(admin.ModelAdmin):
-    list_display = ["symbol", "entry_type", "entry_price", "date"]
+    list_display = ["symbol", "date"]
     inlines = [OrderInline]
-    readonly_fields = ["symbol", "entry_type", "entry_price", "target_price", "stoploss", "pl", "strength", "date", "quantity"]
+    readonly_fields = ["symbol", "strength", "date"]
 
 
 admin.site.register(MarketHoliday, MarketHolidayAdmin)

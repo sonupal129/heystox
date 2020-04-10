@@ -510,19 +510,8 @@ class SortedStockDashboardReport(BaseModel):
     
     
 class OrderBook(BaseModel):
-    entry_choices = {
-        ("BUY", "BUY"),
-        ("SELL", "SELL"),
-    }
-
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="order_books")
     date = models.DateField(blank=True, null=True)
-    entry_type = models.CharField(blank=True, null=True, max_length=10, choices=entry_choices)
-    quantity = models.IntegerField(blank=True, null=True)
-    entry_price = models.FloatField(blank=True, null=True)
-    target_price = models.FloatField(blank=True, null=True)
-    stoploss = models.FloatField(blank=True, null=True)
-    pl = models.FloatField(blank=True, null=True)
     strength = models.CharField(blank=True, max_length=50, null=True)
 
     def __str__(self):
@@ -545,18 +534,27 @@ class Order(BaseModel):
         ("RE", "Rejected")
     }
 
-    order_type_choices = {
+    entry_type_choices = {
         ("ET", "Entry"),
         ("EX", "Exit"),
+    }
+
+    transaction_choices = {
+        ("BUY", "BUY"),
+        ("SELL", "SELL"),
     }
 
     order_book = models.ForeignKey(OrderBook, on_delete=models.CASCADE, related_name="orders", null=True, blank=True)
     order_id = models.CharField(blank=True, null=True, max_length=30)
     entry_time = models.DateTimeField(blank=True, null=True)
-    price = models.FloatField(blank=True, null=True)
-    transaction_type = models.CharField(blank=True, null=True, max_length=10)
+    entry_price = models.FloatField(blank=True, null=True)
+    target_price = models.FloatField(blank=True, null=True)
+    stoploss = models.FloatField(blank=True, null=True)
+    quantity = models.IntegerField(blank=True, null=True)
+    pl = models.FloatField(blank=True, null=True)
+    transaction_type = models.CharField(blank=True, null=True, max_length=10, choices=transaction_choices)
     status = models.CharField(choices=status_choices, max_length=10, default='OP')
-    order_type = models.CharField(choices=status_choices, max_length=10, default='', blank=True)
+    entry_type = models.CharField(choices=entry_type_choices, max_length=10, default='', blank=True)
 
     class Meta:
         ordering = ["entry_time"]

@@ -37,5 +37,5 @@ def verify_stock_pdhl_longshort(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Order)
 def send_signal_to_start_websocket(sender, instance, **kwargs):
-    if instance.order_type == "ET":
+    if instance.entry_type == "ET":
         start_upstox_websocket.delay()
