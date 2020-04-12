@@ -4,7 +4,7 @@ from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol,
 from .trading import *
 from market_analysis.imports import *
 from .intraday_indicator import get_macd_crossover, get_stochastic_crossover
-
+from .upstox_events_handlers import *
 # CODE STARTS BELOW
 
 @celery_app.task(queue="low_priority")
@@ -149,11 +149,16 @@ def calculate_profit_loss_on_entry_stocks():
                 report.pl = round(abs(report.target_price - report.entry_price), 2)
             report.save()
 
-# @task(name="testing_function_two")
-# def raju_mera_name(run_every=None, run=False):
-#     while run:
-#         time.sleep(run_every)
-#         users = User.objects.all()
-#         print(users)
-#         print(f"{datetime.now()}")    
+
+@celery_app.task(queue="high_priority")
+def start_upstox_websocket(run_in_background=True):
+    user = get_upstox_user()
+    user.set_on_quote_update(event_handler_on_quote_update)
+    user.set_on_trade_update(event_handler_on_trade_update)
+    user.set_on_order_update(event_handler_on_order_update)
+    user.set_on_disconnect(event_handler_on_disconnection)
+    user.set_on_error(event_handler_on_error)
+    user.start_websocket(run_in_background)
+    slack_message_sender.delay(text="Websocket for Live Data Feed Started")
+    return "Websocket Started"
 

@@ -224,7 +224,7 @@ class Symbol(BaseModel):
         """Finds stocks is fall under previous day high low conditions"""
         if date_obj == None:
             date_obj = get_local_time().date()
-        previous_trading_day = date_obj - timedelta(self.get_last_trading_day_count(date_obj))
+        previous_trading_day = self.get_last_trading_day_count(date_obj)
         last_day_closing_price = self.get_day_closing_price(date_obj=date_obj - timedelta(previous_trading_day))
         last_day_opening_price = self.get_day_opening_price(date_obj=date_obj - timedelta(previous_trading_day))
         today_open_price = self.get_day_opening_price(date_obj=date_obj)
@@ -422,7 +422,7 @@ class Indicator(BaseModel):
 class StrategyTimestamp(BaseModel):
     stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE, related_name="timestamps")
     indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE)
-    timestamp = models.DateTimeField()
+    timestamp = models.DateTimeField(null=True, blank=True)
     diff = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
 
     def __str__(self):
@@ -510,34 +510,64 @@ class SortedStockDashboardReport(BaseModel):
     
     
 class OrderBook(BaseModel):
-    entry_choices = {
-        ("BUY", "BUY"),
-        ("SELL", "SELL"),
-    }
-
-    symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="orders")
-    entry_type = models.CharField(blank=True, null=True, max_length=10, choices=entry_choices)
-    entry_price = models.FloatField(blank=True, null=True)
-    exit_price = models.FloatField(blank=True, null=True)
-    pl = models.FloatField(blank=True, null=True)
+    symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="order_books")
+    date = models.DateField(blank=True, null=True)
     strength = models.CharField(blank=True, max_length=50, null=True)
 
     def __str__(self):
         return self.symbol.symbol
 
-class Orders(BaseModel):
+    def get_first_order_by_status(self, status="CO"):
+        """return order based on order status"""
+        return self.orders.filter(status=status).first()
+
+    def get_last_order_by_status(self, status="CO"):
+        """return order based on order status"""
+        return self.orders.filter(status=status).last()
+
+
+class Order(BaseModel):
     status_choices = {
         ("CA", "Cancelled"),
         ("OP", "Open"),
         ("CO", "Completed"),
         ("RE", "Rejected")
     }
-    order_book = models.ForeignKey(OrderBook, on_delete=models.CASCADE, blank=True, null=True)
-    order_id = models.IntegerField(blank=True, null=True)
+
+    entry_type_choices = {
+        ("ET", "Entry"),
+        ("EX", "Exit"),
+    }
+
+    transaction_choices = {
+        ("BUY", "BUY"),
+        ("SELL", "SELL"),
+    }
+
+    order_book = models.ForeignKey(OrderBook, on_delete=models.CASCADE, related_name="orders", null=True, blank=True)
+    order_id = models.CharField(blank=True, null=True, max_length=30)
     entry_time = models.DateTimeField(blank=True, null=True)
-    price = models.FloatField(blank=True, null=True)
-    transaction_type = models.CharField(blank=True, null=True, max_length=10)
+    entry_price = models.FloatField(blank=True, null=True)
+    target_price = models.FloatField(blank=True, null=True)
+    stoploss = models.FloatField(blank=True, null=True)
+    quantity = models.IntegerField(blank=True, null=True)
+    pl = models.FloatField(blank=True, null=True)
+    transaction_type = models.CharField(blank=True, null=True, max_length=10, choices=transaction_choices)
     status = models.CharField(choices=status_choices, max_length=10, default='OP')
+    entry_type = models.CharField(choices=entry_type_choices, max_length=10, default='', blank=True)
+
+    class Meta:
+        ordering = ["entry_time"]
 
     def __str__(self):
         return str(self.order_id)
+
+    def is_first_order_in_order_book(self, status="CO"):
+        if self.order_id == self.order_book.get_first_order_by_status(status).order_id:
+            return True
+        return False
+
+    def is_last_order_in_order_book(self, status="CO"):
+        if self.order_id == self.order_book.get_last_order_by_status(status).order_id:
+            return True
+        return False

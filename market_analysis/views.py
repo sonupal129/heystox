@@ -8,40 +8,47 @@ from .mixins import GroupRequiredMixins
 # Create your views here.
 
 
-@login_required
-def upstox_login(request):
-    if request.user:
-        user_profile= request.user.user_profile
-    else:
-        return redirect("market_analysis_urls:upstox-login")
-    if user_profile and user_profile.for_trade and user_profile.subscribed_historical_api or user_profile.subscribed_live_api:
-        login_url = user_profile.get_authentication_url()
-        return redirect(login_url)
-    else:
-        return(HttpResponse("Requested User UserProfile Not Created or Not Subscribed for Api's"))
-      
+class UpstoxLogin(BasePermissionMixin, View):
+    http_method_names = ["get"]
 
-@login_required
-def get_access_token_from_upstox(request):
-    upstox_response_code = request.GET.get("code", None)
-    user_profile = request.user.user_profile
-    session = cache.get(request.user.email + "_upstox_user_session")
-    if upstox_response_code != cache.get(request.user.email + "_upstox_user_response_code"):
-        cache.set(request.user.email + "_upstox_user_response_code", upstox_response_code, 30*60*48)
-    if upstox_response_code is not None:
-        session.set_code(upstox_response_code)
-        try:
-            access_token = session.retrieve_access_token()
-            user_profile.credential.access_token = access_token
-            user_profile.credential.save()
-            upstox_user = Upstox(user_profile.credential.api_key, access_token)
-            cache.set(request.user.email + "_upstox_login_user", upstox_user, 30*60*48)
-            return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
-        except SystemError:
+    def get(self, request):
+        user_profile = request.user.user_profile
+        if user_profile and user_profile.for_trade and user_profile.subscribed_historical_api or user_profile.subscribed_live_api:
+            login_url = user_profile.get_authentication_url()
+            return redirect(login_url)
+        else:
+            return(HttpResponse("Requested User UserProfile Not Created or Not Subscribed for Api's"))
+
+
+class UpstoxLoginComplete(BasePermissionMixin, View):
+    http_method_names = ["get"]
+
+    def get(self, request):
+        upstox_response_code = request.GET.get("code", None)
+        user_profile = request.user.user_profile
+        session_cache_key = request.user.email + "_upstox_user_session"
+        response_code_cache_key = request.user.email + "_upstox_user_response_code"
+        session = cache.get(session_cache_key)
+        cached_response_code = cache.get(response_code_cache_key)
+        if upstox_response_code != cached_response_code:
+            cache.set(response_code_cache_key, upstox_response_code, 30*60*48)
+            session.set_code(upstox_response_code)
+        if request.user.is_superuser:
+            if upstox_response_code is not None:
+                try:
+                    access_token = session.retrieve_access_token()
+                    user_profile.credential.access_token = access_token
+                    user_profile.credential.save()
+                    upstox_user = Upstox(user_profile.credential.api_key, access_token)
+                    cache.set(request.user.email + "_upstox_login_user", upstox_user, 30*60*48)
+                    return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
+                except SystemError:
+                    return redirect("market_analysis_urls:upstox-login")
             return redirect("market_analysis_urls:upstox-login")
-    return redirect("market_analysis_urls:upstox-login")
+        return redirect("market_analysis_urls:sorted-dashboard-report")
 
 
+        
 # class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListView):
 #     template_name = "sorted_stocks_dashboard.html"
 #     context_object_name = "symbols"
@@ -123,7 +130,7 @@ class UserLoginRegisterView(LoginView):
     http_method_names = ["post", "get"]
     template_name = "login.html"
     form_class = UserLoginRegisterForm
-    success_url = "/dashboard/sorted-stocks/"
+    success_url = "/report/"
 
     def get_success_url(self):
         if self.success_url:
@@ -134,10 +141,21 @@ class UserLoginRegisterView(LoginView):
         if request.method == "POST" and "email" in request.POST:
             form = self.get_form()
             if form.is_valid():
+                email = form.cleaned_data["email"]
+                try:
+                    user = User.objects.get(email=email)
+                except:
+                    return HttpResponse("No User Found, Please contact Administrator")
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)
         elif request.method == "POST" and "register-email" in request.POST:
             return redirect("market_analysis_urls:login-register")
+        return super(UserLoginRegisterView, self).post(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect(self.get_success_url())
+        return super(UserLoginRegisterView, self).get(request, *args, **kwargs)
 
             

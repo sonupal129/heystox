@@ -1,5 +1,5 @@
 from .notification_tasks import slack_message_sender
-from market_analysis.models import Symbol, MasterContract, Candle, PreMarketOrderData
+from market_analysis.models import Symbol, MasterContract, Candle, PreMarketOrderData, SortedStocksList
 from .trading import get_upstox_user
 from market_analysis.imports import *
 # START CODE BELOW  
@@ -118,7 +118,7 @@ def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
     updated_stocks = []
     for symbol in Symbol.objects.exclude(exchange__name="NSE_INDEX"):
-        if symbol.get_stock_data(days=0):
+        if symbol.get_stock_data():
             symbol.last_day_closing_price = symbol.get_day_closing_price()
             symbol.last_day_opening_price = symbol.get_day_opening_price()
             symbol.save()
@@ -143,7 +143,6 @@ def import_premarket_stocks_data():
     web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS)
     sleep(5)
     market_trading_date = get_local_time().strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%m-%Y").date()
-    slack_message_sender.delay(channel="#random", text=market_trading_date)
     if market_trading_date == today_date:
         for sector, url in urls.items():
             response = requests.get(url, headers=settings.NSE_HEADERS)
@@ -152,7 +151,7 @@ def import_premarket_stocks_data():
                 response_data = response.json().get("data")
                 bulk_data_upload = []
                 if response_data:
-                    slack_message_sender.delay(channel="#random", text=response)
+                    slack_message_sender.delay(channel="#random", text=str(response))
                     for data in response_data:
                         context = {}
                         symbol = Symbol.objects.get(symbol=data.get("symbol").lower())

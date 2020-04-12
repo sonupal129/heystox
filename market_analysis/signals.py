@@ -1,9 +1,10 @@
 from market_analysis.imports import *
-from market_analysis.models import UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp
+from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order)
 
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.indicator_signals import macd_stochastic_signal
 from market_analysis.tasks.intraday_indicator import is_stock_pdhl, has_entry_for_long_short
+from market_analysis.tasks.day_trading_tasks import start_upstox_websocket
 # Code Below
 
 @receiver(post_save, sender=User)
@@ -34,3 +35,7 @@ def verify_stock_pdhl_longshort(sender, instance, **kwargs):
         is_stock_pdhl.delay(instance.id)
         has_entry_for_long_short.delay(instance.id)
 
+@receiver(post_save, sender=Order)
+def send_signal_to_start_websocket(sender, instance, **kwargs):
+    if instance.entry_type == "ET":
+        start_upstox_websocket.delay()

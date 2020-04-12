@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList, UserProfile
+from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList, UserProfile, MarketHoliday
 from .notification_tasks import slack_message_sender
 from .intraday_indicator import get_macd_crossover, get_stochastic_crossover
 # Codes Starts Below

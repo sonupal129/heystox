@@ -25,9 +25,18 @@
 
 <body>
     <form action="" method="get">
-        Sorted Stock Created Date: <input type="date" name="created_at">
+        <label>Sorted Stock Date:</label>
+        <input type="date" name="created_at">
         <input type="submit" />
     </form>
+    <ol>
+        <li>Data showing here is based on current market trend and analysis. We 
+            Do not take any responsiblity for your profit & loss. Please take entry on your judgement.
+        </li>
+        <li>Please read trader guidelines before taking entry.
+            <a href="https://docs.google.com/document/d/1BM9i-WB_FFqTrYLAn1Ub3jQ9p6i0icOAceEIgZ9_Stw/edit?usp=sharing">Trading Guidelines</a>
+        </li>
+    </ol>
     <h2>Total Sorted Stocks Count: <span>{% if symbols %}{{ symbols.count }}{% else %} 0 {% endif %}</span></h2>
     <table>
         <tr>

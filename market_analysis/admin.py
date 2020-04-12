@@ -52,16 +52,16 @@ class PreMarketOrderDataAdmin(admin.ModelAdmin):
 class SortedStockDashboardReportAdmin(admin.ModelAdmin):
     list_display = ["name", "entry_type", "entry_price", "entry_time"]
 
-class OrdersInline(admin.TabularInline):
-    model = Orders
-    fields = ('order_id', 'transaction_type', 'status')
-    readonly_fields = ('order_id', 'transaction_type', 'status')
+class OrderInline(admin.TabularInline):
+    model = Order
+    fields = ('order_id', 'transaction_type', 'status', 'entry_type')
+    readonly_fields = ('order_id', 'transaction_type', 'status', "transaction_type", "entry_type")
     extra = 0
 
 class OrderBookAdmin(admin.ModelAdmin):
-    list_display = ["symbol", "entry_type", "entry_price"]
-    inlines = [OrdersInline]
-    readonly_fields = ["symbol", "entry_type", "entry_price", "exit_price", "pl", "strength"]
+    list_display = ["symbol", "date"]
+    inlines = [OrderInline]
+    readonly_fields = ["symbol", "strength", "date"]
 
 
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
