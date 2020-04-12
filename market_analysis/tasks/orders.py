@@ -308,7 +308,7 @@ def analyse_stock_price_place_order(**data:dict):
     elif price_type == "low" and limit_price < hit_price:
         price_hit = True
         price_hit_row = df.loc[df["ltp"] <= hit_price].iloc[0]
-    df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=5)] # Time Increament should happen automatically, Implement Later
+    df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=10)] # Time Increament should happen automatically, Implement Later
     last_ticker = df.iloc[-1]
     context = {'transaction_type': cached_value["entry_type"],
         'symbol': data["symbol"],
