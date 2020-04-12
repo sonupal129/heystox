@@ -2,6 +2,15 @@
 <html>
     <h1>Heystox Sorted Stocks</h1>
 <head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-163472567-1"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'UA-163472567-1');
+    </script>
     <meta http-equiv="refresh" content="30">
     <style>
         table {
@@ -34,7 +43,7 @@
             Do not take any responsiblity for your profit & loss. Please take entry on your judgement.
         </li>
         <li>Please read trader guidelines before taking entry.
-            <a href="https://docs.google.com/document/d/1BM9i-WB_FFqTrYLAn1Ub3jQ9p6i0icOAceEIgZ9_Stw/edit?usp=sharing">Trading Guidelines</a>
+            <a href="https://docs.google.com/document/d/1BM9i-WB_FFqTrYLAn1Ub3jQ9p6i0icOAceEIgZ9_Stw/edit?usp=sharing" target="_blank">Trading Guidelines</a>
         </li>
     </ol>
     <h2>Total Sorted Stocks Count: <span>{% if symbols %}{{ symbols.count }}{% else %} 0 {% endif %}</span></h2>
