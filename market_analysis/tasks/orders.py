@@ -156,7 +156,8 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
     last_open_order = order_book.get_last_order_by_status("OP")
     if last_completed_order and last_open_order:
         last_order = find_last_order(last_open_order, last_completed_order)
-    last_order = last_completed_order if last_completed_order and not last_open_order else last_open_order
+    else:
+        last_order = last_completed_order or last_open_order
     order_book, is_created = OrderBook.objects.get_or_create(symbol=symbol, date=get_local_time().date())
     if is_created:
         order = Order.objects.create(order_book=order_book, transaction_type=transaction_type)

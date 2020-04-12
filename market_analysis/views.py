@@ -144,5 +144,11 @@ class UserLoginRegisterView(LoginView):
                 return self.form_invalid(form)
         elif request.method == "POST" and "register-email" in request.POST:
             return redirect("market_analysis_urls:login-register")
+        return super(UserLoginRegisterView, self).post(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect(self.get_success_url())
+        return super(UserLoginRegisterView, self).get(request, *args, **kwargs)
 
             

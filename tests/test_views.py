@@ -22,6 +22,6 @@ class UpstoxLoginTest(BaseViewTest, TestCase):
 
 class SortedStockDashboardViewTest(BaseViewTest, TestCase):
     url_name_space = 'market_analysis_urls:sorted-dashboard'
-    url_path = '/dashboard/sorted-stocks/'
+    url_path = '/report/'
     view = SortedStocksDashBoardView
     status_code = 302
