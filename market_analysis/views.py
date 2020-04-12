@@ -33,17 +33,19 @@ class UpstoxLoginComplete(BasePermissionMixin, View):
         if upstox_response_code != cached_response_code:
             cache.set(response_code_cache_key, upstox_response_code, 30*60*48)
             session.set_code(upstox_response_code)
-        if upstox_response_code is not None:
-            try:
-                access_token = session.retrieve_access_token()
-                user_profile.credential.access_token = access_token
-                user_profile.credential.save()
-                upstox_user = Upstox(user_profile.credential.api_key, access_token)
-                cache.set(request.user.email + "_upstox_login_user", upstox_user, 30*60*48)
-                return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
-            except SystemError:
-                return redirect("market_analysis_urls:upstox-login")
-        return redirect("market_analysis_urls:upstox-login")
+        if request.user.is_superuser:
+            if upstox_response_code is not None:
+                try:
+                    access_token = session.retrieve_access_token()
+                    user_profile.credential.access_token = access_token
+                    user_profile.credential.save()
+                    upstox_user = Upstox(user_profile.credential.api_key, access_token)
+                    cache.set(request.user.email + "_upstox_login_user", upstox_user, 30*60*48)
+                    return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
+                except SystemError:
+                    return redirect("market_analysis_urls:upstox-login")
+            return redirect("market_analysis_urls:upstox-login")
+        return redirect("market_analysis_urls:sorted-dashboard-report")
 
 
         
@@ -139,6 +141,11 @@ class UserLoginRegisterView(LoginView):
         if request.method == "POST" and "email" in request.POST:
             form = self.get_form()
             if form.is_valid():
+                email = form.cleaned_data["email"]
+                try:
+                    user = User.objects.get(email=email)
+                except:
+                    return HttpResponse("No User Found, Please contact Administrator")
                 return self.form_valid(form)
             else:
                 return self.form_invalid(form)

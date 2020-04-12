@@ -222,7 +222,7 @@ LOGIN_URL = "/login/"
 # LOGIN_REDIRECT_URL = "/dashboard/sorted-stocks/"
 
 # LOGIN Redirect Exempted Url
-LOGIN_REDIRECT_EXEMPTED_URLS = [LOGIN_URL, "/admin/login/"]
+LOGIN_REDIRECT_EXEMPTED_URLS = [LOGIN_URL, "/power-house/login/"]
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
