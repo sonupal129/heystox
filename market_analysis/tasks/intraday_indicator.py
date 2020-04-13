@@ -136,7 +136,6 @@ def is_stock_pdhl(obj_id):
 
 @celery_app.task(queue="low_priority") # Will Work on These Functions Later
 def has_entry_for_long_short(obj_id):
-    print(obj_id)
     stock = SortedStocksList.objects.get(id=obj_id)
     if stock.symbol.has_entry_for_long_short() == stock.entry_type:
         long_short_entry = Indicator.objects.get(name="LONGSHORT")

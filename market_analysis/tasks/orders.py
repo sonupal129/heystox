@@ -140,6 +140,7 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
         slack_message_sender.delay(text="Daily Order Limit Exceed No More Order Can Be Place Using Bot, Please Place Orders Manually")
         return "Daily Order Limit Exceed"
     symbol = Symbol.objects.get(symbol__iexact=order_details.get("symbol"))
+    order_book, is_created = OrderBook.objects.get_or_create(symbol=symbol, date=get_local_time().date())
     transaction_type = order_details.get("transaction_type", None)
     quantity = order_details.get("quantity", None)
     order_type = order_details.get("order_type", None)
@@ -158,7 +159,6 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
         last_order = find_last_order(last_open_order, last_completed_order)
     else:
         last_order = last_completed_order or last_open_order
-    order_book, is_created = OrderBook.objects.get_or_create(symbol=symbol, date=get_local_time().date())
     if is_created:
         order = Order.objects.create(order_book=order_book, transaction_type=transaction_type)
     else:
