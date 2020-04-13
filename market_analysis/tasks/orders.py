@@ -101,7 +101,7 @@ def send_order_place_request(signal_detail:dict=None):
     order_schema["duarion_type"] = "DAY"
     order_schema["order_type"] = "LIMIT"
     order_schema["product_type"] = "INTRADAY"
-    if entry_time.time() > order_place_start_time and entry_time.time() <= order_place_end_time:
+    if entry_time.time() > order_place_start_time and entry_time.time() < order_place_end_time:
         user = get_upstox_user()
         symbol = Symbol.objects.get(symbol=name)
         user.get_master_contract(symbol.exchange.name.upper())
@@ -136,7 +136,7 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
     user = get_upstox_user()
     today_date = get_local_time().date()
     orders_qty = OrderBook.objects.filter(created_at__date=today_date).count()
-    if orders_qty >= settings.MAX_ORDER_QUANTITY:
+    if orders_qty >= settings.MAX_DAILY_TRADE:
         slack_message_sender.delay(text="Daily Order Limit Exceed No More Order Can Be Place Using Bot, Please Place Orders Manually")
         return "Daily Order Limit Exceed"
     symbol = Symbol.objects.get(symbol__iexact=order_details.get("symbol"))
@@ -198,6 +198,7 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
 
 @celery_app.task(queue="high_priority")
 def create_update_order_on_update(order_data):
+    sleep(0.2)
     order_choices = {
         "cancelled": "CA",
         "open": "OP",
@@ -224,9 +225,24 @@ def create_update_order_on_update(order_data):
         order.entry_time = exchange_time if exchange_time else None
         order.entry_price = order_data.get("price") or order_data.get("average_price")
         order.save()
-    if order.status not in ["CO", "OP"]:
+    if order.entry_type != "" and order.status not in ["CO", "OP"]:
         order.entry_type = ""
         order.save()
+    if order.status in ["CO", "OP"] and order.entry_type == "":
+        
+        last_completed_order = order.order_book.get_last_order_by_status("CO")
+        last_open_order = order.order_book.get_last_order_by_status("OP")
+        
+        if last_completed_order and last_open_order:
+            last_order = find_last_order(last_open_order, last_completed_order)
+        else:
+            last_order = last_completed_order or last_open_order
+        
+        if last_order and last_order.entry_type == "ET":
+            order.entry_type = "EX"
+        else:
+            order.entry_type = "ET"
+
     if order.status == "CO":
         # Create Logic About when to Subscribe for instrument
         cache_key = "_".join([order_data["symbol"].lower(), "cached_ticker_data"])

@@ -151,10 +151,13 @@ def import_premarket_stocks_data():
                 response_data = response.json().get("data")
                 bulk_data_upload = []
                 if response_data:
-                    slack_message_sender.delay(channel="#random", text=str(response))
+                    slack_message_sender.delay(channel="#random", text=str(response.content))
                     for data in response_data:
                         context = {}
-                        symbol = Symbol.objects.get(symbol=data.get("symbol").lower())
+                        try:
+                            symbol = Symbol.objects.get(symbol=data.get("symbol").lower())
+                        except:
+                            continue
                         try:
                             pre_market_stock = PreMarketOrderData.objects.get(symbol=symbol, created_at__date=get_local_time().date())
                         except:

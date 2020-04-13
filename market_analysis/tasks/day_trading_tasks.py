@@ -132,17 +132,32 @@ def calculate_profit_loss_on_entry_stocks():
             stock = Symbol.objects.get(symbol=report.name.lower())
             live_data = stock.get_stock_live_data()
             live_data = live_data.loc[live_data["date"] > str(report.entry_time)]
+            
             if report.entry_type == "BUY":
-                target_price = live_data.loc[live_data["high_price"] >= report.target_price ].iloc[0]
-                stoploss_price = live_data.loc[live_data["low_price"] <= report.stoploss_price ].iloc[0]
+                target_price = live_data.loc[live_data["high_price"] >= report.target_price ].head(1)
+                stoploss_price = live_data.loc[live_data["low_price"] <= report.stoploss_price ].head(1)
+                if target_price.any().low_price and stoploss_price.any().high_price:
+                    final_price = target_price if target_price.date < stoploss_price.date else stoploss_price
+                else:
+                    final_price = target_price if target_price.any().low_price else stoploss_price
+                final_price = final_price.iloc[0]
+                if final_price.high_price >= report.target_price:
+                    status = "TARGET_HIT"
+                elif final_price.low_price <= report.stoploss_price:
+                    status = "STOPLOSS_HIT"
             elif report.entry_type == "SELL":
-                target_price = live_data.loc[live_data["low_price"] <= report.target_price ].iloc[0]
-                stoploss_price = live_data.loc[live_data["high_price"] >= report.stoploss_price ].iloc[0]
-            earliest_time = min(target_price.date, stoploss_price.date)
-            if target_price.date == earliest_time:
-                status = "TARGET_HIT"
-            elif stoploss_price.date == earliest_time:
-                status = "STOPLOSS_HIT"
+                target_price = live_data.loc[live_data["low_price"] <= report.target_price ].head(1)
+                stoploss_price = live_data.loc[live_data["high_price"] >= report.stoploss_price].head(1)
+                if target_price.any().low_price and stoploss_price.any().high_price:
+                    final_price = target_price if target_price.date < stoploss_price.date else stoploss_price
+                else:
+                    final_price = target_price if target_price.any().low_price else stoploss_price
+                final_price = final_price.iloc[0]
+                if final_price.low_price <= report.target_price:
+                    status = "TARGET_HIT"
+                elif final_price.high_price >= report.stoploss_price:
+                    status = "STOPLOSS_HIT"
+                    
             if status == "STOPLOSS_HIT":
                 report.pl = round(abs(report.entry_price - report.stoploss_price), 2)
             elif status == "STATUS":
