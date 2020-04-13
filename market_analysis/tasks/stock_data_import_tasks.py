@@ -211,7 +211,7 @@ def import_daily_losers_gainers():
                             except:
                                 stock = None
                             if stock:
-                                stock = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_movement, created_at__date=get_local_time().date())
+                                stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_movement, created_at__date=get_local_time().date())
                                 created_stocks.append(stock.symbol)
                     else:
                         slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")

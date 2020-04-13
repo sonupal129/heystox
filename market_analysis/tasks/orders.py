@@ -229,8 +229,8 @@ def create_update_order_on_update(order_data):
         order.save()
     if order.status == "CO":
         # Create Logic About when to Subscribe for instrument
-        cache_key = "_".join([order_data["symbol"], "cached_ticker_data"])
-        if order.order_type == "ET":
+        cache_key = "_".join([order_data["symbol"].lower(), "cached_ticker_data"])
+        if order.entry_type == "ET":
             data = {
                 "symbol": order_data.get("symbol"),
                 "target_price" : order.target_price,
