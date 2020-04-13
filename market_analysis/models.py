@@ -243,8 +243,8 @@ class Symbol(BaseModel):
                 < self.get_days_high_low_price(date_obj=date_obj, price_type="HIGH", candle_type=candle_type):
                 return "BUY"
         elif self.is_stock_ohl(date_obj=date_obj, candle_type=candle_type) == "SELL":
-            if self.get_days_high_low_price(date_obj=stock_date - timedelta(1), price_type="LOW", candle_type=candle_type)\
-                < self.get_days_high_low_price(date_obj=stock_date, price_type="LOW", candle_type=candle_type):
+            if self.get_days_high_low_price(date_obj=date_obj - timedelta(1), price_type="LOW", candle_type=candle_type)\
+                < self.get_days_high_low_price(date_obj=date_obj, price_type="LOW", candle_type=candle_type):
                 return "SELL"
 
 
