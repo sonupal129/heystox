@@ -51,6 +51,7 @@ class PreMarketOrderDataAdmin(admin.ModelAdmin):
 
 class SortedStockDashboardReportAdmin(admin.ModelAdmin):
     list_display = ["name", "entry_type", "entry_price", "entry_time"]
+    search_fields = ["name"]
 
 class OrderInline(admin.TabularInline):
     model = Order
