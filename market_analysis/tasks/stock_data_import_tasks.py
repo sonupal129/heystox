@@ -128,51 +128,56 @@ def update_symbols_closing_opening_price():
 
 @celery_app.task(queue="medium_priority")
 def import_premarket_stocks_data():
-    urls = {"NFTY": "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/nifty.json",
-            "NFTYBNK": "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/niftybank.json"}
+    urls = {"NFTY" : "https://www.nseindia.com/api/market-data-pre-open?key=NIFTY",
+            "NFTYBNK": "https://www.nseindia.com/api/market-data-pre-open?key=BANKNIFTY"}
     
-    def convert_price(price:str):
-        obj_price = price
-        if "," in obj_price:
-            obj_price = obj_price.replace(",", "")
-        obj_price = float(obj_price)
-        return obj_price
+    proxy = {'http': 'http://165.22.223.235:8118'} # Modify Function And Create rotating proxy mechanism 
     
-    market_date_url = "https://www1.nseindia.com/live_market/dynaContent/live_analysis/pre_open/pomMktStatus.jsp"
+    def response_filter(obj):
+        last_price = obj["metadata"]["previousClose"]
+        if last_price > 100 and last_price < 300:
+            return obj
+    
+    market_date_url = "https://www.nseindia.com/api/marketStatus"
     today_date = get_local_time().date()
-    web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS)
-    sleep(5)
-    market_trading_date = get_local_time().strptime(web_response.text.strip().rsplit("|")[-1].rsplit(" ")[0], "%d-%m-%Y").date()
+    web_response = requests.get(market_date_url, headers=settings.NSE_HEADERS, proxies=proxy).json()["marketState"]
+    market_trading_date = get_local_time().strptime(web_response[0]["tradeDate"], "%d-%b-%Y").date()
+    
     if market_trading_date == today_date:
         for sector, url in urls.items():
-            response = requests.get(url, headers=settings.NSE_HEADERS)
-            sleep(3)
+            response = requests.get(url, headers=settings.NSE_HEADERS, proxies=proxy)
+            sleep(1)
             if response.status_code == 200:
                 response_data = response.json().get("data")
                 bulk_data_upload = []
                 if response_data:
                     slack_message_sender.delay(channel="#random", text=str(response.content))
+                    response_data = filter(response_filter, response_data)
                     for data in response_data:
+                        metadata = data["metadata"]
+                        details = data["detail"]["preOpenMarket"]
                         context = {}
                         try:
-                            symbol = Symbol.objects.get(symbol=data.get("symbol").lower())
+                            symbol = Symbol.objects.get(symbol=metadata.get("symbol").lower())
                         except:
+                            print(metadata.get("symbol"))
                             continue
-                        try:
-                            pre_market_stock = PreMarketOrderData.objects.get(symbol=symbol, created_at__date=get_local_time().date())
-                        except:
-                            pre_market_stock = PreMarketOrderData.objects.create(symbol=symbol, created_at=get_local_time().now())
+                        pre_market_stock, is_created = PreMarketOrderData.objects.get_or_create(symbol=symbol, created_at__date=get_local_time().date())
                         if pre_market_stock:
                             pre_market_stock.sector = sector
-                            pre_market_stock.open_price = convert_price(data.get("iep"))
-                            pre_market_stock.change = convert_price(data.get("chn"))
-                            pre_market_stock.change_percent = convert_price(data.get("perChn"))
-                            pre_market_stock.previous_close = convert_price(data.get("pCls"))
-                            pre_market_stock.change_percent = convert_price(data.get("perChn"))
-                            pre_market_stock.total_trade_qty = convert_price(data.get("trdQnty"))
+                            pre_market_stock.open_price = details["IEP"]
+                            pre_market_stock.change = metadata["change"]
+                            pre_market_stock.change_percent = metadata["pChange"]
+                            pre_market_stock.previous_close = metadata["previousClose"]
+                            pre_market_stock.total_trade_qty = metadata["finalQuantity"]
+                            pre_market_stock.buy_qty_ato = details["atoBuyQty"]
+                            pre_market_stock.sell_qty_ato = details["atoSellQty"]
+                            pre_market_stock.total_buy_qty = details["totalBuyQuantity"]
+                            pre_market_stock.total_sell_qty = details["totalSellQuantity"]
                             pre_market_stock.save()
         return "Premarket Data Saved Successfully"
     return f"No Trading Day on {today_date}"
+
 
 @celery_app.task(queue="medium_priority")
 def import_daily_losers_gainers():
@@ -180,43 +185,34 @@ def import_daily_losers_gainers():
     start_time = time(9,30)
     end_time = time(15,30)
     if current_time > start_time and current_time < end_time:
-        urls = {
-                "BUY": ["https://www1.nseindia.com/live_market/dynaContent/live_analysis/gainers/niftyGainers1.json",
-                        "https://www1.nseindia.com/live_market/dynaContent/live_analysis/gainers/jrNiftyGainers1.json"],
-                "SELL": ["https://www1.nseindia.com/live_market/dynaContent/live_analysis/losers/niftyLosers1.json",
-                        "https://www1.nseindia.com/live_market/dynaContent/live_analysis/losers/jrNiftyLosers1.json"]
-            }
-        
+        urls = (
+        "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20NEXT%2050",
+        "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050"
+        )
         nifty_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
-        
-        def response_filter(obj):
-            open_price = obj.get("openPrice")
-            change = float(obj.get("netPrice"))
-            if "," in open_price:
-                open_price = open_price.replace(",","")
-            open_price = float(open_price)
-            if open_price >= 100 and open_price < 300 and change >= settings.MARKET_BULLISH_MOVEMENT:
-                return obj
+    else:
+        return f"{current_time} Time is greater or lower than {start_time} {end_time}"
+    def response_filter(obj):
+        open_price = obj.get("open")
+        change = obj.get("pChange")
+        if open_price >= 100 and open_price < 300 and change >= settings.MARKET_BULLISH_MOVEMENT or change <= settings.MARKET_BEARISH_MOVEMENT:
+            return obj
             
-        proxies = {'http': 'http://165.22.223.235:8118'} # Modify Function And Create rotating proxy mechanism
-        if nifty_movement in ("BUY", "SELL"):
-            import_urls = urls.get(nifty_movement)
-            if import_urls:
-                created_stocks = []
-                for url in import_urls:
-                    response = requests.get(url, headers=settings.NSE_HEADERS, proxies=proxies)
-                    sleep(2)
-                    if response.status_code == 200:
-                        responses = filter(response_filter, response.json().get("data"))
-                        for symbol in responses:
-                            try:
-                                stock = Symbol.objects.get(symbol=symbol.get("symbol").lower())
-                            except:
-                                stock = None
-                            if stock:
-                                stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_movement, created_at__date=get_local_time().date())
-                                created_stocks.append(stock.symbol)
-                    else:
-                        slack_message_sender.delay(channel="#random", text=f"Incorrect Url: {url}")
-                return f"Added Stocks {created_stocks}"
-    return f"{current_time} Time is greater or lower than {start_time} {end_time}"
+    proxy = {'http': 'http://165.22.223.235:8118'} # Modify Function And Create rotating proxy mechanism
+    if nifty_movement in ("BUY", "SELL"):
+        created_stocks = []
+        for url in urls:
+            response = requests.get(url, headers=settings.NSE_HEADERS, proxies=proxy)
+            sleep(2)
+            if response.status_code == 200:
+                sell_stocks = sorted(response.json().get("data"), key= lambda o : o.get("pChange"))[:15]
+                buy_stocks = sorted(response.json().get("data"), key= lambda o : o.get("pChange"), reverse=True)[:15]
+                responses = filter(response_filter, sell_stocks + buy_stocks)
+                for symbol in responses:
+                    try:
+                        stock = Symbol.objects.get(symbol=symbol.get("symbol").lower())
+                    except:
+                        continue
+                    stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY" if symbol.get("pChange") > 0 else "SELL", created_at__date=get_local_time().date())
+                    created_stocks.append(stock.symbol)
+        return f"Added Stocks {created_stocks}"
