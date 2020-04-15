@@ -73,7 +73,7 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
 def create_market_hour_candles(days, fetch_last_candle_number):
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     cache_key = str(get_local_time().date()) + "_nifty_daily_gainers_loosers"
-    cached_value = redis_cache.get(cache_key, cached_value)
+    cached_value = redis_cache.get(cache_key)
     
     for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
         fetch_candles_data.apply_async(kwargs={"symbol":stock, "days":days, "fetch_last_candle":fetch_last_candle_number}) # By Defautl Fetching 5 Minute Candle
