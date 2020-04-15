@@ -151,7 +151,6 @@ def import_premarket_stocks_data():
                 response_data = response.json().get("data")
                 bulk_data_upload = []
                 if response_data:
-                    slack_message_sender.delay(channel="#random", text=str(response.content))
                     response_data = filter(response_filter, response_data)
                     for data in response_data:
                         metadata = data["metadata"]
@@ -184,6 +183,8 @@ def import_daily_losers_gainers():
     current_time = get_local_time().time()
     start_time = time(9,30)
     end_time = time(15,30)
+    cache_key = str(get_local_time().date()) + "_nifty_daily_gainers_loosers"
+    cached_value = redis_cache.get(cache_key)
     if current_time > start_time and current_time < end_time:
         urls = (
         "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20NEXT%2050",
@@ -191,7 +192,7 @@ def import_daily_losers_gainers():
         )
         nifty_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     else:
-        return f"{current_time} Time is greater or lower than {start_time} {end_time}"
+        return f"Current Time {current_time} is greater or lower than Market start {start_time} and end time {end_time}"
     def response_filter(obj):
         open_price = obj.get("open")
         change = obj.get("pChange")
@@ -215,4 +216,11 @@ def import_daily_losers_gainers():
                         continue
                     stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY" if symbol.get("pChange") > 0 else "SELL", created_at__date=get_local_time().date())
                     created_stocks.append(stock.symbol)
+                    if is_created:
+                        if cached_value == None:
+                            cached_value = [stock.symbol]
+                            redis_cache.set(cache_key, cached_value)
+                        elif stock.symbol not in cached_value:
+                            cached_value.append(stock.symbol)
+                            redis_cache.set(cache_key, cached_value)
         return f"Added Stocks {created_stocks}"
