@@ -215,12 +215,12 @@ def import_daily_losers_gainers():
                     except:
                         continue
                     sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY" if symbol.get("pChange") > 0 else "SELL", created_at__date=get_local_time().date())
-                    created_stocks.append(stock.symbol)
                     if is_created:
+                        created_stocks.append(stock.symbol)
                         if cached_value == None:
                             cached_value = [stock.symbol]
-                            redis_cache.set(cache_key, cached_value, 60*30)
+                            redis_cache.set(cache_key, cached_value)
                         elif stock.symbol not in cached_value:
                             cached_value.append(stock.symbol)
-                            redis_cache.set(cache_key, cached_value, 60*30)
+                            redis_cache.set(cache_key, cached_value)
         return f"Added Stocks {created_stocks}"
