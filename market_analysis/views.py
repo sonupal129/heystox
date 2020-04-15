@@ -5,6 +5,8 @@ from market_analysis.tasks.trading import get_cached_liquid_stocks
 from market_analysis.view_mixins import BasePermissionMixin
 from .forms import UserLoginRegisterForm
 from .mixins import GroupRequiredMixins
+from market_analysis.tasks.notification_tasks import slack_message_sender
+from market_analysis.tasks.users_tasks import login_upstox_user
 # Create your views here.
 
 
@@ -30,24 +32,30 @@ class UpstoxLoginComplete(BasePermissionMixin, View):
         response_code_cache_key = request.user.email + "_upstox_user_response_code"
         session = cache.get(session_cache_key)
         cached_response_code = cache.get(response_code_cache_key)
-        if upstox_response_code != cached_response_code:
-            cache.set(response_code_cache_key, upstox_response_code, 30*60*48)
-            session.set_code(upstox_response_code)
+        session.set_code(upstox_response_code)
         if request.user.is_superuser:
-            if upstox_response_code is not None:
-                try:
-                    access_token = session.retrieve_access_token()
-                    user_profile.credential.access_token = access_token
-                    user_profile.credential.save()
-                    upstox_user = Upstox(user_profile.credential.api_key, access_token)
-                    cache.set(request.user.email + "_upstox_login_user", upstox_user, 30*60*48)
-                    return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
-                except SystemError:
-                    return redirect("market_analysis_urls:upstox-login")
-            return redirect("market_analysis_urls:upstox-login")
+            try:
+                access_token = session.retrieve_access_token()
+                user_profile.credential.access_token = access_token
+                user_profile.credential.save()
+                login_upstox_user.delay(request.user.email)
+            except Exception as e:
+                slack_message_sender.delay(text=str(e), channel="#random")
+                return redirect("market_analysis_urls:upstox-login")
+            return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
         return redirect("market_analysis_urls:sorted-dashboard-report")
 
+        #         try:
+        #             upstox_user = Upstox(user_profile.credential.api_key, access_token)
+        #             cache.set(request.user.email + "_upstox_login_user", upstox_user, 30*60*48)
+                
+        #         except Exception as e:
+        #             slack_message_sender.delay(text=str(e))
+        #             return redirect("market_analysis_urls:upstox-login")
+        #     return redirect("market_analysis_urls:upstox-login")
+        # return redirect("market_analysis_urls:sorted-dashboard-report")
 
+# class UpstoxUserLogoutView(View):
         
 # class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListView):
 #     template_name = "sorted_stocks_dashboard.html"
@@ -113,17 +121,16 @@ class SortedStocksDashBoardReportView(BasePermissionMixin, GroupRequiredMixins, 
         else:
             date_obj = get_local_time().date()
         qs = SortedStockDashboardReport.objects.filter(created_at__date=date_obj)
-        # for q in qs:
-        #     if not q.exit_price or not q.pl:
-        #         symbol = Symbol.objects.get(symbol=q.name)
-        #         df = symbol.get_stock_live_data(date_obj=date_obj)
         return qs
-                
-                # Fixed 1% Exit Strategy
 
-
-
-
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.user.is_superuser:
+            upstox_user = self.request.user.user_profile.get_upstox_user()
+            context["upstox_user"] = upstox_user
+        if self.context_object_name is not None:
+            context[self.context_object_name] = self.get_queryset()
+        return context
 
 
 class UserLoginRegisterView(LoginView):

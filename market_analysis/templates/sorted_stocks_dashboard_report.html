@@ -29,6 +29,19 @@
         tr:nth-child(even) {
             background-color: #dddddd;
         }
+
+        .button {
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -47,6 +60,10 @@
         </li>
     </ol>
     <h2>Total Sorted Stocks Count: <span>{% if symbols %}{{ symbols.count }}{% else %} 0 {% endif %}</span></h2>
+    {% if request.user.is_superuser and upstox_user %}
+    <a href=""><button class="button" style="position:absolute;top:20%;right:2%;">Log Out Upstox</button></a>
+    {% endif %}
+    <a href="ww.gltist.com" target="_blank"><button class="button" style="position:absolute;top:20%;right:20%;">Futures</button></a>
     <table>
         <tr>
             <th>Name</th>

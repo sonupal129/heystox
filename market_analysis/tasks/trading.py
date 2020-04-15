@@ -2,24 +2,25 @@ from market_analysis.imports import *
 from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList, UserProfile, MarketHoliday
 from .notification_tasks import slack_message_sender
 from .intraday_indicator import get_macd_crossover, get_stochastic_crossover
+from .users_tasks import login_upstox_user
 # Codes Starts Below
 
 def get_upstox_user(email="sonupal129@gmail.com"):
-    try:
-        user = UserProfile.objects.get(user__email=email)
-    except UserProfile.DoesNotExist:
-        return f"user with {email} not found in system"
-    profile = None
-    try:
-        profile = user.get_upstox_user().get_profile()
-    except:
-        profile = None
+    user = UserProfile.objects.get(user__email=email)
+    cache_key = str(get_local_time().date()) +  "_local_upstox_user"
+    profile = cache.get(cache_key)
+    counter = 0
     while profile is None:
         try:
             profile = user.get_upstox_user().get_profile()
+            cache.set(cache_key, user.get_upstox_user(), 30*10)
         except:
-            slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
-            sleep(120)
+            counter += 1
+            login_upstox_user.delay(email)
+            sleep(2)
+            if counter >= 120:
+                slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
+                counter = 0
     return user.get_upstox_user()
 
 def select_stocks_for_trading(min_price:int, max_price:int):

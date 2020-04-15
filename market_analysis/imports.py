@@ -24,6 +24,7 @@ import hashlib
 from django.core.cache import caches, cache
 from django.contrib.auth import authenticate, login
 from django.core.exceptions import ValidationError, PermissionDenied, ImproperlyConfigured
+from requests.exceptions import HTTPError
 from django.http import (HttpResponseRedirect, HttpResponseForbidden, HttpResponse, JsonResponse)
 from django.shortcuts import redirect, render, get_object_or_404, resolve_url
 import requests
