@@ -204,7 +204,7 @@ def import_daily_losers_gainers():
         created_stocks = []
         for url in urls:
             response = requests.get(url, headers=settings.NSE_HEADERS, proxies=proxy)
-            sleep(2)
+            sleep(1)
             if response.status_code == 200:
                 sell_stocks = sorted(response.json().get("data"), key= lambda o : o.get("pChange"))[:15]
                 buy_stocks = sorted(response.json().get("data"), key= lambda o : o.get("pChange"), reverse=True)[:15]
@@ -214,13 +214,13 @@ def import_daily_losers_gainers():
                         stock = Symbol.objects.get(symbol=symbol.get("symbol").lower())
                     except:
                         continue
-                    stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY" if symbol.get("pChange") > 0 else "SELL", created_at__date=get_local_time().date())
+                    sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY" if symbol.get("pChange") > 0 else "SELL", created_at__date=get_local_time().date())
                     created_stocks.append(stock.symbol)
                     if is_created:
                         if cached_value == None:
                             cached_value = [stock.symbol]
-                            redis_cache.set(cache_key, cached_value)
+                            redis_cache.set(cache_key, cached_value, 60*30)
                         elif stock.symbol not in cached_value:
                             cached_value.append(stock.symbol)
-                            redis_cache.set(cache_key, cached_value)
+                            redis_cache.set(cache_key, cached_value, 60*30)
         return f"Added Stocks {created_stocks}"
