@@ -346,6 +346,7 @@ class UserProfile(BaseModel):
             login_url = session.get_login_url()
             return login_url
 
+
 class BankDetail(BaseModel):
     user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name="bank")
     bank_name = models.CharField(max_length=200)

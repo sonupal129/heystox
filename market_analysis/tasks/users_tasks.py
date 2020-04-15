@@ -37,4 +37,13 @@ def authenticate_users_in_morning():
         message = "Login URL for " + user_profile.user.get_full_name() + ": " + user_profile.get_authentication_url()
         slack_message_sender.delay(text=message)
 
-
+@celery_app.task(queue="low_priority", autoretry_for=(HTTPError,), retry_kwargs={'max_retries': 2, 'countdown': 10})
+def login_upstox_user(email):
+    user_profile = UserProfile.objects.get(user__email=email)
+    try:
+        upstox_user = Upstox(user_profile.credential.api_key, user_profile.credential.access_token)
+        cache.set(email + "_upstox_login_user", upstox_user, 30*60*48)
+    except HTTPError as e:
+        slack_message_sender.delay(text="Unable to log in upstox trying again: " + str(e))
+        raise HTTPError("Unable to authenticate")
+    return "Successfully Loged-In in Upstox"

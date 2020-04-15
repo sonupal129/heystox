@@ -95,14 +95,19 @@ def delete_last_cached_candles_data():
 
 @celery_app.task(queue="medium_priority")
 def create_stocks_realtime_candle():
-    upstox_user = get_upstox_user(email="sonupal129@gmail.com")
-    for stock in Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True):
+    cache_key = str(get_local_time().date()) + "_nifty_daily_gainers_loosers"
+    cached_value = redis_cache.get(cache_key)
+    symbols = Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True)
+    for stock in symbols:
         cache_candles_data.apply_async(kwargs={"stock_name":stock}) #By default one minute is set
+    if cached_value:
+        new_values = [ stock for stock in cached_value if stock not in symbols]
+        for stock in new_values:
+            cache_candles_data.apply_async(kwargs={"stock_name":stock}) #By default one minute is set
     return "All Candles data cached"
 
 @celery_app.task(queue="low_priority")
 def create_nifty_50_realtime_candle():
-    upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     cache_candles_data.delay(stock_name="nifty_50")
     return f"nifty_50 Data Cached Successfully"
 

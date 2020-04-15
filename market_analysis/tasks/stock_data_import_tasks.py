@@ -193,11 +193,13 @@ def import_daily_losers_gainers():
         nifty_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     else:
         return f"Current Time {current_time} is greater or lower than Market start {start_time} and end time {end_time}"
+    
     def response_filter(obj):
         open_price = obj.get("open")
         change = obj.get("pChange")
-        if open_price >= 100 and open_price < 300 and change >= settings.MARKET_BULLISH_MOVEMENT or change <= settings.MARKET_BEARISH_MOVEMENT:
-            return obj
+        if open_price >= 100 and open_price < 300:
+            if change >= settings.MARKET_BULLISH_MOVEMENT or change <= settings.MARKET_BEARISH_MOVEMENT:
+                return obj
             
     proxy = {'http': 'http://165.22.223.235:8118'} # Modify Function And Create rotating proxy mechanism
     if nifty_movement in ("BUY", "SELL"):
