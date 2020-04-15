@@ -61,8 +61,8 @@ def get_stocks_for_trading():
 @celery_app.task(queue="high_priority")
 def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOVEMENT):
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
-    # sorted_stocks_name = []
     today_date = get_local_time().date()
+    cache_key = str(today_date) + "_todays_sorted_stocks"
     movement_on_entry = {
         "BUY" : settings.MARKET_BULLISH_MOVEMENT,
         "SELL": settings.MARKET_BEARISH_MOVEMENT,
@@ -76,8 +76,8 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
                 continue
         # slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date).select_related("symbol").prefetch_related("timestamps")
+    cached_value = redis_cache.get(cache_key)
     if sorted_stocks:
-        cached_stocks = []
         deleted_stocks = []
         counter = 0
         for stock in sorted_stocks:
@@ -85,12 +85,16 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
                 deleted_stocks.append(stock.symbol.symbol)
                 stock.delete()
             else:
-                cached_stocks.append(stock)
+                if cached_value == None:
+                    cached_value = [stock]
+                    redis_cache.set(cache_key, cached_value, 60*30)
+                elif stock not in cached_value:
+                    cached_value.append(stock)
+                    redis_cache.set(cache_key, cached_value, 60*30)
                 # get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id}) # Stochastic Crossover Check
                 # get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})# Macd Crossover Check
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
-        redis_cache.set("todays_sorted_stocks", cached_stocks, 60*30)
 
 
 # Market Sideways Functions - Need To Work More on below functions

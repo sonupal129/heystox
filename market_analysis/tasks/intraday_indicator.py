@@ -104,7 +104,8 @@ def find_ohl_stocks():
     current_time = get_local_time().time()
     start_time = time(9,25)
     if current_time > start_time:
-        sorted_stocks = redis_cache.get("todays_sorted_stocks")
+        cache_key = str(get_local_time().date()) + "_todays_sorted_stocks"
+        sorted_stocks = redis_cache.get(cache_key)
         if sorted_stocks:
             todays_timestamps = StrategyTimestamp.objects.select_related("stock", "indicator").filter(indicator__name="OHL", timestamp__date=get_local_time().date())
             for stock in sorted_stocks:
