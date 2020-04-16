@@ -86,7 +86,7 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, u
 
 
 @celery_app.task(queue="high_priority")
-def update_stocks_candle_data(days=0):
+def update_stocks_candle_data(days=6):
     """Update all stocks candles data after trading day"""
     for q in Symbol.objects.all():
         fetch_candles_data.delay(symbol=q.symbol, days=days)
@@ -218,7 +218,6 @@ def import_daily_losers_gainers():
                         continue
                     sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY" if symbol.get("pChange") > 0 else "SELL", created_at__date=get_local_time().date())
                     if is_created:
-                        fetch_candles_data(stock.symbol)
                         created_stocks.append(stock.symbol)
                         if cached_value == None:
                             cached_value = [stock.symbol]
