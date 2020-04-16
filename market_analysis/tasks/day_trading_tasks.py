@@ -78,8 +78,7 @@ def create_market_hour_candles(days, fetch_last_candle_number):
     for stock in symbols:
         fetch_candles_data.apply_async(kwargs={"symbol":stock, "days":days, "fetch_last_candle":fetch_last_candle_number}) # By Defautl Fetching 5 Minute Candle
     if cached_value:
-        new_values = [ stock for stock in cached_value if stock not in symbols]
-        for stock in new_values:
+        for stock in cached_value:
             fetch_candles_data.apply_async(kwargs={"symbol":stock, "days":days}) # By Defautl Fetching 5 Minute Candle, for nify gainers with not limit of fetch last candles
    
     # Now Create Nifty 50 Candle
@@ -101,8 +100,7 @@ def create_stocks_realtime_candle():
     for stock in symbols:
         cache_candles_data.apply_async(kwargs={"stock_name":stock}) #By default one minute is set
     if cached_value:
-        new_values = [ stock for stock in cached_value if stock not in symbols]
-        for stock in new_values:
+        for stock in cached_value:
             cache_candles_data.apply_async(kwargs={"stock_name":stock}) #By default one minute is set
     return "All Candles data cached"
 

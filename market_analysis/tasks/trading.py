@@ -77,6 +77,11 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
                 continue
         # slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
     sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date).select_related("symbol").prefetch_related("timestamps")
+    nifty_imported_stocks_cache_key = str(get_local_time().date()) + "_nifty_daily_gainers_loosers"
+    nifty_imported_stocks_cached_value = redis_cache.get(nifty_imported_stocks_cache_key)
+    if nifty_imported_stocks_cached_value == None:
+        imported_stocks = SortedStocksList.objects.filter(created_at__date=today_date).exclude(symbol_id__in=get_cached_liquid_stocks()).values_list("symbol__symbol", flat=True)
+        redis_cache.set(nifty_imported_stocks_cache_key, imported_stocks, 60*30)
     cached_value = redis_cache.get(cache_key)
     if sorted_stocks:
         deleted_stocks = []

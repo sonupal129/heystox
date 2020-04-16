@@ -183,8 +183,6 @@ def import_daily_losers_gainers():
     current_time = get_local_time().time()
     start_time = time(9,30)
     end_time = time(15,30)
-    cache_key = str(get_local_time().date()) + "_nifty_daily_gainers_loosers"
-    cached_value = redis_cache.get(cache_key)
     if current_time > start_time and current_time < end_time:
         urls = (
         "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20NEXT%2050",
@@ -219,10 +217,4 @@ def import_daily_losers_gainers():
                     sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY" if symbol.get("pChange") > 0 else "SELL", created_at__date=get_local_time().date())
                     if is_created:
                         created_stocks.append(stock.symbol)
-                        if cached_value == None:
-                            cached_value = [stock.symbol]
-                            redis_cache.set(cache_key, cached_value)
-                        elif stock.symbol not in cached_value:
-                            cached_value.append(stock.symbol)
-                            redis_cache.set(cache_key, cached_value)
         return f"Added Stocks {created_stocks}"
