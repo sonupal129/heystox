@@ -121,8 +121,12 @@ def find_update_macd_stochastic_crossover_in_stocks():
     current_time = get_local_time().time()
     start_time = time(9,25)
     cache_key = str(get_local_time().date()) + "_todays_sorted_stocks"
+    cached_value = redis_cache.get(cache_key)
     if current_time > start_time:
-        for stock in redis_cache.get(cache_key):
+        if cached_value == None:
+            add_stock_on_market_sideways.apply_async()
+            sleep(1)
+        for stock in cached_value:
             if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
                 get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
                 get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
