@@ -135,7 +135,7 @@ def import_premarket_stocks_data():
     
     def response_filter(obj):
         last_price = obj["metadata"]["previousClose"]
-        if last_price > 100 and last_price < 300:
+        if last_price > 60 and last_price < 300:
             return obj
     
     market_date_url = "https://www.nseindia.com/api/marketStatus"
@@ -218,6 +218,7 @@ def import_daily_losers_gainers():
                         continue
                     sorted_stock, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY" if symbol.get("pChange") > 0 else "SELL", created_at__date=get_local_time().date())
                     if is_created:
+                        fetch_candles_data(stock.symbol)
                         created_stocks.append(stock.symbol)
                         if cached_value == None:
                             cached_value = [stock.symbol]
