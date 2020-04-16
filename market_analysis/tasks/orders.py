@@ -57,9 +57,10 @@ def get_auto_exit_price(price, entry_type):
         sl = fixed_auto_exit_percentage + 0.20
     if entry_type == "SELL":
         stoploss = price - (price * sl /100)
+        return roundup(stoploss)
     elif entry_type == "BUY":
         stoploss = price + (price * sl /100)
-    return roundup(stoploss)
+        return roundup(stoploss)
 
 def calculate_order_quantity(share_price, entry_type):
     user = get_upstox_user()
@@ -251,7 +252,7 @@ def create_update_order_on_update(order_data):
                 "symbol": order_data.get("symbol"),
                 "target_price" : order.target_price,
                 "stoploss": order.stoploss,
-                "auto_exit_price" : get_auto_exit_price(order.entry_price, order.entry_type),
+                "auto_exit_price" : get_auto_exit_price(order.entry_price, order.transaction_type),
                 "entry_type" : order.entry_type,
                 "order_id" : order.order_id,
                 "stock_data" : None,
