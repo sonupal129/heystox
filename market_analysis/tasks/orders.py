@@ -113,10 +113,10 @@ def send_order_place_request(signal_detail:dict=None):
         percentage_calculator = lambda higher_number, lower_number : (higher_number - lower_number) / lower_number * 100
         buy_qty = data["total_buy_qty"]
         sell_qty = data["total_sell_qty"]
-        if entry_type == "BUY" and (percentage_calculator(sell_qty, buy_qty) < 20 or percentage_calculator(buy_qty, sell_qty) > 20):
+        if entry_type == "BUY" and (percentage_calculator(sell_qty, buy_qty) < 30 or percentage_calculator(buy_qty, sell_qty) > 20):
             # Send Order Place Request
             send_order_request.delay(order_schema)
-        elif entry_type == "SELL" and (percentage_calculator(buy_qty, sell_qty) < 20 or percentage_calculator(sell_qty, buy_qty) > 20):
+        elif entry_type == "SELL" and (percentage_calculator(buy_qty, sell_qty) < 30 or percentage_calculator(sell_qty, buy_qty) > 20):
             # Send Order Place Request
             send_order_request.delay(order_schema)
         # Do All Function Logic Here

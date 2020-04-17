@@ -11,6 +11,8 @@ def event_handler_on_quote_update(message):
     return message
 
 def event_handler_on_order_update(message):
+    # user = get_upstox_user()
+    # user.start_websocket(True)
     order_statuses = ["cancelled", "open", "complete", "rejected"]
     if message.get("status") in order_statuses:
         create_update_order_on_update.delay(message)

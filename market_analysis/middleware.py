@@ -9,8 +9,10 @@ class UserAuthRequired(object):
         self.get_response = get_response
 
     def __call__(self, request):
-        if not request.user.is_authenticated and request.path not in settings.LOGIN_REDIRECT_EXEMPTED_URLS:
-            return HttpResponseRedirect(settings.LOGIN_URL)
         response = self.get_response(request)
+        if request.path in settings.LOGIN_REDIRECT_EXEMPTED_URLS:
+            return response
+        elif not request.user.is_authenticated and request.path not in settings.LOGIN_REDIRECT_EXEMPTED_URLS:
+            return HttpResponseRedirect(settings.LOGIN_URL)
         return response
 

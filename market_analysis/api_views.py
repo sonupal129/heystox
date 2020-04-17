@@ -1,6 +1,7 @@
 from market_analysis.serializers import UserSerializer, UserProfileSerializer, SortedStockDashboardSerializer
 from market_analysis.imports import *
 from .models import UserProfile, SortedStocksList, Symbol
+from market_analysis.tasks.notification_tasks import slack_message_sender
 # Code Starts Below
 
 class UsersListView(APIView):
@@ -65,3 +66,17 @@ class SortedStocksListView(APIView):
 #         obj = get_object_or_404(Symbol, symbol=symbol_name)
 #         data = obj.get_stock_live_data().to_json()
 #         return HttpResponse(data, content_type = 'application/json')
+
+
+class UpstoxOrderUpdateView(APIView):
+    http_method_names = ["post", "get"]
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        slack_message_sender(text=str(request.data))
+        print(request.data)
+        return Response({"success": True})
+
+    def get(self, request, **kwargs):
+        print(request.path)
+        return Response({"Raju" : "aagaya"})
