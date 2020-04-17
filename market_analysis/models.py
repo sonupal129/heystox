@@ -556,6 +556,7 @@ class Order(BaseModel):
     transaction_type = models.CharField(blank=True, null=True, max_length=10, choices=transaction_choices)
     status = models.CharField(choices=status_choices, max_length=10, default='OP')
     entry_type = models.CharField(choices=entry_type_choices, max_length=10, default='', blank=True)
+    message = models.CharField(max_length=200, blank=True, null=True)
 
     class Meta:
         ordering = ["entry_time"]

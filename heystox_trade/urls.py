@@ -26,7 +26,7 @@ admin.site.site_title = "Heystox Admin"
 admin.site.index_title = "Welcome to Heystox"
 
 urlpatterns = [
-    path('power-house/', admin.site.urls),
+    path('admin/', admin.site.urls),
     path('', include("market_analysis.urls", namespace="market_analysis_urls")),
     path('api/v1/', include("market_analysis.api_urls", namespace="market_analysis_api_urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

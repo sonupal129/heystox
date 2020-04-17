@@ -68,15 +68,15 @@ class SortedStocksListView(APIView):
 #         return HttpResponse(data, content_type = 'application/json')
 
 
-class UpstoxOrderUpdateView(APIView):
-    http_method_names = ["post", "get"]
-    permission_classes = [AllowAny]
+# class UpstoxOrderUpdateView(APIView):
+#     http_method_names = ["post", "get"]
+#     permission_classes = [AllowAny]
 
-    def post(self, request, *args, **kwargs):
-        slack_message_sender(text=str(request.data))
-        print(request.data)
-        return Response({"success": True})
+#     def post(self, request, *args, **kwargs):
+#         slack_message_sender(text=str(request.data))
+#         print(request.data)
+#         return Response({"success": True})
 
-    def get(self, request, **kwargs):
-        print(request.path)
-        return Response({"Raju" : "aagaya"})
+#     def get(self, request, **kwargs):
+#         print(request.path)
+#         return Response({"Raju" : "aagaya"})

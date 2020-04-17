@@ -99,7 +99,7 @@ testpath==0.4.2
 text-unidecode==1.2
 tornado==5.1.1
 traitlets==4.3.3
-upstox==2.0.0
+upstox==2.0.1
 urllib3==1.25.3
 vine==1.3.0
 wcwidth==0.1.7

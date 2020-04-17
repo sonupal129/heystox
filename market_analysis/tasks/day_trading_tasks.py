@@ -4,7 +4,7 @@ from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol,
 from .trading import *
 from market_analysis.imports import *
 from .intraday_indicator import get_macd_crossover, get_stochastic_crossover
-from .upstox_events_handlers import *
+from .upstox_events_handlers import start_upstox_websocket
 # CODE STARTS BELOW
 
 @celery_app.task(queue="low_priority")
@@ -123,7 +123,8 @@ def find_update_macd_stochastic_crossover_in_stocks():
     if current_time > start_time:
         if cached_value == None:
             add_today_movement_stocks.apply_async()
-            sleep(1)
+            sleep(3)
+            cached_value = redis_cache.get(cache_key)
         for stock in cached_value:
             if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
                 get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
@@ -183,14 +184,7 @@ def calculate_profit_loss_on_entry_stocks():
 
 
 @celery_app.task(queue="high_priority")
-def start_upstox_websocket(run_in_background=True):
-    user = get_upstox_user()
-    user.set_on_quote_update(event_handler_on_quote_update)
-    user.set_on_trade_update(event_handler_on_trade_update)
-    user.set_on_order_update(event_handler_on_order_update)
-    user.set_on_disconnect(event_handler_on_disconnection)
-    user.set_on_error(event_handler_on_error)
-    user.start_websocket(run_in_background)
-    slack_message_sender.delay(text="Websocket for Live Data Feed Started")
-    return "Websocket Started"
+def start_websocket(run_in_background=True):
+    start_upstox_websocket(run_in_background)
+    return "Socket Started"
 

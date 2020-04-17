@@ -11,8 +11,6 @@ def event_handler_on_quote_update(message):
     return message
 
 def event_handler_on_order_update(message):
-    # user = get_upstox_user()
-    # user.start_websocket(True)
     order_statuses = ["cancelled", "open", "complete", "rejected"]
     if message.get("status") in order_statuses:
         create_update_order_on_update.delay(message)
@@ -28,9 +26,18 @@ def event_handler_on_error(message):
 
 
 def event_handler_on_disconnection(message):
-    user = get_upstox_user()
-    for i in range(0,3):
-        user.start_websocket(True)
-        sleep(0.5)
     slack_message_sender.delay(text="Websocket Disconnected, Connecting Again")
+    start_upstox_websocket()
     return "Start Websocket Again" 
+
+
+def start_upstox_websocket(run_in_background=True):
+    user = get_upstox_user()
+    user.set_on_quote_update(event_handler_on_quote_update)
+    user.set_on_trade_update(event_handler_on_trade_update)
+    user.set_on_order_update(event_handler_on_order_update)
+    user.set_on_disconnect(event_handler_on_disconnection)
+    user.set_on_error(event_handler_on_error)
+    user.start_websocket(run_in_background)
+    slack_message_sender.delay(text="Websocket for Live Data Feed Started")
+    return "Websocket Started"

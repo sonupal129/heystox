@@ -199,6 +199,7 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
 
 @celery_app.task(queue="high_priority")
 def create_update_order_on_update(order_data):
+    print(order_data)
     sleep(0.2)
     order_choices = {
         "cancelled": "CA",
@@ -209,26 +210,25 @@ def create_update_order_on_update(order_data):
     order_id = order_data.get("order_id")
     user = get_upstox_user()
     user.get_master_contract(order_data.get("exchange"))
-    order, is_created = Order.objects.get_or_create(order_id=order_id)
     exchange_time = get_local_time().strptime(order_data.get("exchange_time"), "%d-%b-%Y %H:%M:%S") if order_data.get("exchange_time") else get_local_time().now()
+    order, is_created = Order.objects.get_or_create(order_id=order_id)
+    
     if is_created:
         order_book = OrderBook.objects.get(symbol__symbol__iexact=order_data.get("symbol"), date=get_local_time().date())
-        order.entry_price = order_data.get("price") or order_data.get("average_price")
         order.transaction_type = "BUY" if order_data.get("transaction_type") == "BUY" else "SELL"
-        order.status = order_choices.get(order_data["status"])
         order.order_book = order_book
-        order.entry_time = exchange_time if exchange_time else None
         order.stoploss = get_stock_stoploss_price(order.entry_price, order.transaction_type)
         order.target_price = get_stock_target_price(order.entry_price, order.transaction_type)
-        order.save()
-    else:
-        order.status = order_choices.get(order_data["status"])
-        order.entry_time = exchange_time if exchange_time else None
-        order.entry_price = order_data.get("price") or order_data.get("average_price")
-        order.save()
+    
     if order.entry_type != "" and order.status not in ["CO", "OP"]:
         order.entry_type = ""
-        order.save()
+    
+    order.message = order_data.get("message")
+    order.entry_price = order_data.get("price") or order_data.get("average_price")
+    order.entry_time = exchange_time if exchange_time else None
+    order.status = order_choices.get(order_data["status"])
+    order.save()
+    
     if order.status in ["CO", "OP"] and order.entry_type == "":
         
         last_completed_order = order.order_book.get_last_order_by_status("CO")

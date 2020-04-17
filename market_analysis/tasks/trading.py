@@ -9,20 +9,22 @@ def get_upstox_user(email="sonupal129@gmail.com"):
     user = UserProfile.objects.get(user__email=email)
     cache_key = str(get_local_time().date()) +  "_local_upstox_user"
     profile = cache.get(cache_key)
-    counter = 0
+    login_attempt_counter = cache.get("login_attempt_counter")
     if profile is None:
-        while profile is None:
-            try:
-                profile = user.get_upstox_user().get_profile()
-                cache.set(cache_key, user.get_upstox_user(), 30*10)
-            except:
-                counter += 1
-                login_upstox_user.delay(email)
-                sleep(2)
-                if counter >= 120:
-                    slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
-                    counter = 0
-    return profile
+        try:
+            profile = user.get_upstox_user().get_profile()
+            cache.set(cache_key, user.get_upstox_user(), 30*10)
+        except:
+            if login_attempt_counter is None:
+                cache.set("login_attempt_counter", 1)
+            else:
+                cache.set("login_attempt_counter", login_attempt_counter + 1)
+            login_upstox_user.delay(email)
+            sleep(2)
+            if login_attempt_counter == 60:
+                cache.delete("login_attempt_counter")
+                slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
+    return cache.get(cache_key)
 
 def select_stocks_for_trading(min_price:int, max_price:int):
       return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price)).exclude(exchange__name="NSE_INDEX")
