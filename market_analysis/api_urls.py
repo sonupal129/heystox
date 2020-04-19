@@ -9,7 +9,7 @@ urlpatterns = [
     path('users/', api_views.UsersListView.as_view(), name="users"),
     path('sorted-stocks/', api_views.SortedStocksListView.as_view(), name="sorted-stocks"),
     path('sorted-stocks/<str:symbol>/', api_views.SortedStocksListView.as_view(), name="sorted-stock"),
-    # path('order-update/', api_views.UpstoxOrderUpdateView.as_view(), name="order-update"),
+    path('cached-data/<str:symbol>/', api_views.CachedTickerDataView.as_view(), name="cached-data"),
 ]
 
 # API LOGIN URLS

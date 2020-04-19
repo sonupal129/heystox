@@ -68,15 +68,14 @@ class SortedStocksListView(APIView):
 #         return HttpResponse(data, content_type = 'application/json')
 
 
-# class UpstoxOrderUpdateView(APIView):
-#     http_method_names = ["post", "get"]
-#     permission_classes = [AllowAny]
+class CachedTickerDataView(APIView):
+    http_method_names = ["get"]
 
-#     def post(self, request, *args, **kwargs):
-#         slack_message_sender(text=str(request.data))
-#         print(request.data)
-#         return Response({"success": True})
-
-#     def get(self, request, **kwargs):
-#         print(request.path)
-#         return Response({"Raju" : "aagaya"})
+    def get(self, request, symbol, **kwargs):
+        cache_key = "_".join([symbol.lower(), "cached_ticker_data"])
+        print(request)
+        print(symbol)
+        cached_value = redis_cache.get(cache_key)
+        if cached_value == None:
+            return Response({"error" : f"No Cached Data foud for {symbol}"})
+        return Response(cached_value)
