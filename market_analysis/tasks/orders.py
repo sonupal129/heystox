@@ -199,7 +199,6 @@ def send_order_request(order_details:dict): # Don't Change This Function Format,
 
 @celery_app.task(queue="high_priority")
 def create_update_order_on_update(order_data):
-    print(order_data)
     sleep(0.2)
     order_choices = {
         "cancelled": "CA",
@@ -207,6 +206,13 @@ def create_update_order_on_update(order_data):
         "complete": "CO",
         "rejected": "RE"
     }
+    if order_data.get("transaction_type") == "B":
+        order_data["transaction_type"] = "BUY"
+    elif order_data.get("transaction_type") == "S":
+        order_data["transaction_type"] = "SELL"
+    else:
+        pass
+
     order_id = order_data.get("order_id")
     user = get_upstox_user()
     user.get_master_contract(order_data.get("exchange"))
@@ -304,13 +310,15 @@ def cache_symbol_ticker_data(data:dict):
     if data["ltp"] != cached_value["stock_data"][-1]["ltp"]:
         cached_value["stock_data"].append(context)
     redis_cache.set(cache_key, cached_value)
-    analyse_ticker_data_signal.send(sender=cache_symbol_ticker_data.__name__, **redis_cache.get(cache_key))
+    exit_on_stoploss_target_hit.delay(data["symbol"].lower())
+    exit_on_auto_hit_price.delay(data["symbol"].lower())
     return cached_value
 
 
-@receiver(analyse_ticker_data_signal)
-def analyse_stock_price_place_order(**data:dict):
-    cache_key = "_".join([data["symbol"].lower(), "cached_ticker_data"])
+@celery_app.task(queue="tickers")
+def exit_on_auto_hit_price(symbol_name:str):
+    """This function will take exit if price after reaching a certain price coming down or vice versa"""
+    cache_key = "_".join([symbol_name.lower(), "cached_ticker_data"])
     cached_value = redis_cache.get(cache_key)
     df = pd.DataFrame(cached_value["stock_data"])
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
@@ -325,81 +333,107 @@ def analyse_stock_price_place_order(**data:dict):
     elif price_type == "low" and limit_price < hit_price:
         price_hit = True
         price_hit_row = df.loc[df["ltp"] <= hit_price].iloc[0]
-    df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=10)] # Time Increament should happen automatically, Implement Later
-    last_ticker = df.iloc[-1]
-    context = {'transaction_type': cached_value["transaction_type"],
-        'symbol': data["symbol"],
-        'order_type': 'LIMIT',
-        'quantity': data["quantity"],
-        'price': 0.0,
-        'duarion_type': 'DAY',
-        'product_type': 'INTRADAY'
-    }
+    if price_hit:
+        df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=10)] # Time Increament should happen automatically, Implement Later
+        last_ticker = df.iloc[-1]
+        last_ticker_ltp = last_ticker.ltp
+        
+        context = {'transaction_type': cached_value["transaction_type"],
+            'symbol': cached_value["symbol"],
+            'order_type': 'LIMIT',
+            'quantity': cached_value["quantity"],
+            'price': 0.0,
+            'duarion_type': 'DAY',
+            'product_type': 'INTRADAY'
+        }
 
-    if cached_value["transaction_type"]  == "BUY" and price_hit:
-        context["transaction_type"] = "SELL"
-        if last_ticker.ltp in [np.arange(hit_price, hit_price+0.05, 0.05)]:
-            context["price"] = hit_price   
-            send_order_request.delay(context) # send order request with limit
-            slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
-        elif last_ticker.ltp in [np.arange(hit_price-0.05, hit_price-0.15, 0.05)]:
-            context["price"] = 0.0
-            context["order_type"] = "MARKET"
-            send_order_request.delay(context) # send order request with market order
-            slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
-    elif cached_value["transaction_type"]  == "SELL" and price_hit:
-        context["transaction_type"] = "BUY"
-        if last_ticker.ltp in [np.arange(hit_price, hit_price+0.15, 0.05)]:
-            context["price"] = 0.0
-            context["order_type"] = "MARKET"
-            send_order_request.delay(context) # send order request with market order
-            slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
-        elif last_ticker.ltp in [np.arange(hit_price, hit_price+0.05, 0.05)]:
-            context["price"] = 0.0
-            send_order_request.delay(context) # send order request with market order
-            slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
+        if cached_value["transaction_type"]  == "BUY" and price_hit:
+            context["transaction_type"] = "SELL"
+            if last_ticker_ltp in np.arange(hit_price, hit_price+0.05, 0.05):
+                context["price"] = hit_price   
+                # print("BUY Auto Exit Limit")
+                send_order_request.delay(context) # send order request with limit
+                slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
+            elif last_ticker_ltp in np.arange(hit_price-0.05, hit_price-0.15, 0.05):
+                context["price"] = 0.0
+                context["order_type"] = "MARKET"
+                # print("BUY Auto Exit Market")
+                send_order_request.delay(context) # send order request with market order
+                slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
+        elif cached_value["transaction_type"]  == "SELL" and price_hit:
+            context["transaction_type"] = "BUY"
+            if last_ticker_ltp in np.arange(hit_price, hit_price+0.15, 0.05):
+                context["price"] = 0.0
+                context["order_type"] = "MARKET"
+                send_order_request.delay(context) # send order request with market order
+                slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
+                # print("Sell Auto Exit Limit")
+            elif last_ticker_ltp in np.arange(hit_price, hit_price+0.05, 0.05):
+                context["price"] = 0.0
+                send_order_request.delay(context) # send order request with market order
+                slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
+                # print("Sell Auto Exit Market")
 
 
 
-@receiver(analyse_ticker_data_signal)
-def exit_on_stoploss_target_hit(**kwargs:dict):
-    cache_key = "_".join([kwargs["symbol"].lower(), "cached_ticker_data"])
+@celery_app.task(queue="tickers")
+def exit_on_stoploss_target_hit(symbol_name:str):
+    cache_key = "_".join([symbol_name.lower(), "cached_ticker_data"])
     cached_value = redis_cache.get(cache_key)
-    df = pd.DataFrame(cached_value["stock_data"])
-    last_ticker = df.iloc[-1]
-    stoploss = cached_value["stoploss"]
-    target_price = cached_value["target_price"]
-    transaction_type = cached_value["transaction_type"]
-    context = {'transaction_type': cached_value["transaction_type"],
-        'symbol': kwargs["symbol"],
-        'order_type': 'LIMIT',
-        'quantity': kwargs["quantity"],
-        'price': 0.0,
-        'duarion_type': 'DAY',
-        'product_type': 'INTRADAY'
-    }
+    if cached_value != None:
+        current_ticker = cached_value["stock_data"][-1]
+        ltp = current_ticker["ltp"]
+        stoploss = cached_value["stoploss"]
+        target_price = cached_value["target_price"]
+        transaction_type = cached_value["transaction_type"]
+        context = {'transaction_type': cached_value["transaction_type"],
+            'symbol': cached_value["symbol"],
+            'order_type': 'LIMIT',
+            'quantity': cached_value["quantity"],
+            'price': 0.0,
+            'duarion_type': 'DAY',
+            'product_type': 'INTRADAY'
+        }
 
 
-    if transaction_type == "BUY":
-        context["transaction_type"] = "SELL"
-        if last_ticker.ltp >= target_price:
-            context["price"] = target_price
-            send_order_request.delay(context) # send order request with market order
-            slack_message_sender.delay(text="Target Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
-        elif last_ticker.ltp <= stoploss:
-            context["price"] = stoploss
-            send_order_request.delay(context) # send order request with market order
-            slack_message_sender.delay(text="Stoploss Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
-    elif transaction_type == "SELL":
-        context["transaction_type"] = "BUY"
-        if last_ticker.ltp <= target_price:
-            context["price"] = target_price
-            send_order_request.delay(context) # send order request with market order
-            slack_message_sender.delay(text="Target Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
-        elif last_ticker.ltp >= stoploss:
-            context["price"] = stoploss
-            send_order_request.delay(context) # send order request with market order
-            slack_message_sender.delay(text="Stoploss Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
+        if transaction_type == "BUY":
+            context["transaction_type"] = "SELL"
+            if ltp >= target_price:
+                context["price"] = target_price
+                # print("BUY HIt")
+                send_order_request.delay(context) # send order request with market order
+                slack_message_sender.delay(text="Target Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
+            elif ltp <= stoploss:
+                context["price"] = stoploss
+                # print("BUY SL")
+                send_order_request.delay(context) # send order request with market order
+                slack_message_sender.delay(text="Stoploss Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
+        elif transaction_type == "SELL":
+            context["transaction_type"] = "BUY"
+            if ltp <= target_price:
+                context["price"] = target_price
+                # print("SELL HIT")
+                send_order_request.delay(context) # send order request with market order
+                slack_message_sender.delay(text="Target Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
+            elif ltp >= stoploss:
+                context["price"] = stoploss
+                send_order_request.delay(context) # send order request with market order
+                slack_message_sender.delay(text="Stoploss Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
+                # print("Sell SL")
 
 
-
+@celery_app.task(queue="high_priority")
+def update_orders_status():
+    """This function will run asynchrously to check if order status not get updated by socket will update it"""
+    orders = Order.objects.filter(entry_time__date=get_local_time().date(), status="OP")
+    user = get_upstox_user()
+    orders_history = user.get_order_history()
+    if orders.exists():
+        for order in orders:
+            order_detail = list(filter(lambda o: o.get("order_id") == int(order.order_id) and o.get("status") in ["complete", "cancelled", "rejected"] , order_history))[0]
+            create_update_order_on_update.delay(order_detail)
+    order_ids = Order.objects.filter(entry_time__date=get_local_time().date()).values_list("order_id", flat=True)
+    new_orders = [order for order in orders_history if str(order.get("order_id")) not in order_ids]
+    if new_orders:
+        for order in new_orders:
+            create_update_order_on_update.delay(order)

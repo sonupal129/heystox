@@ -206,6 +206,7 @@ CELERY_QUEUES = (
     Queue("low_priority"),
     Queue("medium_priority"),
     Queue("high_priority"),
+    Queue("tickers"), # Please do not add any other task on this queue except ticker data anylysing tasks
 )
 CELERY_CACHE_BACKEND = "redis"
 

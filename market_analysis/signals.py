@@ -4,7 +4,6 @@ from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStoc
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.indicator_signals import macd_stochastic_signal
 from market_analysis.tasks.intraday_indicator import is_stock_pdhl, has_entry_for_long_short
-from market_analysis.tasks.day_trading_tasks import start_upstox_websocket
 # Code Below
 
 @receiver(post_save, sender=User)

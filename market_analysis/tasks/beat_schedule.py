@@ -139,10 +139,18 @@ orders = {
         "schedule": crontab(day_of_week="1-5", hour=14, minute=50),
         "kwargs": {"from_last_minutes": 0},
     },
+    "update_orders_status": {
+        "task": "market_analysis.tasks.orders.update_orders_status",
+        "schedule": crontab(day_of_week="1-5", hour="10-14", minute="*/6"),
+    },
 }
 
 # CRON JOB SCHEDULES
 
 celery_app.conf.beat_schedule = {
-    **misc_tasks, **users_tasks, **stock_data_import_tasks, **day_trading_tasks
+    **misc_tasks, 
+    **users_tasks,
+    **stock_data_import_tasks,
+    **day_trading_tasks,
+    **orders,
 }
