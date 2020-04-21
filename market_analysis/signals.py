@@ -33,3 +33,10 @@ def verify_stock_pdhl_longshort(sender, instance, **kwargs):
     if kwargs.get("created"):
         is_stock_pdhl.delay(instance.id)
         has_entry_for_long_short.delay(instance.id)
+
+
+
+# def send_slack_on_order_rejection(sender, instance, **kwargs):
+#     """Send slack message if any error in order like order rejeceted or cancelled by broker"""
+#     if instance.status in ["CA", "RE"] and instance.message:
+#         slack_message_sender.delay("Error Found in placing")

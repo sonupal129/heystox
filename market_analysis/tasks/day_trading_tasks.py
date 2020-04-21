@@ -159,10 +159,11 @@ def calculate_profit_loss_on_entry_stocks():
                 else:
                     final_price = target_price if target_price.any().low_price else stoploss_price
                 final_price = final_price.iloc[0]
-                if final_price.high_price >= report.target_price:
-                    status = "TARGET_HIT"
-                elif final_price.low_price <= report.stoploss_price:
-                    status = "STOPLOSS_HIT"
+                if not final_price.empty:
+                    if final_price.high_price >= report.target_price:
+                        status = "TARGET_HIT"
+                    elif final_price.low_price <= report.stoploss_price:
+                        status = "STOPLOSS_HIT"
             elif report.entry_type == "SELL":
                 target_price = live_data.loc[live_data["low_price"] <= report.target_price ].head(1)
                 stoploss_price = live_data.loc[live_data["high_price"] >= report.stoploss_price].head(1)

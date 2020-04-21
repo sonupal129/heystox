@@ -16,11 +16,12 @@ def clear_all_cache():
 
 @celery_app.task(queue="low_priority")
 def create_stocks_report():
-    reports = SortedStockDashboardReport.objects.all().values()
-    df = pd.DataFrame(list(reports))
+    reports = SortedStockDashboardReport.objects.filter(entry_time__date=get_local_time().date()).values()
+    df = pd.DataFrame(list(reports)).set_index("id")
     filepath = "".join(['media/exports/stocks_report_' + str(get_local_time().date()) + ".csv"])
     df.to_csv(filepath, encoding="utf-8")
-    slack_message_sender(text=settings.SITE_URL + filepath)
+    message = " ".join(["Daily Trade Report: ", settings.SITE_URL, filepath])
+    slack_message_sender(text=message)
     return "Report Exported Successfully"
 
 
