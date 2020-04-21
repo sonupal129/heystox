@@ -246,7 +246,8 @@ DEFAULT_TARGET = 2 # Target is in percentage
 MAX_ORDER_QUANTITY = 1
 MAX_DAILY_TRADE = 5
 
-
+# SITE URL
+SITE_URL = "http://127.0.0.1:8000/"
 
 
 

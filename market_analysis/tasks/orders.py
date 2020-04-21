@@ -268,7 +268,7 @@ def create_update_order_on_update(order_data):
             }
             redis_cache.set(cache_key, data)
             user.subscribe(user.get_instrument_by_symbol(order_data.get("exchange"), order_data.get("symbol")), LiveFeedType.Full)
-        elif order.order_type == "EX":
+        elif order.entry_type == "EX":
             redis_cache.delete(cache_key)
             user.unsubscribe(user.get_instrument_by_symbol(order_data.get("exchange"), order_data.get("symbol")), LiveFeedType.Full)
     slack_message_sender.delay(text=str(order.order_id) + " Order Status Changed to {0} Please Check".format(order_data["status"]), channel="#random")
@@ -277,10 +277,11 @@ def create_update_order_on_update(order_data):
 @celery_app.task(queue="high_priority")
 def cancel_not_executed_orders(from_last_minutes=20):
     """Cancel orders which are not executed after 20 minutes of placing"""
-    orders = Order.objects.filter(entry_time__lte=get_local_time().now() - timedelta(minutes=from_last_minutes), status="OP")
+    orders = Order.objects.filter(entry_time__range=[get_local_time().date(), get_local_time().now() - timedelta(minutes=from_last_minutes)], status="OP")
     user = get_upstox_user()
-    for order in orders:
-        user.cancel_order(order.order_id)
+    if orders.exists():
+        for order in orders:
+            user.cancel_order(order.order_id)
 
 
 def cache_symbol_ticker_data(data:dict):
@@ -335,44 +336,45 @@ def exit_on_auto_hit_price(symbol_name:str):
         price_hit_row = df.loc[df["ltp"] <= hit_price].iloc[0]
     if price_hit:
         df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=10)] # Time Increament should happen automatically, Implement Later
-        last_ticker = df.iloc[-1]
-        last_ticker_ltp = last_ticker.ltp
-        
-        context = {'transaction_type': cached_value["transaction_type"],
-            'symbol': cached_value["symbol"],
-            'order_type': 'LIMIT',
-            'quantity': cached_value["quantity"],
-            'price': 0.0,
-            'duarion_type': 'DAY',
-            'product_type': 'INTRADAY'
-        }
+        if not df.empty:
+            last_ticker = df.iloc[-1]
+            last_ticker_ltp = last_ticker.ltp
+            
+            context = {'transaction_type': cached_value["transaction_type"],
+                'symbol': cached_value["symbol"],
+                'order_type': 'LIMIT',
+                'quantity': cached_value["quantity"],
+                'price': 0.0,
+                'duarion_type': 'DAY',
+                'product_type': 'INTRADAY'
+            }
 
-        if cached_value["transaction_type"]  == "BUY" and price_hit:
-            context["transaction_type"] = "SELL"
-            if last_ticker_ltp in np.arange(hit_price, hit_price+0.05, 0.05):
-                context["price"] = hit_price   
-                # print("BUY Auto Exit Limit")
-                send_order_request.delay(context) # send order request with limit
-                slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
-            elif last_ticker_ltp in np.arange(hit_price-0.05, hit_price-0.15, 0.05):
-                context["price"] = 0.0
-                context["order_type"] = "MARKET"
-                # print("BUY Auto Exit Market")
-                send_order_request.delay(context) # send order request with market order
-                slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
-        elif cached_value["transaction_type"]  == "SELL" and price_hit:
-            context["transaction_type"] = "BUY"
-            if last_ticker_ltp in np.arange(hit_price, hit_price+0.15, 0.05):
-                context["price"] = 0.0
-                context["order_type"] = "MARKET"
-                send_order_request.delay(context) # send order request with market order
-                slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
-                # print("Sell Auto Exit Limit")
-            elif last_ticker_ltp in np.arange(hit_price, hit_price+0.05, 0.05):
-                context["price"] = 0.0
-                send_order_request.delay(context) # send order request with market order
-                slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(data["symbol"]), channel="#random")
-                # print("Sell Auto Exit Market")
+            if cached_value["transaction_type"]  == "BUY" and price_hit:
+                context["transaction_type"] = "SELL"
+                if last_ticker_ltp in np.arange(hit_price, hit_price+0.05, 0.05):
+                    context["price"] = hit_price   
+                    # print("BUY Auto Exit Limit")
+                    send_order_request.delay(context) # send order request with limit
+                    slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(symbol_name), channel="#random")
+                elif last_ticker_ltp in np.arange(hit_price-0.05, hit_price-0.15, 0.05):
+                    context["price"] = 0.0
+                    context["order_type"] = "MARKET"
+                    # print("BUY Auto Exit Market")
+                    send_order_request.delay(context) # send order request with market order
+                    slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(symbol_name), channel="#random")
+            elif cached_value["transaction_type"]  == "SELL" and price_hit:
+                context["transaction_type"] = "BUY"
+                if last_ticker_ltp in np.arange(hit_price, hit_price+0.15, 0.05):
+                    context["price"] = 0.0
+                    context["order_type"] = "MARKET"
+                    send_order_request.delay(context) # send order request with market order
+                    slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(symbol_name), channel="#random")
+                    # print("Sell Auto Exit Limit")
+                elif last_ticker_ltp in np.arange(hit_price, hit_price+0.05, 0.05):
+                    context["price"] = 0.0
+                    send_order_request.delay(context) # send order request with market order
+                    slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(symbol_name), channel="#random")
+                    # print("Sell Auto Exit Market")
 
 
 
@@ -402,23 +404,23 @@ def exit_on_stoploss_target_hit(symbol_name:str):
                 context["price"] = target_price
                 # print("BUY HIt")
                 send_order_request.delay(context) # send order request with market order
-                slack_message_sender.delay(text="Target Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
+                slack_message_sender.delay(text="Target Hit Order Sent for {0}".format(symbol_name), channel="#random")
             elif ltp <= stoploss:
                 context["price"] = stoploss
                 # print("BUY SL")
                 send_order_request.delay(context) # send order request with market order
-                slack_message_sender.delay(text="Stoploss Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
+                slack_message_sender.delay(text="Stoploss Hit Order Sent for {0}".format(symbol_name), channel="#random")
         elif transaction_type == "SELL":
             context["transaction_type"] = "BUY"
             if ltp <= target_price:
                 context["price"] = target_price
                 # print("SELL HIT")
                 send_order_request.delay(context) # send order request with market order
-                slack_message_sender.delay(text="Target Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
+                slack_message_sender.delay(text="Target Hit Order Sent for {0}".format(symbol_name), channel="#random")
             elif ltp >= stoploss:
                 context["price"] = stoploss
                 send_order_request.delay(context) # send order request with market order
-                slack_message_sender.delay(text="Stoploss Hit Order Sent for {0}".format(kwargs["symbol"]), channel="#random")
+                slack_message_sender.delay(text="Stoploss Hit Order Sent for {0}".format(symbol_name), channel="#random")
                 # print("Sell SL")
 
 
