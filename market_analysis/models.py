@@ -361,7 +361,7 @@ class Credentials(BaseModel):
     user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name="credential", null=True)
     api_key = models.CharField(max_length=150, null=True, blank=True)
     secret_key = models.CharField(max_length=150, null=True, blank=True)
-    access_token = models.CharField(max_length=200, null=True, blank=True)
+    access_token = models.CharField(max_length=500, null=True, blank=True)
 
     class Meta:
         verbose_name_plural = "Credentials"
