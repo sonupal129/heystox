@@ -36,7 +36,7 @@ class UpstoxLoginComplete(BasePermissionMixin, View):
         if request.user.is_superuser:
             try:
                 access_token = session.retrieve_access_token()
-                user_profile.credential.access_token = access_token
+                user_profile.credential.access_token = access_token["access_token"]
                 user_profile.credential.save()
                 login_upstox_user.delay(request.user.email)
             except Exception as e:
