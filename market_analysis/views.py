@@ -35,9 +35,9 @@ class UpstoxLoginComplete(BasePermissionMixin, View):
         session.set_code(upstox_response_code)
         if request.user.is_superuser:
             try:
-                access_token_object = session.retrieve_access_token()
-                print(access_token_object.get("access_token"))
-                user_profile.credential.access_token = access_token_object.get("access_token")
+                access_token_data = session.retrieve_access_token()
+                token = access_token_data["access_token"]
+                user_profile.credential.access_token = token
                 user_profile.credential.save()
                 login_upstox_user.delay(request.user.email)
             except Exception as e:
@@ -46,30 +46,8 @@ class UpstoxLoginComplete(BasePermissionMixin, View):
             return HttpResponse("Successfully logged in Upstox now you can query Upstox api")
         return redirect("market_analysis_urls:sorted-dashboard-report")
 
-        #         try:
-        #             upstox_user = Upstox(user_profile.credential.api_key, access_token)
-        #             cache.set(request.user.email + "_upstox_login_user", upstox_user, 30*60*48)
-                
-        #         except Exception as e:
-        #             slack_message_sender.delay(text=str(e))
-        #             return redirect("market_analysis_urls:upstox-login")
-        #     return redirect("market_analysis_urls:upstox-login")
-        # return redirect("market_analysis_urls:sorted-dashboard-report")
 
 # class UpstoxUserLogoutView(View):
-        
-# class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListView):
-#     template_name = "sorted_stocks_dashboard.html"
-#     context_object_name = "symbols"
-#     group_required = ["trader"]
-
-#     def get_queryset(self):
-#         date = self.request.GET.get("created_at")
-#         if date:
-#             requested_date = datetime.strptime(date, "%Y-%m-%d").date()
-#             filters = SortedStocksList.objects.filter(created_at__date=requested_date).order_by("symbol__symbol")
-#             return filters
-#         return SortedStocksList.objects.filter(created_at__date=datetime.now().date())
 
 
 class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListView):
@@ -81,10 +59,8 @@ class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListVi
         date = self.request.GET.get("created_at")
         if date:
             requested_date = get_local_time().strptime(date, "%Y-%m-%d").date()
-            # filtered_qs = SortedStocksList.objects.filter(created_at__date=requested_date)
             timestamps = StrategyTimestamp.objects.filter(timestamp__date=requested_date, indicator__name="MACD")
         else:
-            # filtered_qs = SortedStocksList.objects.filter(created_at__date=datetime.now().date())
             timestamps = StrategyTimestamp.objects.filter(timestamp__date=get_local_time().date(), indicator__name="MACD")
         sorted_stock_id = []
         

@@ -9,15 +9,15 @@ class StockDashboardViewTest(BaseViewTest, TestCase):
     url_path = '/dashboard/'
     view = StockDashboardView
 
-class UpstoxLoginTest(BaseViewTest, TestCase):
+class UpstoxLoginCompleteTest(BaseViewTest, TestCase):
     url_name_space = 'market_analysis_urls:upstox-login'
     url_path = "/heystox/login"
-    view = upstox_login
+    view = UpstoxLoginComplete
 
 class UpstoxLoginTest(BaseViewTest, TestCase):
     url_name_space = 'market_analysis_urls:login-upstox-done'
     url_path = '/'
-    view = get_access_token_from_upstox
+    view = UpstoxLogin 
     status_code = 302
 
 class SortedStockDashboardViewTest(BaseViewTest, TestCase):
