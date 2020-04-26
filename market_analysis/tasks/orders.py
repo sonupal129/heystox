@@ -8,9 +8,6 @@ from market_analysis.tasks.notification_tasks import slack_message_sender
 
 # Orders Functions
 
-def roundup(x, prec=2, base=.05):
-  return round(base * round(float(x)/base), prec)
-
 def get_stock_stoploss_price(price, entry_type):
     if price < 100:
         sl = settings.DEFAULT_STOPLOSS + 0.10

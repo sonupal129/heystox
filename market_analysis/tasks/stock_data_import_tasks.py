@@ -246,7 +246,7 @@ def import_international_market_index_data():
         df = pd.DataFrame(list(csv_file))
         df.columns = df.iloc[0]
         df = df.drop(0)
-        df["Open"] = df.Open.apply(roundup)
+        df["Open"] = df.Open.apply(roundup) 
         df["High"] = df.High.apply(roundup)
         df["Low"] = df.Low.apply(roundup)
         df["Close"] = df.Close.apply(roundup)

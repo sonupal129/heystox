@@ -191,8 +191,6 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
             #Stochastic Indicator 
             df["stoch"] = stoch(high=df.high_price, close=df.close_price, low=df.low_price)
             df["stoch_signal"] = stoch_signal(high=df.high_price, close=df.close_price, low=df.low_price)
-            df["stoch_diff"] = df.stoch - df.stoch_signal
-            df["percentage"] = round(df.stoch * (df.stoch - df.stoch_signal) /100, 6)
             df["stochastic_signal"] = np.where(df.stoch < df.stoch_signal, "SELL", "BUY")
             df.loc[(df["stochastic_signal"] != df["stochastic_signal"].shift()) & (df["stochastic_signal"] == "BUY"), "stochastic_signal"] = "BUY_CROSSOVER"
             df.loc[(df["stochastic_signal"] != df["stochastic_signal"].shift()) & (df["stochastic_signal"] == "SELL"), "stochastic_signal"] = "SELL_CROSSOVER"

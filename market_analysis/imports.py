@@ -114,3 +114,8 @@ stock_movement = {
     "BUY" : settings.MARKET_BULLISH_MOVEMENT,
     "SELL" : settings.MARKET_BEARISH_MOVEMENT
 }
+
+
+
+def roundup(x, prec=2, base=.05):
+  return round(base * round(float(x)/base), prec)
