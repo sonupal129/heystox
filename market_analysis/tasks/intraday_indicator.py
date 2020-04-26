@@ -145,6 +145,7 @@ def has_entry_for_long_short(obj_id):
         long_short.save()
 
 
+@celery_app.task(queue="medium_priority")
 def find_stochastic_bolligerband_crossover(sorted_stock_id):
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time().date()
@@ -225,6 +226,7 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
     return "Bollinger Crossover Not Found"
     
 
+@celery_app.task(queue="medium_priority")
 def find_stochastic_macd_crossover(sorted_stock_id):
     """(Custom Macd Crossover) This function find crossover between macd and macd signal and return signal as buy or sell"""
     stochastic_macd_indicator = Indicator.objects.get(name="STOCHASTIC_MACD")

@@ -10,7 +10,7 @@ misc_tasks = {
     },
     "create_stocks_report": {
         "task": "market_analysis.tasks.misc_tasks.create_stocks_report",
-        "schedule": crontab(day_of_week="2-6", hour=21, minute=0),
+        "schedule": crontab(day_of_week="1-5", hour=21, minute=0),
     },
     # "add_together": {
     #     "task": "market_analysis.tasks.misc_tasks.add_together",
