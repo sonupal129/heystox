@@ -2,7 +2,7 @@ from market_analysis.imports import *
 from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order)
 
 from market_analysis.tasks.notification_tasks import slack_message_sender
-from market_analysis.tasks.indicator_signals import macd_stochastic_signal
+from market_analysis.tasks.indicator_signals import prepare_orderdata_from_signal
 from market_analysis.tasks.intraday_indicator import is_stock_pdhl, has_entry_for_long_short
 # Code Below
 
@@ -16,17 +16,24 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
     if update_fields and "current_balance" in update_fields:
         Earning.objects.get_or_create(user=instance.user_profile, date=get_local_time().date(), opening_balance=instance.current_balance)
 
+# @receiver(post_save, sender=StrategyTimestamp)
+# def verify_macd_signal(sender, instance, created, **kwargs):
+#     if created:
+#         if instance.indicator.name == "MACD" and instance.is_last_timestamp(): 
+#             stock = instance.stock
+#             try:
+#                 secondlast_timestamp = stock.get_second_last_timestamp()
+#             except:
+#                 secondlast_timestamp = None
+#             if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
+#                 macd_stochastic_combination_signal.delay(instance.id, secondlast_timestamp.id)
+
 @receiver(post_save, sender=StrategyTimestamp)
-def verify_macd_signal(sender, instance, created, **kwargs):
+def verify_stochastic_macd_signal(sender, instance, created, **kwargs):
     if created:
-        if instance.indicator.name == "MACD" and instance.is_last_timestamp(): 
-            stock = instance.stock
-            try:
-                secondlast_timestamp = stock.get_second_last_timestamp()
-            except:
-                secondlast_timestamp = None
-            if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
-                macd_stochastic_signal.delay(instance.id, secondlast_timestamp.id)
+        if instance.indicator.name in  ["STOCHASTIC_MACD", "STOCHASTIC_BOLLINGER"]: 
+            prepare_orderdata_from_signal.delay(instance.id)
+
 
 @receiver(post_save, sender=SortedStocksList)
 def verify_stock_pdhl_longshort(sender, instance, **kwargs):

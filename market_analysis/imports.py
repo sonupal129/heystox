@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta, date, time
 import pytz
 from time import sleep
+import time as time_library
 # Project Settings 
 from django.conf import settings
 
@@ -12,9 +13,13 @@ from django.contrib.postgres.fields import JSONField
 import pandas as pd
 import numpy as np
 
+# Python Libraries
+import csv
+
 # TA LIbrary for Stock Market
 from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
 from ta.momentum import stoch, stoch_signal
+from ta.volatility import bollinger_hband, bollinger_lband, bollinger_mavg
 
 # Upstox API
 from upstox_api.api import *
@@ -58,6 +63,9 @@ import django_filters
 # DJnago Celery
 from heystox_trade.celery import app as celery_app
 from celery.schedules import crontab
+
+# Import Redis
+import redis
 
 # ATTRIBUTE & FUNCTIONS FOR IMPORTS
 

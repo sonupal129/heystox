@@ -13,6 +13,8 @@ def clear_all_cache():
     """Clear Default Cache"""
     cache.clear()
     redis_cache.clear()
+    r = redis.Redis()
+    r.flushall()
 
 @celery_app.task(queue="low_priority")
 def create_stocks_report():
@@ -20,7 +22,7 @@ def create_stocks_report():
     df = pd.DataFrame(list(reports)).set_index("id")
     filepath = "".join(['media/exports/stocks_report_' + str(get_local_time().date()) + ".csv"])
     df.to_csv(filepath, encoding="utf-8")
-    message = " ".join(["Daily Trade Report: ", settings.SITE_URL, filepath])
+    message = "".join(["Daily Trade Report: ", settings.SITE_URL, filepath])
     slack_message_sender(text=message)
     return "Report Exported Successfully"
 

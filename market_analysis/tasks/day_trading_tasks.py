@@ -3,7 +3,7 @@ from .notification_tasks import slack_message_sender
 from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle, Indicator, SortedStockDashboardReport)
 from .trading import *
 from market_analysis.imports import *
-from .intraday_indicator import get_macd_crossover, get_stochastic_crossover
+from .intraday_indicator import *
 from .upstox_events_handlers import start_upstox_websocket
 # CODE STARTS BELOW
 
@@ -111,7 +111,7 @@ def create_nifty_50_realtime_candle():
 
 
 @celery_app.task(queue="high_priority")
-def find_update_macd_stochastic_crossover_in_stocks():
+def apply_intraday_indicator_on_sorted_stocks():
     movement_on_entry = {
         "BUY" : settings.MARKET_BULLISH_MOVEMENT,
         "SELL": settings.MARKET_BEARISH_MOVEMENT,
@@ -127,8 +127,8 @@ def find_update_macd_stochastic_crossover_in_stocks():
             cached_value = redis_cache.get(cache_key)
         for stock in cached_value:
             if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
-                get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-                get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+                find_stochastic_bolligerband_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+                find_stochastic_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
         return "Celery request sent for stock"
     return f"Current time {current_time} not > 9:25"
 

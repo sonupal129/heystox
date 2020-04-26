@@ -272,7 +272,7 @@ class Candle(BaseModel):
     high_price = models.FloatField("Candle High Price", blank=True, null=True)
     low_price = models.FloatField("Candle Low Price", blank=True, null=True)
     close_price = models.FloatField("Candle Close Price", blank=True, null=True)
-    volume = models.IntegerField("Volume", blank=True, null=True)
+    volume = models.BigIntegerField("Volume", blank=True, null=True)
     atp = models.IntegerField("Average Traded Price", blank=True, null=True)
     total_buy_quantity = models.IntegerField("Total Buy Quantity", blank=True, null=True)
     total_sell_quantity = models.IntegerField("Total Sell Quantity", blank=True, null=True)
@@ -424,7 +424,7 @@ class StrategyTimestamp(BaseModel):
     stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE, related_name="timestamps")
     indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(null=True, blank=True)
-    diff = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+    entry_price = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
 
     def __str__(self):
         return "{} | {}".format(self.stock.__str__(), self.timestamp.time())

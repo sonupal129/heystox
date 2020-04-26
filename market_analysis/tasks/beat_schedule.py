@@ -69,6 +69,10 @@ stock_data_import_tasks = {
         "task": "market_analysis.tasks.stock_data_import_tasks.import_premarket_stocks_data",
         "schedule": crontab(day_of_week="1-5", hour=9, minute=9),
     },
+    "import_international_market_index_data": {
+        "task": "market_analysis.tasks.stock_data_import_tasks.import_international_market_index_data",
+        "schedule": crontab(day_of_week="2-6", hour=4, minute=10),
+    },
 }
 
 
@@ -111,8 +115,8 @@ day_trading_tasks = {
         "task": "market_analysis.tasks.day_trading_tasks.create_nifty_50_realtime_candle",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
     },
-    "find_update_macd_stochastic_crossover_in_stocks": {
-        "task": "market_analysis.tasks.day_trading_tasks.find_update_macd_stochastic_crossover_in_stocks",
+    "apply_intraday_indicator_on_sorted_stocks": {
+        "task": "market_analysis.tasks.day_trading_tasks.apply_intraday_indicator_on_sorted_stocks",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/1"),
     },
     "todays_movement_stocks_add_on_sideways": {

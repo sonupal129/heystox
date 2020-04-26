@@ -4,11 +4,6 @@ from market_analysis.views import *
 
 # Code Below
 
-class StockDashboardViewTest(BaseViewTest, TestCase):
-    url_name_space = 'market_analysis_urls:dashboard'
-    url_path = '/dashboard/'
-    view = StockDashboardView
-
 class UpstoxLoginCompleteTest(BaseViewTest, TestCase):
     url_name_space = 'market_analysis_urls:upstox-login'
     url_path = "/heystox/login"

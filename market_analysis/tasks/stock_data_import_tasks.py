@@ -159,7 +159,6 @@ def import_premarket_stocks_data():
                         try:
                             symbol = Symbol.objects.get(symbol=metadata.get("symbol").lower())
                         except:
-                            print(metadata.get("symbol"))
                             continue
                         pre_market_stock, is_created = PreMarketOrderData.objects.get_or_create(symbol=symbol, created_at__date=get_local_time().date())
                         if pre_market_stock:
@@ -218,3 +217,48 @@ def import_daily_losers_gainers():
                     if is_created:
                         created_stocks.append(stock.symbol)
         return f"Added Stocks {created_stocks}"
+
+
+@celery_app.task(queue="low_priority")
+def import_international_market_index_data():
+    """This function will import international market index daily chart data for ex -- Dow Jones,
+        NIKKI, HENSENG, SGX Nifty, For importing data it is using yahoo finance api"""
+    index_unique_key = {
+        "DOW_JONES" : "%5EDJI",
+        "HSI" : "^HSI",
+        "SGX" : "S68.SI"
+    }
+    
+    today_date = get_local_time().date()
+    today_date_timestamp = int(time_library.mktime(today_date.timetuple()))
+    last_month_timestamp = int(time_library.mktime((get_local_time().date()- timedelta(days=30)).timetuple()))
+    
+    
+    for index, unique_key in index_unique_key.items():
+        try:
+            index_symbol = Symbol.objects.get(symbol=index, exchange__name=index)
+        except:
+            index_symbol = Symbol.objects.create(symbol=index, exchange=MasterContract.objects.get(name=index))
+        url = f"https://query1.finance.yahoo.com/v7/finance/download/{unique_key}?period1={last_month_timestamp}&period2={today_date_timestamp}&interval=1d&events=history"
+        response = requests.get(url, allow_redirects=True)
+        decode_response = response.content.decode('utf-8')
+        csv_file = csv.reader(decode_response.splitlines(), delimiter=',')
+        df = pd.DataFrame(list(csv_file))
+        df.columns = df.iloc[0]
+        df = df.drop(0)
+        df["Open"] = df.Open.apply(roundup)
+        df["High"] = df.High.apply(roundup)
+        df["Low"] = df.Low.apply(roundup)
+        df["Close"] = df.Close.apply(roundup)
+        df = df.dropna()
+        for data in df.to_dict("records"):
+            converted_date = datetime.strptime(data["Date"], "%Y-%m-%d")
+            print(converted_date)
+            candle, is_created = Candle.objects.get_or_create(symbol=index_symbol, candle_type="1D", date=converted_date)
+            candle.open_price = data["Open"]
+            candle.high_price = data["High"]
+            candle.low_price = data["Low"]
+            candle.close_price = data["Close"]
+            candle.volume = data["Volume"]
+            candle.save()
+    return "Candle Data Saved for International Indexes"

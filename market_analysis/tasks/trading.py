@@ -1,7 +1,7 @@
 from market_analysis.imports import *
 from market_analysis.models import Symbol, MasterContract, Candle, SortedStocksList, UserProfile, MarketHoliday
 from .notification_tasks import slack_message_sender
-from .intraday_indicator import get_macd_crossover, get_stochastic_crossover
+
 from .users_tasks import login_upstox_user
 # Codes Starts Below
 
@@ -12,7 +12,7 @@ def get_upstox_user(email="sonupal129@gmail.com"):
     login_attempt_counter = cache.get("login_attempt_counter")
     if profile is None:
         try:
-            profile = user.get_upstox_user().get_profile()
+            upstox_user_profile = user.get_upstox_user().get_profile()
             cache.set(cache_key, user.get_upstox_user(), 30*10)
         except:
             if login_attempt_counter is None:
@@ -103,8 +103,6 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
                 elif stock not in cached_value:
                     cached_value.append(stock)
                     redis_cache.set(cache_key, cached_value, 60*30)
-                # get_stochastic_crossover.apply_async(kwargs={"sorted_stock_id": stock.id}) # Stochastic Crossover Check
-                # get_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})# Macd Crossover Check
         if deleted_stocks:
             slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
 

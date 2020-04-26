@@ -5,10 +5,6 @@ from market_analysis.tasks.notification_tasks import slack_message_sender
 
 # Code Below
 
-# Signals
-
-analyse_ticker_data_signal = Signal(providing_args=["context"])
-
 
 # Orders Functions
 
@@ -61,6 +57,9 @@ def get_auto_exit_price(price, entry_type):
     elif entry_type == "BUY":
         stoploss = price + (price * sl /100)
         return roundup(stoploss)
+
+
+
 
 def calculate_order_quantity(share_price, entry_type):
     user = get_upstox_user()
@@ -131,12 +130,23 @@ def add_expected_target_stoploss(stock_report_id):
 
 # od = {'transaction_type': 'SELL', 'symbol': 'CANBK', 'order_type': 'LIMIT', 'quantity': 1, 'price': 87.20, ', duarion_type': 'DAY', 'product_type': 'INTRADAY'}
 
+def get_or_update_order_quantity(update=False):
+    cache_key = str(get_local_time().date()) + "_total_order_quantity"
+    cached_value = redis_cache.get(cache_key)
+    if cached_value == None:
+        redis_cache.set(cache_key, 0)
+        return 0
+    if update and (cached_value == 0 or cached_value):
+        cached_value += 1
+        redis_cache.set(cache_key, cached_value)
+        return cached_value
+    return cached_value
 
 @celery_app.task(queue="high_priority")
 def send_order_request(order_details:dict, ignore_max_trade_quantity:bool=False): # Don't Change This Function Format, Because This is As per Upstox Format, 
     user = get_upstox_user()
     today_date = get_local_time().date()
-    orders_qty = OrderBook.objects.filter(created_at__date=today_date).count()
+    orders_qty = get_or_update_order_quantity()
     if not ignore_max_trade_quantity:
         if orders_qty >= settings.MAX_DAILY_TRADE:
             slack_message_sender.delay(text="Daily Order Limit Exceed No More Order Can Be Place Using Bot, Please Place Orders Manually")
@@ -255,6 +265,7 @@ def create_update_order_on_update(order_data):
         # Create Logic About when to Subscribe for instrument
         cache_key = "_".join([order_data["symbol"].lower(), "cached_ticker_data"])
         if order.entry_type == "ET":
+            get_or_update_order_quantity(True)
             data = {
                 "symbol": order_data.get("symbol"),
                 "target_price" : order.target_price,
@@ -336,7 +347,7 @@ def exit_on_auto_hit_price(symbol_name:str):
         price_hit = True
         price_hit_row = df.loc[df["ltp"] <= hit_price].iloc[0]
     if price_hit:
-        df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=10)] # Time Increament should happen automatically, Implement Later
+        df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=15)] # Time Increament should happen automatically, Implement Later
         if not df.empty:
             last_ticker = df.iloc[-1]
             last_ticker_ltp = last_ticker.ltp
