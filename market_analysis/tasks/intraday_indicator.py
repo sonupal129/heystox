@@ -163,6 +163,7 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
     df["bollinger_signal"] = np.where(df.close_price < df.medium_band, "SELL", "BUY")
     df.loc[(df["bollinger_signal"] != df["bollinger_signal"].shift()) & (df["bollinger_signal"] == "BUY"), "bollinger_signal"] = "BUY_CROSSOVER"
     df.loc[(df["bollinger_signal"] != df["bollinger_signal"].shift()) & (df["bollinger_signal"] == "SELL"), "bollinger_signal"] = "SELL_CROSSOVER"
+    df = df.drop(df.head(1).index)
     new_df = df.copy(deep=True).drop(df.tail(1).index)
     try:
         if sorted_stock.entry_type == "SELL":
@@ -171,20 +172,20 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
             bollinger_crossover = new_df[new_df.bollinger_signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         bollinger_crossover = pd.Series()
-
+        
     if not bollinger_crossover.empty:
         candle_before_crossover = df.loc[bollinger_crossover.name - 1]
         candle_after_crossover = df.loc[bollinger_crossover.name + 1]
-        try:
-            if sorted_stock.entry_type == "BUY":
-                if (candle_before_crossover.open_price <= bollinger_crossover.medium_band and candle_before_crossover.close_price <= bollinger_crossover.medium_band) and \
-                    (candle_after_crossover.open_price >= bollinger_crossover.medium_band or candle_after_crossover.close_price >= bollinger_crossover.medium_band):
-                    bollinger_signal = candle_after_crossover
-            elif sorted_stock.entry_type == "SELL":
-                if (candle_before_crossover.open_price >= bollinger_crossover.medium_band and candle_before_crossover.close_price >= bollinger_crossover.medium_band) and \
-                    (candle_after_crossover.open_price <= bollinger_crossover.medium_band or candle_after_crossover.close_price <= bollinger_crossover.medium_band):
-                    bollinger_signal = candle_after_crossover
-        except:
+        if sorted_stock.entry_type == "BUY" and \
+            (candle_before_crossover.open_price <= bollinger_crossover.medium_band and candle_before_crossover.close_price <= bollinger_crossover.medium_band) and \
+                (candle_after_crossover.open_price > bollinger_crossover.medium_band or candle_after_crossover.close_price > bollinger_crossover.medium_band):
+                bollinger_signal = candle_after_crossover
+
+        elif sorted_stock.entry_type == "SELL" and \
+            (candle_before_crossover.open_price >= bollinger_crossover.medium_band and candle_before_crossover.close_price >= bollinger_crossover.medium_band) and \
+                (candle_after_crossover.open_price < bollinger_crossover.medium_band or candle_after_crossover.close_price < bollinger_crossover.medium_band):
+                bollinger_signal = candle_after_crossover
+        else:
             bollinger_signal = pd.Series()
 
         if not bollinger_signal.empty:
@@ -194,27 +195,23 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
             df["stochastic_signal"] = np.where(df.stoch < df.stoch_signal, "SELL", "BUY")
             df.loc[(df["stochastic_signal"] != df["stochastic_signal"].shift()) & (df["stochastic_signal"] == "BUY"), "stochastic_signal"] = "BUY_CROSSOVER"
             df.loc[(df["stochastic_signal"] != df["stochastic_signal"].shift()) & (df["stochastic_signal"] == "SELL"), "stochastic_signal"] = "SELL_CROSSOVER"
-            df = df.loc[df["date"]  < bollinger_crossover.date]
-            new_df = df.copy(deep=True).drop(df.tail(1).index)
+            df = df.loc[df["date"]  <= bollinger_crossover.date]
+
             try:
                 if sorted_stock.entry_type == "SELL":
-                    stochastic_crossover = new_df[new_df.stochastic_signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
+                    stochastic_crossover = df[df.stochastic_signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
                 elif sorted_stock.entry_type == "BUY":
-                    stochastic_crossover = new_df[new_df.stochastic_signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
+                    stochastic_crossover = df[df.stochastic_signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
             except:
                 stochastic_crossover = pd.Series()
-            
             if not stochastic_crossover.empty:
                 time_diff = bollinger_signal.date - stochastic_crossover.date
                 if time_diff <= timedelta(minutes=25):
-                    try:
-                        stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp__range=[bollinger_signal.date - timedelta(minutes=10), bollinger_signal.date + timedelta(minutes=10)]).order_by("timestamp")
-                    except:
-                        stamp = None
+                    stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp__range=[bollinger_signal.date - timedelta(minutes=10), bollinger_signal.date + timedelta(minutes=10)]).order_by("timestamp")
                     if not stamp.exists():
                         stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp=bollinger_signal.date)
                         if is_created:
-                            stamp.entry_price = bollinger_signal.close_price
+                            stamp.entry_price = float(bollinger_signal.close_price)
                             stamp.save()
                     elif stamp.count() > 1:
                         stamp.exclude(id=stamp.first().id).delete()

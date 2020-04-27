@@ -28,7 +28,7 @@ def prepare_orderdata_from_signal(timestamp_id):
     """prepare order data on signal and verify order if order is already placed then do not place new order"""
     timestamp = StrategyTimestamp.objects.get(id=timestamp_id)
     sorted_stock = timestamp.stock
-    entry_price = timestamp.entry_price
+    entry_price = float(timestamp.entry_price)
     
     if sorted_stock.entry_type == "BUY":
         if timestamp.entry_price > timestamp.stock.symbol.get_stock_live_price(price_type="open"):
