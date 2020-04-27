@@ -174,8 +174,12 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
         bollinger_crossover = pd.Series()
         
     if not bollinger_crossover.empty:
-        candle_before_crossover = df.loc[bollinger_crossover.name - 1]
-        candle_after_crossover = df.loc[bollinger_crossover.name + 1]
+        try:
+            candle_before_crossover = df.loc[bollinger_crossover.name - 1]
+            candle_after_crossover = df.loc[bollinger_crossover.name + 1]
+        except:
+            return "Candle Before and After Could not be Created"
+            
         if sorted_stock.entry_type == "BUY" and \
             (candle_before_crossover.open_price <= bollinger_crossover.medium_band and candle_before_crossover.close_price <= bollinger_crossover.medium_band) and \
                 (candle_after_crossover.open_price > bollinger_crossover.medium_band or candle_after_crossover.close_price > bollinger_crossover.medium_band):
@@ -193,6 +197,8 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
             df["stoch"] = stoch(high=df.high_price, close=df.close_price, low=df.low_price)
             df["stoch_signal"] = stoch_signal(high=df.high_price, close=df.close_price, low=df.low_price)
             df["stochastic_signal"] = np.where(df.stoch < df.stoch_signal, "SELL", "BUY")
+            df.loc[(df["stochastic_signal"].shift() == "BUY") & (df["stochastic_signal"] == "SELL") & (df["stochastic_signal"].shift(-1) == "BUY"), "stochastic_signal"] = "BUY"
+            df.loc[(df["stochastic_signal"].shift() == "SELL") & (df["stochastic_signal"] == "BUY") & (df["stochastic_signal"].shift(-1) == "SELL"), "stochastic_signal"] = "SELL"
             df.loc[(df["stochastic_signal"] != df["stochastic_signal"].shift()) & (df["stochastic_signal"] == "BUY"), "stochastic_signal"] = "BUY_CROSSOVER"
             df.loc[(df["stochastic_signal"] != df["stochastic_signal"].shift()) & (df["stochastic_signal"] == "SELL"), "stochastic_signal"] = "SELL_CROSSOVER"
             df = df.loc[df["date"]  <= bollinger_crossover.date]
@@ -205,8 +211,8 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
             except:
                 stochastic_crossover = pd.Series()
             if not stochastic_crossover.empty:
-                time_diff = bollinger_signal.date - stochastic_crossover.date
-                if time_diff <= timedelta(minutes=25):
+                time_diff = int((bollinger_signal.date - stochastic_crossover.date).astype('timedelta64[m]'))
+                if timedelta(minutes=time_diff) <= timedelta(minutes=25):
                     stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp__range=[bollinger_signal.date - timedelta(minutes=10), bollinger_signal.date + timedelta(minutes=10)]).order_by("timestamp")
                     if not stamp.exists():
                         stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp=bollinger_signal.date)
@@ -240,6 +246,8 @@ def find_stochastic_macd_crossover(sorted_stock_id):
     df["stoch_diff"] = df.stoch - df.stoch_signal
     df["percentage"] = round(df.stoch * (df.stoch - df.stoch_signal) /100, 6)
     df["stochastic_crossover"] = np.where(df.stoch < df.stoch_signal, "SELL", "BUY")
+    df.loc[(df["stochastic_crossover"].shift() == "BUY") & (df["stochastic_crossover"] == "SELL") & (df["stochastic_crossover"].shift(-1) == "BUY"), "stochastic_crossover"] = "BUY"
+    df.loc[(df["stochastic_crossover"].shift() == "SELL") & (df["stochastic_crossover"] == "BUY") & (df["stochastic_crossover"].shift(-1) == "SELL"), "stochastic_crossover"] = "SELL"
     df.loc[(df["stochastic_crossover"] != df["stochastic_crossover"].shift()) & (df["stochastic_crossover"] == "BUY"), "stochastic_crossover"] = "BUY_CROSSOVER"
     df.loc[(df["stochastic_crossover"] != df["stochastic_crossover"].shift()) & (df["stochastic_crossover"] == "SELL"), "stochastic_crossover"] = "SELL_CROSSOVER"
     df = df.drop(columns=["total_buy_quantity", "total_sell_quantity"])
@@ -286,8 +294,8 @@ def find_stochastic_macd_crossover(sorted_stock_id):
                     stochastic_crossover_signal = pd.Series()
                 
                 if not stochastic_crossover_signal.empty:
-                    time_diff = macd_crossover_signal.date - stochastic_crossover_signal.date
-                    if time_diff < timedelta(minutes=30):
+                    time_diff = int((macd_crossover_signal.date - stochastic_crossover_signal.date).astype('timedelta64[m]'))
+                    if timedelta(minutes=time_diff) < timedelta(minutes=30):
                         try:
                             stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=stochastic_macd_indicator, timestamp__range=[macd_crossover_signal.date - timedelta(minutes=10), macd_crossover_signal.date + timedelta(minutes=10)]).order_by("timestamp")
                         except:
