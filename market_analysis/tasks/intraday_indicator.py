@@ -179,7 +179,7 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
             candle_after_crossover = df.loc[bollinger_crossover.name + 1]
         except:
             return "Candle Before and After Could not be Created"
-            
+
         if sorted_stock.entry_type == "BUY" and \
             (candle_before_crossover.open_price <= bollinger_crossover.medium_band and candle_before_crossover.close_price <= bollinger_crossover.medium_band) and \
                 (candle_after_crossover.open_price > bollinger_crossover.medium_band or candle_after_crossover.close_price > bollinger_crossover.medium_band):
@@ -211,8 +211,8 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
             except:
                 stochastic_crossover = pd.Series()
             if not stochastic_crossover.empty:
-                time_diff = int((bollinger_signal.date - stochastic_crossover.date).astype('timedelta64[m]'))
-                if timedelta(minutes=time_diff) <= timedelta(minutes=25):
+                time_diff = bollinger_signal.date - stochastic_crossover.date
+                if time_diff <= timedelta(minutes=25):
                     stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp__range=[bollinger_signal.date - timedelta(minutes=10), bollinger_signal.date + timedelta(minutes=10)]).order_by("timestamp")
                     if not stamp.exists():
                         stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp=bollinger_signal.date)
