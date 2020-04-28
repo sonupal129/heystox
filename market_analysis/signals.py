@@ -29,7 +29,7 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 #                 macd_stochastic_combination_signal.delay(instance.id, secondlast_timestamp.id)
 
 @receiver(post_save, sender=StrategyTimestamp)
-def verify_stochastic_macd_signal(sender, instance, created, **kwargs):
+def send_signal_on_indicator_object_creation(sender, instance, created, **kwargs):
     if created:
         if instance.indicator.name in  ["STOCHASTIC_MACD", "STOCHASTIC_BOLLINGER"]: 
             prepare_orderdata_from_signal.delay(instance.id)

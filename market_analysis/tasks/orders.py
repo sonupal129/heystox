@@ -198,10 +198,10 @@ def send_order_request(order_details:dict, ignore_max_trade_quantity:bool=False)
                 order.entry_type = "EX"
             else:
                 order.entry_type = "ET"
+                order.stoploss = get_stock_stoploss_price(price, transaction_type)
+                order.target_price = get_stock_target_price(price, transaction_type)
             order.quantity = quantity
             order.entry_price = price
-            order.stoploss = get_stock_stoploss_price(price, transaction_type)
-            order.target_price = get_stock_target_price(price, transaction_type)
             order.save()
         
 
@@ -257,6 +257,7 @@ def create_update_order_on_update(order_data):
             order.entry_type = "EX"
         else:
             order.entry_type = "ET"
+        order.save()
 
     if order.status == "CO":
         # Create Logic About when to Subscribe for instrument
@@ -339,11 +340,11 @@ def exit_on_auto_hit_price(symbol_name:str):
     hit_price = cached_value["auto_exit_price"]
     if price_type == "high" and limit_price > hit_price:
         price_hit = True
-        price_hit_row = df.loc[df["ltp"] >= hit_price].iloc[0]
+        price_hit_row = df.loc[df["ltp"] >= hit_price].head(0)
     elif price_type == "low" and limit_price < hit_price:
         price_hit = True
-        price_hit_row = df.loc[df["ltp"] <= hit_price].iloc[0]
-    if price_hit:
+        price_hit_row = df.loc[df["ltp"] <= hit_price].head(0)
+    if not price_hit_row.empty:
         df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=15)] # Time Increament should happen automatically, Implement Later
         if not df.empty:
             last_ticker = df.iloc[-1]

@@ -129,7 +129,7 @@ def apply_intraday_indicator_on_sorted_stocks():
             if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
                 find_stochastic_bolligerband_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
                 find_stochastic_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-        return "Celery request sent for stock"
+        return "Indicator Called"
     return f"Current time {current_time} not > 9:25"
 
 @celery_app.task(queue="medium_priority")

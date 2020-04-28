@@ -73,9 +73,7 @@ class CachedTickerDataView(APIView):
 
     def get(self, request, symbol, **kwargs):
         cache_key = "_".join([symbol.lower(), "cached_ticker_data"])
-        print(request)
-        print(symbol)
         cached_value = redis_cache.get(cache_key)
         if cached_value == None:
-            return Response({"error" : f"No Cached Data foud for {symbol}"})
+            return Response({"error" : f"No Cached Data found for {symbol}"})
         return Response(cached_value)

@@ -40,23 +40,24 @@ def prepare_orderdata_from_signal(timestamp_id):
     entry_available = False
 
     try:
-        existing_order = OrderBook.objects.get(symbol=sorted_stock.symbol, date__date=get_local_time().date())
+        existing_order = OrderBook.objects.get(symbol=sorted_stock.symbol, date=get_local_time().date())
         last_order = existing_order.get_last_order_by_status()
         if last_order.entry_type == "EX":
             entry_available = True
     except:
         existing_order = None
 
+    is_stock_moved = sorted_stock.symbol.is_stock_moved_good_for_trading(movement_percent=stock_movement.get(sorted_stock.entry_type))
+    sorted_stock.entry_price = entry_price
+    sorted_stock.save()
+    order_detail = {}
+    order_detail["name"] = sorted_stock.symbol.symbol
+    order_detail["entry_time"] = timestamp.timestamp
+    order_detail["entry_type"] = sorted_stock.entry_type
+    order_detail["entry_price"] = entry_price
+      
     if existing_order == None or entry_available:
-        is_stock_moved = sorted_stock.symbol.is_stock_moved_good_for_trading(movement_percent=stock_movement.get(sorted_stock.entry_type))
-        if is_stock_moved:
-            sorted_stock.entry_price = entry_price
-            sorted_stock.save()
-            order_detail = {}
-            order_detail["name"] = sorted_stock.symbol.symbol
-            order_detail["entry_time"] = timestamp.timestamp
-            order_detail["entry_type"] = sorted_stock.entry_type
-            order_detail["entry_price"] = entry_price
+        if is_stock_moved:    
             send_order_place_request.delay(order_detail)
             return "Order Request Sent"
         return "Not Enough Movement in Stock"
@@ -64,6 +65,7 @@ def prepare_orderdata_from_signal(timestamp_id):
         strength = existing_order.strength
         existing_order.strength = ", ".join(strength, timestamp.indicator.name)
         existing_order.save()
+        
 
 
 
