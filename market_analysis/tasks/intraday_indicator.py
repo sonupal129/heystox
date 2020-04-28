@@ -213,7 +213,7 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
             if not stochastic_crossover.empty:
                 time_diff = bollinger_signal.date - stochastic_crossover.date
                 if time_diff <= timedelta(minutes=25):
-                    stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp__range=[bollinger_signal.date - timedelta(minutes=10), bollinger_signal.date + timedelta(minutes=10)]).order_by("timestamp")
+                    stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp__range=[bollinger_signal.date - timedelta(minutes=20), bollinger_signal.date + timedelta(minutes=20)]).order_by("timestamp")
                     if not stamp.exists():
                         stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp=bollinger_signal.date)
                         if is_created:
@@ -287,15 +287,15 @@ def find_stochastic_macd_crossover(sorted_stock_id):
                 df_after_last_crossover = df.loc[df["date"] >= stochastic_crossover.date]
                 try:
                     if stochastic_crossover.stochastic_crossover == "SELL_CROSSOVER":
-                        stochastic_crossover_signal = df_after_last_crossover.loc[(df_after_last_crossover.stoch_diff <= -20.05)]
+                        stochastic_crossover_signal = df_after_last_crossover.loc[(df_after_last_crossover.stoch_diff <= -20.05)].iloc[-1]
                     elif stochastic_crossover.stochastic_crossover == "BUY_CROSSOVER":
-                        stochastic_crossover_signal = df_after_last_crossover.loc[(df_after_last_crossover.stoch_diff >= 22.80)]
+                        stochastic_crossover_signal = df_after_last_crossover.loc[(df_after_last_crossover.stoch_diff >= 22.80)].iloc[-1]
                 except:
                     stochastic_crossover_signal = pd.Series()
                 
                 if not stochastic_crossover_signal.empty:
-                    time_diff = int((macd_crossover_signal.date - stochastic_crossover_signal.date).astype('timedelta64[m]'))
-                    if timedelta(minutes=time_diff) < timedelta(minutes=30):
+                    time_diff = (macd_crossover_signal.date - stochastic_crossover_signal.date)
+                    if time_diff < timedelta(minutes=30):
                         try:
                             stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=stochastic_macd_indicator, timestamp__range=[macd_crossover_signal.date - timedelta(minutes=10), macd_crossover_signal.date + timedelta(minutes=10)]).order_by("timestamp")
                         except:

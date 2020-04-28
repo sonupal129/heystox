@@ -67,7 +67,7 @@ def calculate_order_quantity(share_price, entry_type):
         stoploss = get_stock_stoploss_price(share_price, entry_type)
         diff = abs(share_price - stoploss)
         if diff < 1:
-            diff = round(diff)
+            diff = 1
         qty = int(bearable_loss / diff)
         if qty > settings.MAX_ORDER_QUANTITY:
             return settings.MAX_ORDER_QUANTITY
@@ -231,8 +231,7 @@ def create_update_order_on_update(order_data):
         order_book = OrderBook.objects.get(symbol__symbol__iexact=order_data.get("symbol"), date=get_local_time().date())
         order.transaction_type = "BUY" if order_data.get("transaction_type") == "BUY" else "SELL"
         order.order_book = order_book
-        order.stoploss = get_stock_stoploss_price(order.entry_price, order.transaction_type)
-        order.target_price = get_stock_target_price(order.entry_price, order.transaction_type)
+        order.save()
     
     if order.entry_type != "" and order.status not in ["CO", "OP"]:
         order.entry_type = ""
@@ -241,7 +240,6 @@ def create_update_order_on_update(order_data):
     order.entry_price = order_data.get("price") or order_data.get("average_price")
     order.entry_time = exchange_time if exchange_time else None
     order.status = order_choices.get(order_data["status"])
-    order.save()
     
     if order.status in ["CO", "OP"] and order.entry_type == "":
         
@@ -257,7 +255,12 @@ def create_update_order_on_update(order_data):
             order.entry_type = "EX"
         else:
             order.entry_type = "ET"
-        order.save()
+
+    if order.entry_type == "ET":
+        order.stoploss = get_stock_stoploss_price(order.entry_price, order.transaction_type)
+        order.target_price = get_stock_target_price(order.entry_price, order.transaction_type)
+    
+    order.save()
 
     if order.status == "CO":
         # Create Logic About when to Subscribe for instrument
