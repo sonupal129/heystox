@@ -34,7 +34,7 @@ def invalidate_stocks_cached_data(symbol:str):
     return f"cache invalidated for {stock_data_id}"
 
 
-@celery_app.task(queue="medium_priority")
+@celery_app.task(queue="medium_priority", autoretry_for=(JSONDecodeError,), retry_kwargs={'max_retries': 2, 'countdown': 10})
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, upstox_user_email="sonupal129@gmail.com", fetch_last_candle:int=None):
     if end_date == None:
         end_date = get_local_time().date()

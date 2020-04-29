@@ -62,8 +62,7 @@ def prepare_orderdata_from_signal(timestamp_id):
             return "Order Request Sent"
         return "Not Enough Movement in Stock"
     elif existing_order:
-        strength = existing_order.strength
-        existing_order.strength = ", ".join(strength, timestamp.indicator.name)
+        existing_order.strength = ", ".join([existing_order.strength, timestamp.indicator.name])
         existing_order.save()
         
 

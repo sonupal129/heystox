@@ -33,7 +33,7 @@ def todays_movement_stocks_add():
     return "Function Not Called"
 
 
-@celery_app.task(queue="high_priority")
+@celery_app.task(queue="high_priority", autoretry_for=(JSONDecodeError,), retry_kwargs={'max_retries': 1, 'countdown': 8})
 def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com", interval:str="1 Minute"):
     try:
         stock = Symbol.objects.get(symbol=stock_name)
@@ -127,8 +127,8 @@ def apply_intraday_indicator_on_sorted_stocks():
             cached_value = redis_cache.get(cache_key)
         for stock in cached_value:
             if stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)):
-                find_stochastic_bolligerband_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-                find_stochastic_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+                find_stochastic_bolligerband_crossover.delay(stock.id)
+                find_stochastic_macd_crossover.delay(stock.id)
         return "Indicator Called"
     return f"Current time {current_time} not > 9:25"
 
@@ -152,12 +152,16 @@ def calculate_profit_loss_on_entry_stocks():
             live_data = live_data.loc[live_data["date"] > str(report.entry_time)]
             
             if report.entry_type == "BUY":
-                target_price = live_data.loc[live_data["high_price"] >= report.target_price ].head(1)
-                stoploss_price = live_data.loc[live_data["low_price"] <= report.stoploss_price ].head(1)
-                if target_price.any().low_price and stoploss_price.any().high_price:
-                    final_price = target_price if target_price.date < stoploss_price.date else stoploss_price
+                try:
+                    target_price_row = live_data.loc[live_data["high_price"] >= report.target_price ].iloc[0]
+                    stoploss_price_row = live_data.loc[live_data["low_price"] <= report.stoploss_price ].iloc[0]
+                except:
+                    target_price_row = pd.Series()
+                    stoploss_price_row = pd.Series()
+                if not target_price_row.empty and not stoploss_price_row.empty:
+                    final_price = target_price_row if target_price_row.date < stoploss_price_row.date else stoploss_price_row
                 else:
-                    final_price = target_price if target_price.any().low_price else stoploss_price
+                    final_price = target_price_row if target_price.any().low_price else stoploss_price
                 final_price = final_price.head(0)
                 if not final_price.empty:
                     if final_price.high_price >= report.target_price:
@@ -178,11 +182,12 @@ def calculate_profit_loss_on_entry_stocks():
                     elif final_price.high_price >= report.stoploss_price:
                         status = "STOPLOSS_HIT"
                     
-            if status == "STOPLOSS_HIT":
-                report.pl = round(abs(report.entry_price - report.stoploss_price), 2)
-            elif status == "STATUS":
-                report.pl = round(abs(report.target_price - report.entry_price), 2)
-            report.save()
+            if status:
+                if status == "STOPLOSS_HIT":
+                    report.pl = round(abs(report.entry_price - report.stoploss_price), 2)
+                elif status == "STATUS":
+                    report.pl = round(abs(report.target_price - report.entry_price), 2)
+                report.save()
 
 
 @celery_app.task(queue="tickers")

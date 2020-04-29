@@ -341,12 +341,17 @@ def exit_on_auto_hit_price(symbol_name:str):
     limit_price = cached_value[price_type]
     price_hit = False
     hit_price = cached_value["auto_exit_price"]
-    if price_type == "high" and limit_price > hit_price:
-        price_hit = True
-        price_hit_row = df.loc[df["ltp"] >= hit_price].head(0)
-    elif price_type == "low" and limit_price < hit_price:
-        price_hit = True
-        price_hit_row = df.loc[df["ltp"] <= hit_price].head(0)
+
+    try:
+        if price_type == "high" and limit_price > hit_price:
+            price_hit = True
+            price_hit_row = df.loc[df["ltp"] >= hit_price].iloc[0]
+        elif price_type == "low" and limit_price < hit_price:
+            price_hit = True
+            price_hit_row = df.loc[df["ltp"] <= hit_price].iloc[0]
+    except:
+        price_hit_row = pd.Series()
+        
     if not price_hit_row.empty:
         df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=15)] # Time Increament should happen automatically, Implement Later
         if not df.empty:
@@ -445,7 +450,7 @@ def update_orders_status():
     orders_history = user.get_order_history()
     if orders.exists():
         for order in orders:
-            order_detail = list(filter(lambda o: o.get("order_id") == int(order.order_id) and o.get("status") in ["complete", "cancelled", "rejected"] , order_history))[0]
+            order_detail = list(filter(lambda o: o.get("order_id") == int(order.order_id) and o.get("status") in ["complete", "cancelled", "rejected"] , orders_history))[0]
             create_update_order_on_update.delay(order_detail)
     order_ids = Order.objects.filter(entry_time__date=get_local_time().date()).values_list("order_id", flat=True)
     new_orders = [order for order in orders_history if str(order.get("order_id")) not in order_ids]

@@ -145,7 +145,7 @@ def has_entry_for_long_short(obj_id):
         long_short.save()
 
 
-@celery_app.task(queue="medium_priority")
+@celery_app.task(queue="high_priority")
 def find_stochastic_bolligerband_crossover(sorted_stock_id):
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time().date()
@@ -165,6 +165,7 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
     df.loc[(df["bollinger_signal"] != df["bollinger_signal"].shift()) & (df["bollinger_signal"] == "SELL"), "bollinger_signal"] = "SELL_CROSSOVER"
     bollinger_df = df.copy(deep=True).drop(df.head(1).index)
     bollinger_df = bollinger_df.drop(df.tail(1).index)
+        
     try:
         if sorted_stock.entry_type == "SELL":
             bollinger_crossover = bollinger_df[bollinger_df.bollinger_signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
@@ -175,22 +176,22 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
         
     if not bollinger_crossover.empty:
         try:
-            candle_before_crossover = bollinger_df.loc[bollinger_crossover.name - 1]
-            candle_after_crossover = bollinger_df.loc[bollinger_crossover.name + 1]
+            candle_before_crossover = bollinger_df.loc[bollinger_df["date"] < bollinger_crossover.date].iloc[-1]
+            candle_after_crossover = bollinger_df.loc[bollinger_df["date"] > bollinger_crossover.date].iloc[0]
         except:
             return "Candle Before and After Could not be Created"
 
-        if sorted_stock.entry_type == "BUY" and \
-            (candle_before_crossover.open_price <= bollinger_crossover.medium_band and candle_before_crossover.close_price <= bollinger_crossover.medium_band) and \
+        bollinger_signal = pd.Series()
+        
+        if sorted_stock.entry_type == "BUY":
+            if (candle_before_crossover.open_price <= bollinger_crossover.medium_band and candle_before_crossover.close_price <= bollinger_crossover.medium_band) and \
                 (candle_after_crossover.open_price > bollinger_crossover.medium_band or candle_after_crossover.close_price > bollinger_crossover.medium_band):
                 bollinger_signal = candle_after_crossover
 
-        elif sorted_stock.entry_type == "SELL" and \
-            (candle_before_crossover.open_price >= bollinger_crossover.medium_band and candle_before_crossover.close_price >= bollinger_crossover.medium_band) and \
+        elif sorted_stock.entry_type == "SELL":
+            if (candle_before_crossover.open_price >= bollinger_crossover.medium_band and candle_before_crossover.close_price >= bollinger_crossover.medium_band) and \
                 (candle_after_crossover.open_price < bollinger_crossover.medium_band or candle_after_crossover.close_price < bollinger_crossover.medium_band):
                 bollinger_signal = candle_after_crossover
-        else:
-            bollinger_signal = pd.Series()
 
         if not bollinger_signal.empty:
             #Stochastic Indicator 
