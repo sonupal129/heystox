@@ -122,3 +122,10 @@ stock_movement = {
 
 def roundup(x, prec=2, base=.05):
   return round(base * round(float(x)/base), prec)
+
+
+
+def is_time_between_range(obj_time, start_time, end_time):
+    if obj_time >= start_time and obj_time <= end_time:
+        return True
+    return False

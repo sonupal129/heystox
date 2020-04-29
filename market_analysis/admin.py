@@ -55,8 +55,8 @@ class SortedStockDashboardReportAdmin(admin.ModelAdmin):
 
 class OrderInline(admin.TabularInline):
     model = Order
-    fields = ('order_id', 'transaction_type', 'status', 'entry_type')
-    readonly_fields = ('order_id', 'transaction_type', "transaction_type", "entry_type")
+    fields = ('order_id', 'transaction_type', 'status', 'entry_type', 'entry_time')
+    readonly_fields = ('order_id', 'transaction_type', "transaction_type", "entry_type", "entry_time")
     extra = 0
 
 class OrderBookAdmin(admin.ModelAdmin):

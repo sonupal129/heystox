@@ -164,18 +164,20 @@ def send_order_request(order_details:dict, ignore_max_trade_quantity:bool=False)
     user.get_master_contract(symbol.exchange.name)
     last_completed_order = order_book.get_last_order_by_status("CO")
     last_open_order = order_book.get_last_order_by_status("OP")
+    
     if last_completed_order and last_open_order:
         last_order = find_last_order(last_open_order, last_completed_order)
     else:
         last_order = last_completed_order or last_open_order
+    
     if is_created:
         order = Order.objects.create(order_book=order_book, transaction_type=transaction_type)
-    else:
-        if last_order:
-            if last_order.transaction_type != transaction_type:
-                order = Order.objects.create(order_book=order_book, transaction_type=transaction_type)
-        else:
+    elif last_order:
+        if last_order.transaction_type != transaction_type:
             order = Order.objects.create(order_book=order_book, transaction_type=transaction_type)
+    else:
+        order = Order.objects.create(order_book=order_book, transaction_type=transaction_type)
+    
     if order:
         upstox_order = user.place_order(
             transaction_types.get(transaction_type),
@@ -238,7 +240,7 @@ def create_update_order_on_update(order_data):
     
     order.message = order_data.get("message")
     order.entry_price = order_data.get("price") or order_data.get("average_price")
-    order.entry_time = exchange_time if exchange_time else None
+    order.entry_time = exchange_time if exchange_time else get_local_time().now()
     order.status = order_choices.get(order_data["status"])
     
     if order.status in ["CO", "OP"] and order.entry_type == "":
