@@ -346,6 +346,8 @@ def exit_on_auto_hit_price(symbol_name:str):
     price_hit = False
     hit_price = cached_value["auto_exit_price"]
 
+    price_hit_row = pd.Series()
+    
     try:
         if price_type == "high" and limit_price > hit_price:
             price_hit = True
@@ -354,7 +356,7 @@ def exit_on_auto_hit_price(symbol_name:str):
             price_hit = True
             price_hit_row = df.loc[df["ltp"] <= hit_price].iloc[0]
     except:
-        price_hit_row = pd.Series()
+        pass
         
     if not price_hit_row.empty:
         df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=15)] # Time Increament should happen automatically, Implement Later
