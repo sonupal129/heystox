@@ -244,7 +244,7 @@ MARKET_BEARISH_MOVEMENT = -1.2
 DEFAULT_STOPLOSS = 1  # Stoploss is in percentage
 DEFAULT_TARGET = 2 # Target is in percentage
 MAX_ORDER_QUANTITY = 1
-MAX_DAILY_TRADE = 5
+MAX_DAILY_TRADE = 10
 
 # SITE URL
 SITE_URL = "http://127.0.0.1:8000/"

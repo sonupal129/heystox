@@ -115,6 +115,8 @@ def send_order_place_request(signal_detail:dict=None):
         elif entry_type == "SELL" and (percentage_calculator(buy_qty, sell_qty) < 30 or percentage_calculator(sell_qty, buy_qty) > 20):
             # Send Order Place Request
             send_order_request.delay(order_schema)
+        else:
+            return "Buy or Sell percentage are not matching"
         # Do All Function Logic Here
 
 @celery_app.task(queue="low_priority")

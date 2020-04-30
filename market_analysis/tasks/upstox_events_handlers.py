@@ -27,7 +27,7 @@ def event_handler_on_error(message):
 
 def event_handler_on_disconnection(message):
     slack_message_sender.delay(text="Websocket Disconnected, Connecting Again")
-    start_upstox_websocket(False)
+    start_upstox_websocket(True)
     return "Start Websocket Again" 
 
 

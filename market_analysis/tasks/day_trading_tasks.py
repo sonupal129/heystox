@@ -33,7 +33,7 @@ def todays_movement_stocks_add():
     return "Function Not Called"
 
 
-@celery_app.task(queue="high_priority", autoretry_for=(JSONDecodeError,), retry_kwargs={'max_retries': 1, 'countdown': 8})
+@celery_app.task(queue="high_priority", autoretry_for=(JSONDecodeError,HTTPError), retry_kwargs={'max_retries': 1, 'countdown': 8})
 def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com", interval:str="1 Minute"):
     try:
         stock = Symbol.objects.get(symbol=stock_name)
@@ -150,7 +150,7 @@ def calculate_profit_loss_on_entry_stocks():
             stock = Symbol.objects.get(symbol=report.name.lower())
             live_data = stock.get_stock_live_data()
             live_data = live_data.loc[live_data["date"] > str(report.entry_time)]
-            
+    
             if report.entry_type == "BUY":
                 try:
                     target_price_row = live_data.loc[live_data["high_price"] >= report.target_price ].iloc[0]
