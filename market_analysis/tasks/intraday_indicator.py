@@ -219,6 +219,7 @@ def find_stochastic_macd_crossover(sorted_stock_id):
     return "Macd Crossover not Found"
 
 
+@celery_app.task(queue="medium_priority")
 def find_adx_bollinger_crossover(sorted_stock_id):
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time().date()
