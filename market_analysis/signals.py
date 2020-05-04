@@ -16,17 +16,6 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
     if update_fields and "current_balance" in update_fields:
         Earning.objects.get_or_create(user=instance.user_profile, date=get_local_time().date(), opening_balance=instance.current_balance)
 
-# @receiver(post_save, sender=StrategyTimestamp)
-# def verify_macd_signal(sender, instance, created, **kwargs):
-#     if created:
-#         if instance.indicator.name == "MACD" and instance.is_last_timestamp(): 
-#             stock = instance.stock
-#             try:
-#                 secondlast_timestamp = stock.get_second_last_timestamp()
-#             except:
-#                 secondlast_timestamp = None
-#             if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
-#                 macd_stochastic_combination_signal.delay(instance.id, secondlast_timestamp.id)
 
 @receiver(post_save, sender=StrategyTimestamp)
 def send_signal_on_indicator_object_creation(sender, instance, created, **kwargs):

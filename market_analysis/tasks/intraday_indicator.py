@@ -5,6 +5,20 @@ from market_analysis.tasks.notification_tasks import slack_message_sender
 # Start code below
 
 
+
+def create_indicator_timestamp(sorted_stock:object, indicator_name:str, entry_price:float, entry_time:object, time_range:int=20):
+    indicator = indicator.objects.get(name=indicator_name)
+
+    stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=indicator, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
+    if not stamp.exists():
+        stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=indicator, timestamp=entry_time)
+        stamp.entry_price = entry_price
+        stamp.save()
+    elif stamp.count() > 1:
+        stamp.exclude(id=stamp.first().id).delete()
+    return "Signal Found"
+
+
 @celery_app.task(queue="low_priority") 
 def find_ohl_stocks():
     current_time = get_local_time().time()
@@ -56,11 +70,11 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time().date()
     df = sorted_stock.symbol.get_stock_live_data()
-    bollinger_stochastic_indicator = Indicator.objects.get(name="STOCHASTIC_BOLLINGER")
     # Bollinger Indicators
     df["high_band"] = bollinger_hband(df.close_price)
     df["medium_band"] = bollinger_mavg(df.close_price)
     df["low_band"] = bollinger_lband(df.close_price)
+    df["adx"] = adx(df.high_price, df.low_price, df.close_price)
     df = df.drop(columns=["total_buy_quantity", "total_sell_quantity"])
     df = df.loc[df["date"] > str(today_date)]
     df["high_band"] = df.high_band.apply(roundup)
@@ -120,16 +134,8 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
                     stochastic_crossover = pd.Series()
                 if not stochastic_crossover.empty:
                     time_diff = bollinger_signal.date - stochastic_crossover.date
-                    if time_diff <= timedelta(minutes=25):
-                        stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp__range=[bollinger_signal.date - timedelta(minutes=20), bollinger_signal.date + timedelta(minutes=20)]).order_by("timestamp")
-                        if not stamp.exists():
-                            stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=bollinger_stochastic_indicator, timestamp=bollinger_signal.date)
-                            if is_created:
-                                stamp.entry_price = float(bollinger_signal.close_price)
-                                stamp.save()
-                        elif stamp.count() > 1:
-                            stamp.exclude(id=stamp.first().id).delete()
-                        return "Crossover Signal Found"
+                    if time_diff <= timedelta(minutes=25) and df.iloc[-1].adx <= 23:    
+                        create_indicator_timestamp(sorted_stock, "STOCHASTIC_BOLLINGER", float(bollinger_signal.close_price), bollinger_signal.date, 40)
                 return "Stochastic Crossover Not Found"
             return "Crossover is Out of time limit"
         return "Bollinger Signal Not Found"
@@ -139,7 +145,6 @@ def find_stochastic_bolligerband_crossover(sorted_stock_id):
 @celery_app.task(queue="medium_priority")
 def find_stochastic_macd_crossover(sorted_stock_id):
     """(Custom Macd Crossover) This function find crossover between macd and macd signal and return signal as buy or sell"""
-    stochastic_macd_indicator = Indicator.objects.get(name="STOCHASTIC_MACD")
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time().date()
     df = sorted_stock.symbol.get_stock_live_data()
@@ -206,20 +211,49 @@ def find_stochastic_macd_crossover(sorted_stock_id):
                     if not stochastic_crossover_signal.empty:
                         time_diff = (macd_crossover_signal.date - stochastic_crossover_signal.date)
                         if time_diff < timedelta(minutes=30):
-                            try:
-                                stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=stochastic_macd_indicator, timestamp__range=[macd_crossover_signal.date - timedelta(minutes=10), macd_crossover_signal.date + timedelta(minutes=10)]).order_by("timestamp")
-                            except:
-                                stamp = None
-                            if not stamp.exists():
-                                stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=stochastic_macd_indicator, timestamp=macd_crossover_signal.date)
-                                stamp.entry_price = macd_crossover_signal.close_price
-                                stamp.save()
-                            elif stamp.count() > 1:
-                                stamp.exclude(id=stamp.first().id).delete()
-                            return "Signal Found"
+                            create_indicator_timestamp(sorted_stock, "STOCHASTIC_MACD", macd_crossover_signal.close_price, macd_crossover_signal.date, 10)
                     return "Stochastic Signal not Found"
                 return "Stochastic Crossover not Found"
             return "Crossover out of time limit"
         return "Macd Signal not Found"
     return "Macd Crossover not Found"
 
+
+def find_adx_bollinger_crossover(sorted_stock_id):
+    sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
+    today_date = get_local_time().date()
+    df = sorted_stock.symbol.get_stock_live_data()
+    df["high_band"] = bollinger_hband(df.close_price)
+    df["medium_band"] = bollinger_mavg(df.close_price)
+    df["low_band"] = bollinger_lband(df.close_price)
+    df = df.drop(columns=["total_buy_quantity", "total_sell_quantity"])
+    high_price = df["high_price"]
+    close_price = df["close_price"]
+    low_price = df["low_price"]
+    df["adx"] = adx(high_price, low_price, close_price)
+    df["adx_neg"] = adx_neg(df.high_price, df.low_price, df.close_price)
+    df["adx_pos"] = adx_pos(df.high_price, df.low_price, df.close_price)
+    df = df.loc[df["date"] > str(today_date)]
+    df["bollinger_signal"] = "No Signal"
+    df.loc[(df["close_price"] > df["high_band"]), "bollinger_signal"] = "SELL"
+    df.loc[(df["close_price"] < df["low_band"]), "bollinger_signal"] = "BUY"
+    try:
+        df = df.drop(index=list(range(75,80)))
+    except:
+        df = pd.DataFrame()
+
+    if not df.empty:
+        try:
+            if sorted_stock.entry_type == "SELL":
+                bollinger_crossover = df[df.bollinger_signal.str.endswith("SELL")].iloc[-1]
+            elif sorted_stock.entry_type == "BUY":
+                bollinger_crossover = df[df.bollinger_signal.str.endswith("BUY")].iloc[-1]
+        except:
+            bollinger_crossover = pd.Series()
+
+        if not bollinger_crossover.empty:
+            if df.iloc[-1].adx <= 23:
+                create_indicator_timestamp(sorted_stock, "ADX_BOLLINGER", bollinger_crossover.close_price, bollinger_crossover.date, 10)
+                return "Signal Found"
+        return "Crossover Not Found"
+    return "Dataframe not created"

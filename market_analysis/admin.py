@@ -21,7 +21,7 @@ class CandleAdmin(admin.ModelAdmin):
 
 class StrategyTimestampInline(admin.TabularInline):
     model = StrategyTimestamp
-    fields = ('indicator', 'timestamp')
+    fields = ('indicator', 'timestamp', 'entry_price')
     extra = 0
 
 class SortedStocksListAdmin(admin.ModelAdmin):
@@ -55,8 +55,8 @@ class SortedStockDashboardReportAdmin(admin.ModelAdmin):
 
 class OrderInline(admin.TabularInline):
     model = Order
-    fields = ('order_id', 'transaction_type', 'status', 'entry_type', 'entry_time')
-    readonly_fields = ('order_id', 'transaction_type', "transaction_type", "entry_type", "entry_time")
+    fields = ('order_id', 'transaction_type', 'status', 'entry_type', 'entry_time', 'message')
+    readonly_fields = ('order_id', 'transaction_type', "transaction_type", "entry_type", "entry_time", "message")
     extra = 0
 
 class OrderBookAdmin(admin.ModelAdmin):

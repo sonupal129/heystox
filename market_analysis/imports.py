@@ -17,7 +17,7 @@ import numpy as np
 import csv
 
 # TA LIbrary for Stock Market
-from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator
+from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator, adx, adx_neg, adx_pos
 from ta.momentum import stoch, stoch_signal
 from ta.volatility import bollinger_hband, bollinger_lband, bollinger_mavg
 
