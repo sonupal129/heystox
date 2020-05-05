@@ -135,7 +135,7 @@ def find_stochastic_bollingerband_crossover(sorted_stock_id):
                     stochastic_crossover = pd.Series()
                 if not stochastic_crossover.empty:
                     time_diff = bollinger_signal.date - stochastic_crossover.date
-                    if time_diff <= timedelta(minutes=25) and df.iloc[-1].adx <= 23:    
+                    if time_diff <= timedelta(minutes=25) and bollinger_signal.adx <= 23:    
                         create_indicator_timestamp(sorted_stock, "STOCHASTIC_BOLLINGER", float(bollinger_signal.close_price), bollinger_signal.date, 40)
                 return "Stochastic Crossover Not Found"
             return "Crossover is Out of time limit"
@@ -254,7 +254,7 @@ def find_adx_bollinger_crossover(sorted_stock_id):
             bollinger_crossover = pd.Series()
 
         if not bollinger_crossover.empty:
-            if df.iloc[-1].adx <= 23:
+            if bollinger_crossover.adx <= 23:
                 create_indicator_timestamp(sorted_stock, "ADX_BOLLINGER", bollinger_crossover.close_price, bollinger_crossover.date, 10)
                 return "Signal Found"
         return "Crossover Not Found"
