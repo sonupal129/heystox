@@ -22,6 +22,7 @@ class CandleAdmin(admin.ModelAdmin):
 class StrategyTimestampInline(admin.TabularInline):
     model = StrategyTimestamp
     fields = ('indicator', 'timestamp', 'entry_price')
+    readonly_fields = ("entry_price",)
     extra = 0
 
 class SortedStocksListAdmin(admin.ModelAdmin):

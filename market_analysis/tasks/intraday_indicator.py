@@ -7,7 +7,8 @@ from market_analysis.tasks.notification_tasks import slack_message_sender
 
 
 def create_indicator_timestamp(sorted_stock:object, indicator_name:str, entry_price:float, entry_time:object, time_range:int=20):
-    indicator = indicator.objects.get(name=indicator_name)
+    
+    indicator = Indicator.objects.get(name=indicator_name)
 
     stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=indicator, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
     if not stamp.exists():
@@ -66,7 +67,7 @@ def has_entry_for_long_short(obj_id):
 
 
 @celery_app.task(queue="high_priority")
-def find_stochastic_bolligerband_crossover(sorted_stock_id):
+def find_stochastic_bollingerband_crossover(sorted_stock_id):
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time().date()
     df = sorted_stock.symbol.get_stock_live_data()
