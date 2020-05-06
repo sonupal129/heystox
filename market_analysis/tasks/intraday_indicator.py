@@ -115,7 +115,7 @@ def find_stochastic_bollingerband_crossover(sorted_stock_id):
                 bollinger_signal = candle_after_crossover
 
         if not bollinger_signal.empty:
-            if is_time_between_range(bollinger_signal.date, get_local_time().now() - timedelta(minutes=15), get_local_time().now()):
+            if is_time_between_range(bollinger_signal.date, 20):
                 #Stochastic Indicator 
                 df["stoch"] = stoch(high=df.high_price, close=df.close_price, low=df.low_price)
                 df["stoch_signal"] = stoch_signal(high=df.high_price, close=df.close_price, low=df.low_price)
@@ -135,7 +135,7 @@ def find_stochastic_bollingerband_crossover(sorted_stock_id):
                     stochastic_crossover = pd.Series()
                 if not stochastic_crossover.empty:
                     time_diff = bollinger_signal.date - stochastic_crossover.date
-                    if time_diff <= timedelta(minutes=25) and bollinger_signal.adx <= 23:    
+                    if time_diff <= timedelta(minutes=25) and bollinger_signal.adx <= 25:    
                         create_indicator_timestamp(sorted_stock, "STOCHASTIC_BOLLINGER", float(bollinger_signal.close_price), bollinger_signal.date, 40)
                 return "Stochastic Crossover Not Found"
             return "Crossover is Out of time limit"
@@ -189,7 +189,7 @@ def find_stochastic_macd_crossover(sorted_stock_id):
         
 
         if not macd_crossover_signal.empty:
-            if is_time_between_range(macd_crossover_signal.date, get_local_time().now() - timedelta(minutes=15), get_local_time().now()):
+            if is_time_between_range(macd_crossover_signal.date, 15):
                 df = df.loc[df["date"] < macd_crossover.date]
                 try:
                     if sorted_stock.entry_type == "SELL":

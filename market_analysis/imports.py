@@ -125,7 +125,8 @@ def roundup(x, prec=2, base=.05):
 
 
 
-def is_time_between_range(obj_time, start_time, end_time):
-    if obj_time >= start_time and obj_time <= end_time:
+def is_time_between_range(obj_time, last_minutes):
+    after_time = get_local_time().now() - timedelta(minutes=last_minutes)
+    if obj_time >= after_time:
         return True
     return False

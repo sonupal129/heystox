@@ -27,6 +27,7 @@ class StrategyTimestampInline(admin.TabularInline):
 
 class SortedStocksListAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
+    list_display = ["symbol", "entry_price", "entry_type"]
     inlines = [StrategyTimestampInline]
     search_fields = ["symbol__symbol"]
 
