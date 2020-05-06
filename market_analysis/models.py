@@ -111,19 +111,20 @@ class Symbol(BaseModel):
         return current_ticker.get(price_type, None)
 
       
-    def get_stock_live_data(self, is_cache=True, date_obj=None): # Currently caching is for testing only, later will remove it
+    def get_stock_live_data(self, date_obj=None, with_live_candle=True): # Currently caching is for testing only, later will remove it
         if date_obj == None:
             date_obj = get_local_time().date()
         stock_data = self.get_stock_data(end_date=date_obj).values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
         df = pd.DataFrame(list(stock_data))
-        try:
-            current_candle_data = self.get_stock_current_candle()
-        except:
-            current_candle_data = None
-        if df is not None and current_candle_data != None:
-            df2 = pd.DataFrame(current_candle_data, index=[0])
-            df1 = pd.concat([df, df2], ignore_index=True, sort=False)
-            return df1
+        if with_live_candle:
+            try:
+                current_candle_data = self.get_stock_current_candle()
+            except:
+                current_candle_data = None
+            if df is not None and current_candle_data != None:
+                df2 = pd.DataFrame(current_candle_data, index=[0])
+                df1 = pd.concat([df, df2], ignore_index=True, sort=False)
+                return df1
         return df
 
     def get_day_opening_price(self, date_obj=None):

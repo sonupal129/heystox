@@ -70,22 +70,21 @@ def has_entry_for_long_short(obj_id):
 def find_stochastic_bollingerband_crossover(sorted_stock_id):
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time().date()
-    df = sorted_stock.symbol.get_stock_live_data()
+    df = sorted_stock.symbol.get_stock_live_data(with_live_candle=False)
     # Bollinger Indicators
-    df["high_band"] = bollinger_hband(df.close_price)
+    # df["high_band"] = bollinger_hband(df.close_price)
     df["medium_band"] = bollinger_mavg(df.close_price)
-    df["low_band"] = bollinger_lband(df.close_price)
+    # df["low_band"] = bollinger_lband(df.close_price)
     df["adx"] = adx(df.high_price, df.low_price, df.close_price)
     df = df.drop(columns=["total_buy_quantity", "total_sell_quantity"])
-    df = df.loc[df["date"] > str(today_date)]
-    df["high_band"] = df.high_band.apply(roundup)
+    # df["high_band"] = df.high_band.apply(roundup)
     df["medium_band"] = df.medium_band.apply(roundup)
-    df["low_band"] = df.low_band.apply(roundup)
+    # df["low_band"] = df.low_band.apply(roundup)
     df["bollinger_signal"] = np.where(df.close_price < df.medium_band, "SELL", "BUY")
+    df = df.loc[df["date"] > str(today_date)]
     df.loc[(df["bollinger_signal"] != df["bollinger_signal"].shift()) & (df["bollinger_signal"] == "BUY"), "bollinger_signal"] = "BUY_CROSSOVER"
     df.loc[(df["bollinger_signal"] != df["bollinger_signal"].shift()) & (df["bollinger_signal"] == "SELL"), "bollinger_signal"] = "SELL_CROSSOVER"
     bollinger_df = df.copy(deep=True).drop(df.head(1).index)
-    bollinger_df = bollinger_df.drop(df.tail(1).index)
         
     try:
         if sorted_stock.entry_type == "SELL":
@@ -132,10 +131,12 @@ def find_stochastic_bollingerband_crossover(sorted_stock_id):
                     stochastic_crossover = stoch_df[stoch_df.stochastic_signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
             except:
                 stochastic_crossover = pd.Series()
+            
             if not stochastic_crossover.empty:
                 time_diff = bollinger_signal.date - stochastic_crossover.date
-                if time_diff <= timedelta(minutes=25) and bollinger_signal.adx <= 25:    
-                    create_indicator_timestamp(sorted_stock, "STOCHASTIC_BOLLINGER", float(bollinger_signal.close_price), bollinger_signal.date, 40)
+                if time_diff <= timedelta(minutes=25) and bollinger_signal.adx <= 23:    
+                    create_indicator_timestamp(sorted_stock, "STOCHASTIC_BOLLINGER", float(bollinger_signal.close_price), bollinger_signal.date, 20)
+                    return "Signal Found"
             return "Stochastic Crossover Not Found"
         return "Bollinger Signal Not Found"
     return "Bollinger Crossover Not Found"
@@ -220,16 +221,12 @@ def find_stochastic_macd_crossover(sorted_stock_id):
 def find_adx_bollinger_crossover(sorted_stock_id):
     sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
     today_date = get_local_time().date()
-    df = sorted_stock.symbol.get_stock_live_data()
-    df = df.drop(df.tail(1).index)
+    df = sorted_stock.symbol.get_stock_live_data(with_live_candle=False)
     df["high_band"] = bollinger_hband(df.close_price)
-    df["medium_band"] = bollinger_mavg(df.close_price)
+    # df["medium_band"] = bollinger_mavg(df.close_price)
     df["low_band"] = bollinger_lband(df.close_price)
     df = df.drop(columns=["total_buy_quantity", "total_sell_quantity"])
-    high_price = df["high_price"]
-    close_price = df["close_price"]
-    low_price = df["low_price"]
-    df["adx"] = adx(high_price, low_price, close_price)
+    df["adx"] = adx(df.high_price, df.low_price, df.close_price)
     df["adx_neg"] = adx_neg(df.high_price, df.low_price, df.close_price)
     df["adx_pos"] = adx_pos(df.high_price, df.low_price, df.close_price)
     df = df.loc[df["date"] > str(today_date)]
