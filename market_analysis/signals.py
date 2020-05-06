@@ -20,7 +20,7 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 @receiver(post_save, sender=StrategyTimestamp)
 def send_signal_on_indicator_object_creation(sender, instance, created, **kwargs):
     if created:
-        if instance.indicator.name == "STOCHASTIC_BOLLINGER":
+        if instance.indicator.name in ["STOCHASTIC_BOLLINGER", "STOCHASTIC_MACD", "ADX_BOLLINGER"]:
             prepare_orderdata_from_signal.delay(instance.id)
 
 

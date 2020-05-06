@@ -10,7 +10,7 @@ def prepare_orderdata_from_signal(timestamp_id):
     sorted_stock = timestamp.stock
     entry_price = float(timestamp.entry_price) if timestamp.entry_price else None
     
-    if is_time_between_range(timestamp.timestamp, get_local_time().now() - timedelta(minutes=15), get_local_time().now()):
+    if is_time_between_range(timestamp.timestamp, 20):
 
         if sorted_stock.entry_type == "BUY":
             if timestamp.entry_price > timestamp.stock.symbol.get_stock_live_price(price_type="open") or entry_price == None:
