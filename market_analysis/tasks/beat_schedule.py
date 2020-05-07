@@ -95,7 +95,7 @@ day_trading_tasks = {
     },
     "create_market_hour_candles_every_five_minute": {
         "task": "market_analysis.tasks.day_trading_tasks.create_market_hour_candles",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="1-59/5"),
+        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/5"),
         "kwargs": {"days": 0, "fetch_last_candle_number": 2},
     },
     "create_market_hour_candles_every_two_hour": {
@@ -105,7 +105,7 @@ day_trading_tasks = {
     },
     "delete_last_cached_candles_data": {
         "task": "market_analysis.tasks.day_trading_tasks.delete_last_cached_candles_data",
-        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="1-59/5"),
+        "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/5"),
     },
     "create_stocks_realtime_candle": {
         "task": "market_analysis.tasks.day_trading_tasks.create_stocks_realtime_candle",

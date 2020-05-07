@@ -73,16 +73,17 @@ def cache_candles_data(stock_name:str, upstox_user_email="sonupal129@gmail.com",
 def create_market_hour_candles(days, fetch_last_candle_number):
     upstox_user = get_upstox_user(email="sonupal129@gmail.com")
     cache_key = str(get_local_time().date()) + "_nifty_daily_gainers_loosers"
-    cached_value = redis_cache.get(cache_key)
+    current_time = get_local_time().now()
+    nse_imported_stocks_cached_value = redis_cache.get(cache_key)
     symbols = Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True)
     for stock in symbols:
-        fetch_candles_data.apply_async(kwargs={"symbol":stock, "days":days, "fetch_last_candle":fetch_last_candle_number}) # By Defautl Fetching 5 Minute Candle
-    if cached_value:
-        for stock in cached_value:
-            fetch_candles_data.apply_async(kwargs={"symbol":stock, "days":days}) # By Defautl Fetching 5 Minute Candle, for nify gainers with not limit of fetch last candles
+        fetch_candles_data.apply_async(kwargs={"symbol":stock, "days":days, "fetch_last_candle":fetch_last_candle_number}, countdown=27) # By Defautl Fetching 5 Minute Candle
+    if nse_imported_stocks_cached_value:
+        for stock in nse_imported_stocks_cached_value:
+            fetch_candles_data.apply_async(kwargs={"symbol":stock, "days":days}, countdown=29) # By Defautl Fetching 5 Minute Candle, for nify gainers with not limit of fetch last candles
    
     # Now Create Nifty 50 Candle
-    fetch_candles_data(symbol="nifty_50", days=days, fetch_last_candle=fetch_last_candle_number)
+    fetch_candles_data.apply_async(kwargs={"symbol":"nifty_50", "days":days, "fetch_last_candle":fetch_last_candle_number}, countdown=25)
 
 
 @celery_app.task(queue="medium_priority")

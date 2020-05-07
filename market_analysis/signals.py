@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order)
+from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Indicator)
 
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.indicator_signals import prepare_orderdata_from_signal
@@ -20,7 +20,7 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 @receiver(post_save, sender=StrategyTimestamp)
 def send_signal_on_indicator_object_creation(sender, instance, created, **kwargs):
     if created:
-        if instance.indicator.name in ["STOCHASTIC_BOLLINGER", "STOCHASTIC_MACD", "ADX_BOLLINGER"]:
+        if instance.indicator.name in Indicator.objects.filter(indicator_type="PR").values_list("name", flat=True):
             prepare_orderdata_from_signal.delay(instance.id)
 
 

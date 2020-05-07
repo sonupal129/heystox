@@ -413,9 +413,16 @@ class SortedStocksList(BaseModel):
         return self.timestamps.filter(indicator__name=indicator_name).order_by("timestamp").last() or None
 
 class Indicator(BaseModel):
+    indicator_type_choices = {
+        ("PR", "PRIMARY"),
+        ("SC", "SECONDARY")
+    }
+
     name = models.CharField(max_length=50)
     description = models.TextField(null=True, blank=True)
+    indicator_type = models.CharField(choices=indicator_type_choices, max_length=10, default="SC")
     value = models.IntegerField()
+
 
     def __str__(self):
         return self.name

@@ -249,7 +249,7 @@ def find_adx_bollinger_crossover(sorted_stock_id):
 
         if not bollinger_crossover.empty:
             if bollinger_crossover.adx <= 23:
-                create_indicator_timestamp(sorted_stock, "ADX_BOLLINGER", bollinger_crossover.close_price, bollinger_crossover.date, 10)
+                create_indicator_timestamp(sorted_stock, "ADX_BOLLINGER", bollinger_crossover.close_price, bollinger_crossover.date, 15)
                 return "Signal Found"
         return "Crossover Not Found"
     return "Dataframe not created"
