@@ -92,10 +92,11 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
         for stock in sorted_stocks:
             if stock.created_at <= get_local_time().now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all():
                 deleted_stocks.append(stock.symbol.symbol)
-                if cached_value and stock in cached_value:
-                    cached_value = cached_value.remove(stock)
-                    redis_cache.set(cache_key, cached_value)
-                stock.delete()
+                # Stock Deleting Deactivated for Some Time
+                # if cached_value and stock in cached_value:
+                #     cached_value = cached_value.remove(stock)
+                #     redis_cache.set(cache_key, cached_value)
+                # stock.delete()
             else:
                 if cached_value == None:
                     cached_value = [stock]

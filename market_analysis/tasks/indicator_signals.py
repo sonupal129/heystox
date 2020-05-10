@@ -48,6 +48,7 @@ def prepare_orderdata_from_signal(timestamp_id):
             existing_order.strength = ", ".join([strength, timestamp.indicator.name])
             existing_order.save()
     else:
+        slack_message_sender.delay(text=f"Stock Entry Time is Out of Limit Could Not Place Order for {sorted_stock}")
         return "Crossover out of time limit"
         
 

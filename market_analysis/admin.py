@@ -21,13 +21,14 @@ class CandleAdmin(admin.ModelAdmin):
 
 class StrategyTimestampInline(admin.TabularInline):
     model = StrategyTimestamp
-    fields = ('indicator', 'timestamp', 'entry_price')
-    readonly_fields = ("entry_price",)
+    fields = ('indicator', 'timestamp', 'entry_price', "created_at")
+    readonly_fields = ("entry_price", "created_at")
     extra = 0
 
 class SortedStocksListAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     list_display = ["symbol", "entry_price", "entry_type"]
+    readonly_fields = ("created_at",)
     inlines = [StrategyTimestampInline]
     search_fields = ["symbol__symbol"]
 
@@ -67,6 +68,9 @@ class OrderBookAdmin(admin.ModelAdmin):
     readonly_fields = ["symbol", "strength", "date"]
 
 
+class IndicatorAdmin(admin.ModelAdmin):
+    list_display = ["name", "indicator_type", "value"]
+
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
 admin.site.register(Candle, CandleAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)
@@ -75,7 +79,7 @@ admin.site.register(MasterContract)
 admin.site.register(BankDetail)
 admin.site.register(Credentials)
 admin.site.register(Earning)
-admin.site.register(Indicator)
+admin.site.register(Indicator, IndicatorAdmin)
 admin.site.register(SortedStocksList, SortedStocksListAdmin)
 admin.site.register(PreMarketOrderData, PreMarketOrderDataAdmin)
 admin.site.register(SortedStockDashboardReport, SortedStockDashboardReportAdmin)
