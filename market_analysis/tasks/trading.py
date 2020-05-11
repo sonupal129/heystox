@@ -104,8 +104,8 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
                 elif stock not in cached_value:
                     cached_value.append(stock)
                     redis_cache.set(cache_key, cached_value, 60*30)
-        if deleted_stocks:
-            slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
+        # if deleted_stocks:
+        #     slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
 
 
 # Market Sideways Functions - Need To Work More on below functions
