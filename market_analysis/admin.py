@@ -71,6 +71,16 @@ class OrderBookAdmin(admin.ModelAdmin):
 class IndicatorAdmin(admin.ModelAdmin):
     list_display = ["name", "indicator_type", "value"]
 
+
+class StrategyAdmin(admin.ModelAdmin):
+    list_display = ["view_strategy_name", "strategy_location"]
+    readonly_fields = ["strategy_name", "strategy_location"]
+
+    def view_strategy_name(self, obj):
+        return obj.get_strategy_name()
+
+
+
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
 admin.site.register(Candle, CandleAdmin)
 admin.site.register(UserProfile, UserProfileAdmin)
@@ -84,3 +94,4 @@ admin.site.register(SortedStocksList, SortedStocksListAdmin)
 admin.site.register(PreMarketOrderData, PreMarketOrderDataAdmin)
 admin.site.register(SortedStockDashboardReport, SortedStockDashboardReportAdmin)
 admin.site.register(OrderBook, OrderBookAdmin)
+admin.site.register(Strategy, StrategyAdmin)

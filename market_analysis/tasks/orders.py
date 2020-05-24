@@ -72,6 +72,7 @@ def calculate_order_quantity(share_price, entry_type):
         if qty > settings.MAX_ORDER_QUANTITY:
             return settings.MAX_ORDER_QUANTITY
         return abs(qty)
+    raise AttributeError("Unable to fetch user balance")
 
 
 find_last_order = lambda order1, order2 : order1 if order1.entry_time > order2.entry_time else order2
@@ -333,7 +334,7 @@ def cache_symbol_ticker_data(data:dict):
         cached_value["stock_data"].append(context)
     redis_cache.set(cache_key, cached_value)
     exit_on_stoploss_target_hit.delay(data["symbol"].lower())
-    exit_on_auto_hit_price.delay(data["symbol"].lower())
+    # exit_on_auto_hit_price.delay(data["symbol"].lower())
     return cached_value
 
 
@@ -462,7 +463,7 @@ def exit_on_stoploss_target_hit(symbol_name:str):
         if target_stoploss_hit:
             if not redis_cache.get(stoploss_target_cache_key):
                 send_order_request.delay(context, True)
-                slack_message_sender.delay(text="{0} Hit Order Sent for {1}".format(symbol_name, order_hit), channel="#random")
+                slack_message_sender.delay(text="{0} Hit Order Sent for trade {1}".format(order_hit, symbol_name), channel="#random")
                 redis_cache.set(stoploss_target_cache_key, True)
 
 

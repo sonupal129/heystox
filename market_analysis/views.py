@@ -3,10 +3,11 @@ from market_analysis.models import UserProfile, MasterContract, SortedStocksList
 from market_analysis.filters import SymbolFilters, SortedStocksFilter
 from market_analysis.tasks.trading import get_cached_liquid_stocks
 from market_analysis.view_mixins import BasePermissionMixin
-from .forms import UserLoginRegisterForm
+from .forms import UserLoginRegisterForm, BacktestForm
 from .mixins import GroupRequiredMixins
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.users_tasks import login_upstox_user
+from market_analysis.tasks.intraday_indicator import prepare_n_call_backtesting_strategy
 # Create your views here.
 
 
@@ -142,4 +143,66 @@ class UserLoginRegisterView(LoginView):
             return redirect(self.get_success_url())
         return super(UserLoginRegisterView, self).get(request, *args, **kwargs)
 
+
+class BacktestSortedStocksView(FormView):
+    template_name = "sorted_stocks_backtest.html"
+    group_required = ["trader"]
+    http_method_names = ["get", "post"]
+    form_class = BacktestForm
+    success_url = "/backtest-stocks/"
+
+    def get_context_data(self, **kwargs):
+        context = super(BacktestSortedStocksView, self).get_context_data(**kwargs)
+        form = self.get_form()
+        # print(context)
+        # print(self.request.GET)
+        # print(self.request.POST)
+        # print(form.is_valid())
+        # print(form.errors)
+        
+        return context
+
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        function_called_before = False
+        context = super(BacktestSortedStocksView, self).get_context_data(*args, **kwargs)
+        if form.is_valid():
+            is_function_called_before = redis_cache.get(form.create_form_cache_key()) # This will check if function called 5 minute before is yest, it will as to wait
+            if is_function_called_before:
+                context["response"] = "Strategy request already sent before, please try after 5 minute to check status"
+                return self.render_to_response(context)
+            symbol = form.cleaned_data["symbol"]
+            strategy = form.cleaned_data["strategy"]
+            entry_type = form.cleaned_data["entry_type"]
+            from_date = form.cleaned_data["from_date"]
+            candle_type = "M5"
+            current_date = get_local_time().date()
+            to_days = (current_date - from_date).days
             
+            data = {
+                "stock_id": symbol.id,
+                "end_date": str(current_date),
+                "to_days": to_days,
+                "strategy_id": strategy.id,
+                "entry_type": entry_type,
+                "form_cache_key": form.create_form_cache_key()
+            }
+
+            cache_key = "_".join([symbol.symbol, str(to_days), str(current_date), str(strategy.strategy_name), str(candle_type), "backtest_strategy"])
+            cached_value = redis_cache.get(cache_key)
+
+            func_module = importlib.import_module(strategy.strategy_location)
+            st_func = getattr(func_module, strategy.strategy_name)
+            print(st_func.delay(4,5))
+            # if cached_value == None:
+            #     prepare_n_call_backtesting_strategy.delay(**data)
+            #     context["response"] = "Backtesting request sent, Please try after 5 minute to check backtest result"
+            #     return self.render_to_response(context)
+            # Write Profite Lostt Funcion
+            # context["df"] = cached_value.to_html()
+            return self.render_to_response(context)
+        return super(BacktestSortedStocksView, self).get(request, *args, **kwargs)
+
+
+

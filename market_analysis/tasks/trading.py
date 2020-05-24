@@ -90,7 +90,11 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
         deleted_stocks = []
         counter = 0
         for stock in sorted_stocks:
-            if stock.created_at <= get_local_time().now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all():
+            try:
+                not_good_movement = stock.created_at <= get_local_time().now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all()
+            except:
+                continue
+            if not_good_movement:
                 deleted_stocks.append(stock.symbol.symbol)
                 # Stock Deleting Deactivated for Some Time
                 # if cached_value and stock in cached_value:

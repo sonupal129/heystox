@@ -26,14 +26,6 @@ def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_pri
     return "All Stocks Data Updated Sucessfully"
 
 
-@celery_app.task(queue="low_priority")
-def invalidate_stocks_cached_data(symbol:str):
-    today_date = str(get_local_time().date())
-    stock_data_id = today_date + "_stock_data_" + symbol
-    cache.delete(stock_data_id)
-    return f"cache invalidated for {stock_data_id}"
-
-
 @celery_app.task(queue="medium_priority", autoretry_for=(JSONDecodeError, TypeError, HTTPError), retry_kwargs={'max_retries': 2, 'countdown': 10})
 def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, upstox_user_email="sonupal129@gmail.com", fetch_last_candle:int=None):
     if end_date == None:
@@ -81,7 +73,7 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, u
                                         high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),
                                         symbol=stock, candle_type="M5"))
     Candle.objects.bulk_create(bulk_candle_data)
-    invalidate_stocks_cached_data.delay(symbol)
+    stock.get_stock_data(cached=False)
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 

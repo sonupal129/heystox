@@ -57,18 +57,22 @@ class Symbol(BaseModel):
     def get_stock_data(self, days=None, end_date=None, candle_type="M5", cached=True):
         if end_date == None:
             end_date = get_local_time().date()
-        cache_id = str(end_date) + "_stock_data_" + self.symbol
+        cache_id = "_".join([ str(end_date), str(days), self.symbol, candle_type, "stock_data" ])
         cached_value = redis_cache.get(cache_id)
         if cached_value != None and cached:
             candles = cached_value
         else:
-            candles = Candle.objects.filter(candle_type=candle_type, date__range=[end_date - timedelta(5), end_date + timedelta(1)], symbol=self)
+            if days and days > 0:
+                candles = Candle.objects.filter(candle_type=candle_type, date__range=[end_date - timedelta(days), end_date + timedelta(1)], symbol=self)
+            else:
+                candles = Candle.objects.filter(candle_type=candle_type, date__range=[end_date - timedelta(5), end_date + timedelta(1)], symbol=self)
             redis_cache.set(cache_id, candles, 300)
         day_count = None
-        if days == 0:
+        if days and days >= 0:
             day_count = days
         else:
             day_count = self.get_last_trading_day_count(end_date)
+        
         if day_count > 0:
             start_date = end_date - timedelta(day_count)               
             candles = candles.filter(candle_type=candle_type, date__range=[start_date, end_date + timedelta(1)], symbol=self)
@@ -415,7 +419,8 @@ class SortedStocksList(BaseModel):
 class Indicator(BaseModel):
     indicator_type_choices = {
         ("PR", "PRIMARY"),
-        ("SC", "SECONDARY")
+        ("SC", "SECONDARY"),
+        ("SP", "SUPPORTING")
     }
 
     name = models.CharField(max_length=50)
@@ -581,3 +586,23 @@ class Order(BaseModel):
         if self.order_id == self.order_book.get_last_order_by_status(status).order_id:
             return True
         return False
+
+
+class Strategy(BaseModel):
+    strategy_name = models.CharField(max_length=200, blank=True, null=True)
+    strategy_location = models.CharField(max_length=500)
+    # description = models.TextField(max_length=1000, blank=True, null=True)
+
+    def __str__(self):
+        return self.get_strategy_name()
+
+    def get_strategy_name(self):
+        return self.strategy_name.replace("_", " ").strip().title()
+
+
+    
+
+
+
+    
+    

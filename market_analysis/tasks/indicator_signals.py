@@ -29,7 +29,6 @@ def prepare_orderdata_from_signal(timestamp_id):
         except:
             existing_order = None
 
-        is_stock_moved = sorted_stock.symbol.is_stock_moved_good_for_trading(movement_percent=stock_movement.get(sorted_stock.entry_type))
         sorted_stock.entry_price = entry_price
         sorted_stock.save()
         order_detail = {}
@@ -39,10 +38,8 @@ def prepare_orderdata_from_signal(timestamp_id):
         order_detail["entry_price"] = entry_price
         
         if existing_order == None or entry_available:
-            if is_stock_moved:    
-                send_order_place_request.delay(order_detail)
-                return "Order Request Sent"
-            return "Not Enough Movement in Stock"
+            send_order_place_request.delay(order_detail)
+            return "Order Request Sent"
         elif existing_order:
             strength = existing_order.strength if existing_order.strength else ""
             existing_order.strength = ", ".join([strength, timestamp.indicator.name])
@@ -51,6 +48,13 @@ def prepare_orderdata_from_signal(timestamp_id):
         slack_message_sender.delay(text=f"Stock Entry Time is Out of Limit Could Not Place Order for {sorted_stock}")
         return "Crossover out of time limit"
         
+
+# def indicator_routers(timestamp_id):
+#     timestamp = StrategyTimestamp.objects.get(id=timestamp_id)
+#     sorted_stock = timestamp.stock
+#     if instance.indicator.indicator_type == "PR":
+#         prepare_orderdata_from_signal.delay(timestamp_id)
+
 
 
 
