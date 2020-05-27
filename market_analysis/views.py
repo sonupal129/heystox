@@ -164,10 +164,6 @@ class BacktestSortedStocksView(View):
         if "backtest_form" in request.POST:
             backtest_form = BacktestForm(request.POST)
             if backtest_form.is_valid():
-                is_function_called_before = redis_cache.get(backtest_form.create_form_cache_key()) # This will check if function called 5 minute before is yest, it will as to wait
-                if is_function_called_before:
-                    context["response"] = "Strategy request for already sent before, please try after 5 minute to check status"
-                    return render(request, self.template_name, self.get_context_data(request, **context))
                 symbol = backtest_form.cleaned_data["symbol"]
                 strategy = backtest_form.cleaned_data["strategy"]
                 entry_type = backtest_form.cleaned_data["entry_type"]
@@ -187,12 +183,20 @@ class BacktestSortedStocksView(View):
 
                 cache_key = "_".join([symbol.symbol, str(to_days), str(current_date), str(strategy.strategy_name), str(candle_type), entry_type, "backtest_strategy"])
                 cached_value = redis_cache.get(cache_key)
+                
                 if cached_value is None:
+                    is_function_called_before = redis_cache.get(backtest_form.create_form_cache_key()) # This will check if function called 5 minute before is yest, it will as to wait
+                    if is_function_called_before:
+                        context["response"] = "Backtesting request for strategy already sent before, please try after 5 minute to check status"
+                        return render(request, self.template_name, self.get_context_data(request, **context))
                     prepare_n_call_backtesting_strategy.delay(**data)
                     redis_cache.set(backtest_form.create_form_cache_key(), True, 60*3)
                     context["response"] = "Backtesting request sent, Please try after 5 minute to check backtest result"
                     return render(request, self.template_name, self.get_context_data(request, **context))
-                context["pl"] = round(cached_value["p/l"].sum(), 2)
+                strt, strt_count = np.unique(cached_value.strategy_status, return_counts=True)
+                df_extrct = dict(zip(strt, strt_count))
+                df_extrct["Profit or Loss"] = round(cached_value["p/l"].sum(), 2)
+                context["vars"] = df_extrct
                 context["df"] = cached_value.to_html()
                 return render(request, self.template_name, self.get_context_data(request, **context))
             else:

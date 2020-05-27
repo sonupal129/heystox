@@ -157,7 +157,6 @@ def prepare_n_call_backtesting_strategy(*args, **kwargs):
     st_func = getattr(func_module, strategy.strategy_name)
     data["strategy"] = st_func
     backtest_indicator_strategy(**data)
-    redis_cache.set(kwargs.get("form_cache_key"), True, 60*3)
     return "Backtesting Completed!, Run function again to get output"
     
 

@@ -52,9 +52,11 @@
         <button name="strategy_deploy_form" type="submit" class="button">Deploy</button>
     </form>
 
-    {% if pl%}
+    {% if vars%}
     <ul>
-        <li>Profit or Loss: <span>{{ pl }}</span></li>
+        {% for k , v in vars.items %}
+        <li>{{ k }} : <span>{{ v }}</span></li>
+        {% endfor %}
     </ul>
     {% endif %}
 
