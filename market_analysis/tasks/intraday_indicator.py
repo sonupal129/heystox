@@ -81,7 +81,7 @@ def backtest_indicator_strategy(stock_id:int, to_days:int, end_date, strategy, c
     
     for candle in candles:
         candles_backtest_df = candles_backtest_df.append(candle, ignore_index=True)
-        output.append(strategy.s(stock_id, backtest=True, backtesting_json_data_frame=candles_backtest_df.to_json()))
+        output.append(strategy.s(stock_id, entry_type, backtest=True, backtesting_json_data_frame=candles_backtest_df.to_json()))
     
     run_tasks = group(output)
     results = run_tasks.apply_async()
@@ -92,52 +92,55 @@ def backtest_indicator_strategy(stock_id:int, to_days:int, end_date, strategy, c
     
     success_tasks = [task.result for task in results if isinstance(task.result, dict)]
     strategy_output_df = pd.DataFrame(success_tasks)
-    strategy_output_df = strategy_output_df.drop_duplicates(subset="entry_time")
-    strategy_output_df["stoploss"] = [get_stock_stoploss_price(price, entry_type) for price in strategy_output_df.entry_price]
-    strategy_output_df["target"] = [get_stock_target_price(price, entry_type) for price in strategy_output_df.entry_price]
-    
-    default_exit_time = kwargs.get("default_exit_time", "14:30")
-    exit_time = datetime.strptime(default_exit_time, "%H:%M")
-    candles_dataframe = pd.DataFrame(list(candles))
-    strategy_status = []
-    exit_price = []
-    
-    for d in strategy_output_df.itertuples():
-        df = candles_dataframe
-        entry_time = datetime.strptime(d.entry_time, "%Y-%m-%dT%H:%M:%S")
-        df = df.loc[df["date"] >= d.entry_time]
-        df = df.loc[df["date"].dt.date.astype(str) == str(entry_time.date())]
-        exit_date_time = entry_time.replace(hour=exit_time.hour, minute=exit_time.minute)
+    if not strategy_output_df.empty:
+        strategy_output_df = strategy_output_df.drop_duplicates(subset="entry_time")
+        strategy_output_df["stoploss"] = [get_stock_stoploss_price(price, entry_type) for price in strategy_output_df.entry_price]
+        strategy_output_df["target"] = [get_stock_target_price(price, entry_type) for price in strategy_output_df.entry_price]
+        
+        default_exit_time = kwargs.get("default_exit_time", "14:30")
+        exit_time = datetime.strptime(default_exit_time, "%H:%M")
+        candles_dataframe = pd.DataFrame(list(candles))
+        strategy_status = []
+        exit_price = []
+        
+        for d in strategy_output_df.itertuples():
+            df = candles_dataframe
+            entry_time = datetime.strptime(d.entry_time, "%Y-%m-%dT%H:%M:%S")
+            df = df.loc[df["date"] >= d.entry_time]
+            df = df.loc[df["date"].dt.date.astype(str) == str(entry_time.date())]
+            exit_date_time = entry_time.replace(hour=exit_time.hour, minute=exit_time.minute)
 
-        if entry_type == "BUY":
-            stoploss_row = df.loc[df["low_price"] <= d.stoploss].head(1)
-            target_row = df.loc[df["high_price"] >= d.target].head(1)
-        elif entry_type == "SELL":
-            stoploss_row = df.loc[df["high_price"] >= d.stoploss].head(1)
-            target_row = df.loc[df["low_price"] <= d.target].head(1)
-        exit_row = compare_target_stoploss_diffrent(target_row, stoploss_row)
+            if entry_type == "BUY":
+                stoploss_row = df.loc[df["low_price"] <= d.stoploss].head(1)
+                target_row = df.loc[df["high_price"] >= d.target].head(1)
+            elif entry_type == "SELL":
+                stoploss_row = df.loc[df["high_price"] >= d.stoploss].head(1)
+                target_row = df.loc[df["low_price"] <= d.target].head(1)
+            exit_row = compare_target_stoploss_diffrent(target_row, stoploss_row)
 
-        if exit_row:
-            if exit_row.get("hit") == "TARGET":
-                exit_price.append(d.target)
-            elif exit_row.get("hit") == "STOPLOSS":
-                exit_price.append(d.stoploss)
-            strategy_status.append(exit_row.get("hit"))
+            if exit_row:
+                if exit_row.get("hit") == "TARGET":
+                    exit_price.append(d.target)
+                elif exit_row.get("hit") == "STOPLOSS":
+                    exit_price.append(d.stoploss)
+                strategy_status.append(exit_row.get("hit"))
 
-        else:
-            strategy_status.append("SIDEWAYS")
-            last_trading_row = df.loc[df["date"] >= str(exit_date_time)].iloc[0]
-            exit_price.append(last_trading_row.close_price)
-    
-    strategy_output_df["strategy_status"] = strategy_status
-    strategy_output_df["exit_price"] = exit_price
-    if entry_type == "SELL":
-        strategy_output_df["p/l"] = strategy_output_df["entry_price"] - strategy_output_df["exit_price"]
-    elif entry_type == "BUY":
-        strategy_output_df["p/l"] = strategy_output_df["exit_price"] - strategy_output_df["entry_price"]          
-    
-    strategy_output_df["entry_time"] = pd.to_datetime(strategy_output_df.entry_time, format="%Y-%m-%dT%H:%M:%S")
-    strategy_output_df = strategy_output_df.loc[(strategy_output_df.entry_time - strategy_output_df.entry_time.shift()) >= pd.Timedelta(minutes=20)]
+            else:
+                strategy_status.append("SIDEWAYS")
+                last_trading_row = df.loc[df["date"] >= str(exit_date_time)].iloc[0]
+                exit_price.append(last_trading_row.close_price)
+        
+        
+        
+        strategy_output_df["strategy_status"] = strategy_status
+        strategy_output_df["exit_price"] = exit_price
+        if entry_type == "SELL":
+            strategy_output_df["p/l"] = strategy_output_df["entry_price"] - strategy_output_df["exit_price"]
+        elif entry_type == "BUY":
+            strategy_output_df["p/l"] = strategy_output_df["exit_price"] - strategy_output_df["entry_price"]          
+        
+        strategy_output_df["entry_time"] = pd.to_datetime(strategy_output_df.entry_time, format="%Y-%m-%dT%H:%M:%S")
+        strategy_output_df = strategy_output_df.loc[(strategy_output_df.entry_time - strategy_output_df.entry_time.shift()) >= pd.Timedelta(minutes=20)]
     redis_cache.set(cache_key, strategy_output_df, 80*30)
     return strategy_output_df
 
@@ -261,7 +264,7 @@ def has_entry_for_long_short(obj_id):
 
 @celery_app.task(queue="high_priority")
 @register_strategy
-def find_stochastic_bollingerband_crossover(stock_id, entry_type="BUY", backtest=False, backtesting_json_data_frame=None):
+def find_stochastic_bollingerband_crossover(stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
     """Find Bollinger crossover with adx and stochastic crossover, Supporting Strategy"""
     stock = Symbol.objects.get(id=stock_id)
     today_date = get_local_time().date()
@@ -462,7 +465,7 @@ def find_adx_bollinger_crossover(stock_id, entry_type, backtest=False, backtesti
 
         if not bollinger_crossover.empty:
             if bollinger_crossover.adx <= 23:
-                response = create_indicator_timestamp(sorted_stock, entry_type, "ADX_BOLLINGER", bollinger_crossover.close_price, bollinger_crossover.date, backtest, 15)
+                response = create_indicator_timestamp(stock, entry_type, "ADX_BOLLINGER", bollinger_crossover.close_price, bollinger_crossover.date, backtest, 15)
                 return response
         return "Crossover Not Found"
     return "Dataframe not created"

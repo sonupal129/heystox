@@ -43,14 +43,14 @@
         <button name="backtest_form" type="submit" class="button">Submit</button>
     </form>
 
-
+    {% if strategy_deploy_form %}
     <p style="font-weight: 300;">Deploy or Remove Strategy</p>
-
     <form action="" method="POST">
         {% csrf_token %}
         {{ strategy_deploy_form.as_table }}
         <button name="strategy_deploy_form" type="submit" class="button">Deploy</button>
     </form>
+    {% endif %}
 
     {% if vars%}
     <ul>

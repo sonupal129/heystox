@@ -193,11 +193,14 @@ class BacktestSortedStocksView(View):
                     redis_cache.set(backtest_form.create_form_cache_key(), True, 60*3)
                     context["response"] = "Backtesting request sent, Please try after 5 minute to check backtest result"
                     return render(request, self.template_name, self.get_context_data(request, **context))
-                strt, strt_count = np.unique(cached_value.strategy_status, return_counts=True)
-                df_extrct = dict(zip(strt, strt_count))
-                df_extrct["Profit or Loss"] = round(cached_value["p/l"].sum(), 2)
-                context["vars"] = df_extrct
-                context["df"] = cached_value.to_html()
+                
+                if not cached_value.empty:
+                    strt, strt_count = np.unique(cached_value.strategy_status, return_counts=True)
+                    df_extrct = dict(zip(strt, strt_count))
+                    df_extrct["Profit or Loss"] = round(cached_value["p/l"].sum(), 2)
+                    df_extrct["Entry Type"] = entry_type
+                    context["vars"] = df_extrct
+                context["df"] = cached_value.to_html() if not cached_value.empty else "No Entry Point Found for Strategy"
                 return render(request, self.template_name, self.get_context_data(request, **context))
             else:
                 context["backtest_form"] = backtest_form
