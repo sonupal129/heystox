@@ -1,6 +1,7 @@
 from django import forms
 from market_analysis.models import Symbol, User, SortedStocksList, Strategy
 from market_analysis.imports import *
+from market_analysis.tasks.trading import get_liquid_stocks
 # Code Starts
 
 class UserLoginRegisterForm(forms.Form):
@@ -24,13 +25,14 @@ class BacktestForm(forms.Form):
         ("SELL", "SELL")
     }
 
-    def get_sorted_stocks():
-        sorted_stocks = SortedStocksList.objects.all().distinct("symbol", "entry_type").values_list("symbol_id")
-        return Symbol.objects.filter(id__in=sorted_stocks)
+    candle_choices = {
+        ("M5", "5 Minute")
+    }
 
-    symbol = forms.ModelChoiceField(queryset=get_sorted_stocks(), to_field_name="id")
-    strategy = forms.ModelChoiceField(queryset=Strategy.objects.all(), to_field_name="id")
+    symbol = forms.ModelChoiceField(queryset=get_liquid_stocks(max_price=300), to_field_name="id", label="Select Stock")
+    strategy = forms.ModelChoiceField(queryset=Strategy.objects.all(), to_field_name="id", label="Strategy")
     entry_type = forms.ChoiceField(choices=entry_choices)
+    candle_type = forms.ChoiceField(choices=candle_choices)
     from_date = forms.DateField(required=True, widget=forms.DateInput(attrs={'type': 'date'}))
     
 
@@ -38,7 +40,9 @@ class BacktestForm(forms.Form):
         today_date = get_local_time().date()
         from_date = self.cleaned_data["from_date"]
         if from_date < today_date - timedelta(90):
-            raise forms.ValidationError("Maximum Testing is allowed for 10 days only, Please select a lower date")
+            raise forms.ValidationError("Maximum Testing is allowed for 90 days only, Please select a lower date")
+        elif from_date > today_date:
+            raise forms.ValidationError(f"From date should be lower than {today_date}, Please select a lower date")
         return from_date
 
     def create_form_cache_key(self):
@@ -50,4 +54,8 @@ class BacktestForm(forms.Form):
         return cache_key
     
 
-
+class StrategyDeployForm(forms.Form):
+    symbol = forms.ModelChoiceField(queryset=get_liquid_stocks(max_price=300), to_field_name="id", label="Select Stock", required=False)
+    strategy = forms.ModelMultipleChoiceField(queryset=Strategy.objects.all())
+    remove_all = forms.BooleanField(required=False, label="Remove Strategy from All Stocks")
+    add_all = forms.BooleanField(required=False, label="Add Strategy to All Stocks")

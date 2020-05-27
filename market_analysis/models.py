@@ -20,6 +20,7 @@ class Symbol(BaseModel):
     exchange = models.ForeignKey(MasterContract, related_name="symbols", on_delete=models.DO_NOTHING)
     token = models.IntegerField(blank=True, null=True)
     symbol = models.CharField(max_length=100)
+    strategy = models.ManyToManyField("Strategy", related_name="symbols")
     name = models.CharField(max_length=100)
     last_day_closing_price = models.FloatField(blank=True, null=True)
     last_day_opening_price = models.FloatField(blank=True, null=True)
@@ -252,6 +253,15 @@ class Symbol(BaseModel):
                 < self.get_days_high_low_price(date_obj=date_obj, price_type="LOW", candle_type=candle_type):
                 return "SELL"
 
+    def get_sorted_stock(self, entry_type:str, date_obj=None):
+        if date_obj == None:
+            date_obj = get_local_time().date()
+        try:
+            sorted_stock = self.sorted_stocks.get(created_at__date=date_obj, entry_type=entry_type)
+            return sorted_stock
+        except:
+            return None
+        
 
 class CandleQuerySet(models.QuerySet):
     def get_by_candle_type(self, type_of_candle):

@@ -67,28 +67,30 @@ def backtest_indicator_strategy(stock_id:int, to_days:int, end_date, strategy, c
     if not callable(strategy):
         raise TypeError("Argument strategy is not callable")
         
-    symbol = Symbol.objects.get(id=sorted_stock_id)
+    symbol = Symbol.objects.get(id=stock_id)
     candles = symbol.get_stock_data(days=to_days, end_date=end_date, candle_type=candle_type).values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
     candles_backtest_df = pd.DataFrame()
     output = []
     
     print("Please wait while strategy getting backtested...")
     
-    cache_key = "_".join([symbol.symbol, str(to_days), str(end_date), str(strategy.__name__), str(candle_type), "backtest_strategy"])
+    cache_key = "_".join([symbol.symbol, str(to_days), str(end_date), str(strategy.__name__), str(candle_type), entry_type, "backtest_strategy"])
     cached_value = redis_cache.get(cache_key)
     if cached_value is not None and cached:
         return cached_value
     
     for candle in candles:
         candles_backtest_df = candles_backtest_df.append(candle, ignore_index=True)
-        output.append(strategy.delay(sorted_stock_id, backtest=True, backtesting_json_data_frame=candles_backtest_df.to_json()))
+        output.append(strategy.s(stock_id, backtest=True, backtesting_json_data_frame=candles_backtest_df.to_json()))
     
-    sleep(10)
+    run_tasks = group(output)
+    results = run_tasks.apply_async()
+    sleep(20)
+
+    while not results.ready():
+        sleep(2)
     
-    while not output[-1].ready():
-        sleep(1)
-    
-    success_tasks = [task.get() for task in output if task.state == "SUCCESS" and isinstance(task.get(), dict)]
+    success_tasks = [task.result for task in results if isinstance(task.result, dict)]
     strategy_output_df = pd.DataFrame(success_tasks)
     strategy_output_df = strategy_output_df.drop_duplicates(subset="entry_time")
     strategy_output_df["stoploss"] = [get_stock_stoploss_price(price, entry_type) for price in strategy_output_df.entry_price]
@@ -130,7 +132,7 @@ def backtest_indicator_strategy(stock_id:int, to_days:int, end_date, strategy, c
     strategy_output_df["strategy_status"] = strategy_status
     strategy_output_df["exit_price"] = exit_price
     if entry_type == "SELL":
-        strategy_output_df["p/l"] = strategy_output_df["entry_price"] - data["exit_price"]
+        strategy_output_df["p/l"] = strategy_output_df["entry_price"] - strategy_output_df["exit_price"]
     elif entry_type == "BUY":
         strategy_output_df["p/l"] = strategy_output_df["exit_price"] - strategy_output_df["entry_price"]          
     
@@ -142,17 +144,20 @@ def backtest_indicator_strategy(stock_id:int, to_days:int, end_date, strategy, c
 
 @celery_app.task(queue="medium_priority")
 def prepare_n_call_backtesting_strategy(*args, **kwargs):
-    entry_type = kwargs.get("entry_type")
-    stock_id = kwargs.get("stock_id")
-    end_date = datetime.strptime(kwargs.get("end_date"), "%Y-%m-%d").date()
-    to_days = kwargs.get("to_days")
+    data = {
+        "entry_type" : kwargs.get("entry_type"),
+        "stock_id" : kwargs.get("stock_id"),
+        "end_date" : datetime.strptime(kwargs.get("end_date"), "%Y-%m-%d").date(),
+        "to_days" : kwargs.get("to_days"),
+        "candle_type" : kwargs.get("candle_type")
+    }
     strategy_id = kwargs.get("strategy_id")
-    candle_type = kwargs.get("candle_type", "M5")
     strategy = Strategy.objects.get(id=strategy_id)
     func_module = importlib.import_module(strategy.strategy_location)
     st_func = getattr(func_module, strategy.strategy_name)
-    st_func(stock_id, to_days, current_date, st_func, entry_type)
-    redis_cache.set(kwargs.get("form_cache_key"))
+    data["strategy"] = st_func
+    backtest_indicator_strategy(**data)
+    redis_cache.set(kwargs.get("form_cache_key"), True, 60*3)
     return "Backtesting Completed!, Run function again to get output"
     
 
@@ -166,12 +171,12 @@ def prepare_n_call_backtesting_strategy(*args, **kwargs):
 # 5. There is a way to right strategy, So please understand previouse strategy function parameter then implement new strategy
 
 # Timestamp Creater
-def create_indicator_timestamp(sorted_stock:object, indicator_name:str, entry_price:float, entry_time:object, backtest=False, time_range:int=20):
+def create_indicator_timestamp(stock, entry_type, indicator_name:str, entry_price:float, entry_time:object, backtest=False, time_range:int=20):
     """This function create timestamp object if signal found using strategy, or if it's backtest parameter is true
     it return only object data do not create any timestamp"""
     if backtest:
         context = {
-            "symbol_name" : sorted_stock.symbol.symbol,
+            "symbol_name" : stock.symbol,
             "indicator_name" : indicator_name,
             "entry_price" : entry_price,
             "entry_time" : entry_time
@@ -179,7 +184,7 @@ def create_indicator_timestamp(sorted_stock:object, indicator_name:str, entry_pr
         return context
     
     indicator = Indicator.objects.get(name=indicator_name)
-
+    sorted_stock = stock.get_sorted_stock(entry_type)
     stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=indicator, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
     if not stamp.exists():
         stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=indicator, timestamp=entry_time)
@@ -257,15 +262,15 @@ def has_entry_for_long_short(obj_id):
 
 @celery_app.task(queue="high_priority")
 @register_strategy
-def find_stochastic_bollingerband_crossover(sorted_stock_id, backtest=False, backtesting_json_data_frame=None):
+def find_stochastic_bollingerband_crossover(stock_id, entry_type="BUY", backtest=False, backtesting_json_data_frame=None):
     """Find Bollinger crossover with adx and stochastic crossover, Supporting Strategy"""
-    sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
+    stock = Symbol.objects.get(id=stock_id)
     today_date = get_local_time().date()
     
     if backtest:
         df = create_backtesting_dataframe(backtesting_json_data_frame)
     else:
-        df = sorted_stock.symbol.get_stock_live_data(with_live_candle=False)
+        df = stock.get_stock_live_data(with_live_candle=False)
     
     df["medium_band"] = bollinger_mavg(df.close_price)
     df["adx"] = adx(df.high_price, df.low_price, df.close_price)
@@ -279,9 +284,9 @@ def find_stochastic_bollingerband_crossover(sorted_stock_id, backtest=False, bac
     bollinger_df = df.copy(deep=True).drop(df.head(1).index)
         
     try:
-        if sorted_stock.entry_type == "SELL":
+        if entry_type == "SELL":
             bollinger_crossover = bollinger_df[bollinger_df.bollinger_signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
-        elif sorted_stock.entry_type == "BUY":
+        elif entry_type == "BUY":
             bollinger_crossover = bollinger_df[bollinger_df.bollinger_signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         bollinger_crossover = pd.Series()
@@ -295,12 +300,12 @@ def find_stochastic_bollingerband_crossover(sorted_stock_id, backtest=False, bac
 
         bollinger_signal = pd.Series()
         
-        if sorted_stock.entry_type == "BUY":
+        if entry_type == "BUY":
             if (candle_before_crossover.open_price <= bollinger_crossover.medium_band and candle_before_crossover.close_price <= bollinger_crossover.medium_band) and \
                 (candle_after_crossover.open_price > bollinger_crossover.medium_band or candle_after_crossover.close_price > bollinger_crossover.medium_band):
                 bollinger_signal = candle_after_crossover
 
-        elif sorted_stock.entry_type == "SELL":
+        elif entry_type == "SELL":
             if (candle_before_crossover.open_price >= bollinger_crossover.medium_band and candle_before_crossover.close_price >= bollinger_crossover.medium_band) and \
                 (candle_after_crossover.open_price < bollinger_crossover.medium_band or candle_after_crossover.close_price < bollinger_crossover.medium_band):
                 bollinger_signal = candle_after_crossover
@@ -317,9 +322,9 @@ def find_stochastic_bollingerband_crossover(sorted_stock_id, backtest=False, bac
             stoch_df = df.loc[df["date"]  <= bollinger_crossover.date]
 
             try:
-                if sorted_stock.entry_type == "SELL":
+                if entry_type == "SELL":
                     stochastic_crossover = stoch_df[stoch_df.stochastic_signal.str.endswith("SELL_CROSSOVER")].iloc[-1]
-                elif sorted_stock.entry_type == "BUY":
+                elif entry_type == "BUY":
                     stochastic_crossover = stoch_df[stoch_df.stochastic_signal.str.endswith("BUY_CROSSOVER")].iloc[-1]
             except:
                 stochastic_crossover = pd.Series()
@@ -327,7 +332,7 @@ def find_stochastic_bollingerband_crossover(sorted_stock_id, backtest=False, bac
             if not stochastic_crossover.empty:
                 time_diff = bollinger_signal.date - stochastic_crossover.date
                 if time_diff <= timedelta(minutes=25) and bollinger_signal.adx <= 23:
-                    response = create_indicator_timestamp(sorted_stock, "STOCHASTIC_BOLLINGER", float(bollinger_signal.close_price), bollinger_signal.date, backtest, 20)  
+                    response = create_indicator_timestamp(stock, entry_type, "STOCHASTIC_BOLLINGER", float(bollinger_signal.close_price), bollinger_signal.date, backtest, 20)  
                     return response
             return "Stochastic Crossover Not Found"
         return "Bollinger Signal Not Found"
@@ -336,11 +341,11 @@ def find_stochastic_bollingerband_crossover(sorted_stock_id, backtest=False, bac
 
 @celery_app.task(queue="medium_priority")
 @register_strategy
-def find_stochastic_macd_crossover(sorted_stock_id, backtest=False, backtesting_json_data_frame=None):
+def find_stochastic_macd_crossover(stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
     """(Custom Macd Crossover) This function find crossover between macd and macd signal and return signal as buy or sell"""
-    sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
+    stock = Symbol.objects.get(id=stock_id)
     today_date = get_local_time().date()
-    df = sorted_stock.symbol.get_stock_live_data()
+    df = stock.get_stock_live_data()
     if backtest:
         df = create_backtesting_dataframe(backtesting_json_data_frame)
     
@@ -367,9 +372,9 @@ def find_stochastic_macd_crossover(sorted_stock_id, backtest=False, backtesting_
     new_df = df.copy(deep=True).drop(df.tail(1).index)
     
     try:
-        if sorted_stock.entry_type == "SELL":
+        if entry_type == "SELL":
             macd_crossover = new_df[new_df.macd_crossover.str.endswith("SELL_CROSSOVER")].iloc[-1]
-        elif sorted_stock.entry_type == "BUY":
+        elif entry_type == "BUY":
             macd_crossover = new_df[new_df.macd_crossover.str.endswith("BUY_CROSSOVER")].iloc[-1]
     except:
         macd_crossover = pd.Series()
@@ -389,9 +394,9 @@ def find_stochastic_macd_crossover(sorted_stock_id, backtest=False, backtesting_
         if not macd_crossover_signal.empty:
             df = df.loc[df["date"] < macd_crossover.date]
             try:
-                if sorted_stock.entry_type == "SELL":
+                if entry_type == "SELL":
                     stochastic_crossover = df[df.stochastic_crossover.str.endswith("SELL_CROSSOVER")].iloc[-1]
-                elif sorted_stock.entry_type == "BUY":
+                elif entry_type == "BUY":
                     stochastic_crossover = df[df.stochastic_crossover.str.endswith("BUY_CROSSOVER")].iloc[-1]
             except:
                 stochastic_crossover = pd.Series()
@@ -409,7 +414,7 @@ def find_stochastic_macd_crossover(sorted_stock_id, backtest=False, backtesting_
                 if not stochastic_crossover_signal.empty:
                     time_diff = (macd_crossover_signal.date - stochastic_crossover_signal.date)
                     if time_diff < timedelta(minutes=30):
-                        response = create_indicator_timestamp(sorted_stock, "STOCHASTIC_MACD", macd_crossover_signal.close_price, macd_crossover_signal.date, backtest, 10)
+                        response = create_indicator_timestamp(stock, entry_type, "STOCHASTIC_MACD", macd_crossover_signal.close_price, macd_crossover_signal.date, backtest, 10)
                         return response
                 return "Stochastic Signal not Found"
             return "Stochastic Crossover not Found"
@@ -419,11 +424,11 @@ def find_stochastic_macd_crossover(sorted_stock_id, backtest=False, backtesting_
 
 @celery_app.task(queue="medium_priority")
 @register_strategy
-def find_adx_bollinger_crossover(sorted_stock_id, backtest=False, backtesting_json_data_frame=None):
+def find_adx_bollinger_crossover(stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
     """Find bolling corssover with help of adx"""
-    sorted_stock = SortedStocksList.objects.get(id=sorted_stock_id)
+    stock = Symbol.objects.get(id=stock_id)
     today_date = get_local_time().date()
-    df = sorted_stock.symbol.get_stock_live_data(with_live_candle=False)
+    df = stock.get_stock_live_data(with_live_candle=False)
     
     if backtest:
         df = create_backtesting_dataframe(backtesting_json_data_frame)
@@ -449,16 +454,16 @@ def find_adx_bollinger_crossover(sorted_stock_id, backtest=False, backtesting_js
 
     if not df.empty:
         try:
-            if sorted_stock.entry_type == "SELL":
+            if entry_type == "SELL":
                 bollinger_crossover = df[df.bollinger_signal.str.endswith("SELL")].iloc[-1]
-            elif sorted_stock.entry_type == "BUY":
+            elif entry_type == "BUY":
                 bollinger_crossover = df[df.bollinger_signal.str.endswith("BUY")].iloc[-1]
         except:
             bollinger_crossover = pd.Series()
 
         if not bollinger_crossover.empty:
             if bollinger_crossover.adx <= 23:
-                response = create_indicator_timestamp(sorted_stock, "ADX_BOLLINGER", bollinger_crossover.close_price, bollinger_crossover.date, backtest, 15)
+                response = create_indicator_timestamp(sorted_stock, entry_type, "ADX_BOLLINGER", bollinger_crossover.close_price, bollinger_crossover.date, backtest, 15)
                 return response
         return "Crossover Not Found"
     return "Dataframe not created"
@@ -467,4 +472,4 @@ def find_adx_bollinger_crossover(sorted_stock_id, backtest=False, backtesting_js
 @celery_app.task(queue="medium_priority")
 @register_strategy
 def rampat_harami(a,b):
-    return a + b
+    return a * b

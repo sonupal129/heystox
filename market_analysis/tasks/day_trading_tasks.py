@@ -126,15 +126,15 @@ def apply_intraday_indicator_on_sorted_stocks():
             add_today_movement_stocks.apply_async()
             sleep(3)
             cached_value = redis_cache.get(cache_key)
-        for stock in cached_value:
+        for sorted_stock in cached_value:
             try:
-                movement = stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type))
+                movement = sorted_stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(sorted_stock.entry_type))
             except:
                 continue
             if movement:
-                find_stochastic_bollingerband_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-                find_stochastic_macd_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
-            find_adx_bollinger_crossover.apply_async(kwargs={"sorted_stock_id": stock.id})
+                find_stochastic_bollingerband_crossover.apply_async(kwargs={"stock_id": sorted_stock.symbol.id, "entry_type": sorted_stock.entry_type})
+                find_stochastic_macd_crossover.apply_async(kwargs={"stock_id": sorted_stock.symbol.id, "entry_type": sorted_stock.entry_type})
+            find_adx_bollinger_crossover.apply_async(kwargs={"stock_id": sorted_stock.symbol.id, "entry_type": sorted_stock.entry_type})
         return "Indicator Called"
     return f"Current time {current_time} not > 9:25"
 

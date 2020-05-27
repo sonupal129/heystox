@@ -39,19 +39,37 @@
 <body>
     <form action="" method="POST">
         {% csrf_token %}
-        {{ form.as_table }}
-        <button type="submit" class="button">Submit</button>
+        {{ backtest_form.as_table }}
+        <button name="backtest_form" type="submit" class="button">Submit</button>
     </form>
-    <a href="{% url 'market_analysis_urls:backtest-sorted-stocks' %}" class="button">Refresh Page</a>
+
+
+    <p style="font-weight: 300;">Deploy or Remove Strategy</p>
+
+    <form action="" method="POST">
+        {% csrf_token %}
+        {{ strategy_deploy_form.as_table }}
+        <button name="strategy_deploy_form" type="submit" class="button">Deploy</button>
+    </form>
+
+    {% if pl%}
     <ul>
-        <li>Profit: <span>RAJU</span></li>
-        <li>Loss: <span>CHACHA</span></li>
+        <li>Profit or Loss: <span>{{ pl }}</span></li>
     </ul>
+    {% endif %}
+
+    {% if deploy_status %}
+    <ul>
+        {% for status in deploy_status %}
+        <li>{{ status }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
     <!-- <h2>Total Sorted Stocks Count: <span>{% if symbols %}{{ symbols.count }}{% else %} 0 {% endif %}</span></h2> -->
     {% if response %}
     <p>{{response}}</p>
     {% endif %}
-
     {% if df %}
     <p style="margin: 10px; font-size: large; border: 0cm; font-style: oblique;">Backtested Data</p>
     {{df|safe}}
