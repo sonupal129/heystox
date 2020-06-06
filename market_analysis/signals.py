@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Indicator, Strategy)
+from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Indicator, Strategy, Symbol)
 
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.indicator_signals import prepare_orderdata_from_signal
@@ -20,7 +20,7 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 @receiver(post_save, sender=StrategyTimestamp)
 def send_signal_on_indicator_object_creation(sender, instance, created, **kwargs):
     if created:
-        if instance.indicator.name in Indicator.objects.filter(indicator_type__in=["PR", "SC"]).values_list("name", flat=True):
+        if instance.indicator.name in Indicator.objects.filter(indicator_type="PR").values_list("name", flat=True):
             prepare_orderdata_from_signal.delay(instance.id)
 
 
@@ -38,8 +38,14 @@ def send_slack_on_order_rejection(sender, instance, **kwargs):
         slack_message_sender.delay(f"Order {instance.order_id}, {instance.get_status_display()}, Please Check!")
 
     
-@receiver(post_delete, sender=Strategy)
-def invalidate_strategy_cache(sender, instance, **kwargs):
-    function_cache_key = ".".join([instance.strategy_location, instance.strategy_name])
-    redis_cache.delete(function_cache_key)
-    return f"Cache Invalidated for {instance}"
+@receiver(m2m_changed, sender=Symbol.entry_strategy.through)
+@receiver(m2m_changed, sender=Symbol.exit_strategy.through)
+def invalidate_strategies_cache(sender, instance, action, **kwargs):
+    entry_cache_key = "_".join([instance.symbol, "Entry", "strategies"])
+    exit_cache_key = "_".join([instance.symbol, "Exit", "strategies"])
+    print("Signal Called")
+    redis_cache.delete(entry_cache_key)
+    redis_cache.delete(exit_cache_key)
+
+
+

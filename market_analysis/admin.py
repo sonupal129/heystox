@@ -7,6 +7,7 @@ class SymbolAdmin(admin.ModelAdmin):
     list_filter = ["exchange"]
     search_fields = ["symbol", "name"]
     date_hierarchy = 'created_at'
+    filter_horizontal = ["entry_strategy", "exit_strategy"]
 
 
 class CandleAdmin(admin.ModelAdmin):
@@ -75,9 +76,18 @@ class IndicatorAdmin(admin.ModelAdmin):
 class StrategyAdmin(admin.ModelAdmin):
     list_display = ["view_strategy_name", "strategy_location"]
     readonly_fields = ["strategy_name", "strategy_location"]
+    actions = ["discover_new_strategies"]
 
     def view_strategy_name(self, obj):
         return obj.get_strategy_name()
+
+    
+    def discover_new_strategies(self, request, queryset):
+        from market_analysis.tasks.strategy_register import strategy_list
+        registered_strategy = []
+        for strategy in strategy_list:
+            registered_strategy.append(strategy.id)
+        Strategy.objects.exclude(id__in=registered_strategy).delete()
 
 
 

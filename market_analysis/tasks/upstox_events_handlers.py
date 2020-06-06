@@ -31,13 +31,24 @@ def event_handler_on_disconnection(message):
     return "Start Websocket Again" 
 
 
+restart_counter = 0
+
 def start_upstox_websocket(run_in_background=True):
-    user = get_upstox_user()
-    user.set_on_quote_update(event_handler_on_quote_update)
-    user.set_on_trade_update(event_handler_on_trade_update)
-    user.set_on_order_update(event_handler_on_order_update)
-    user.set_on_disconnect(event_handler_on_disconnection)
-    user.set_on_error(event_handler_on_error)
-    user.start_websocket(run_in_background)
-    slack_message_sender.delay(text="Websocket for Live Data Feed Started")
+    global restart_counter
+    if restart_counter < 5 or restart_counter > 30:
+        sleep(5)
+        user = get_upstox_user()
+        user.set_on_quote_update(event_handler_on_quote_update)
+        user.set_on_trade_update(event_handler_on_trade_update)
+        user.set_on_order_update(event_handler_on_order_update)
+        user.set_on_disconnect(event_handler_on_disconnection)
+        user.set_on_error(event_handler_on_error)
+        user.start_websocket(run_in_background)
+        slack_message_sender.delay(text="Websocket for Live Data Feed Started")
+    
+    if restart_counter > 32:
+        restart_counter = 0
+    
+    restart_counter += 1
+    
     return "Websocket Started"

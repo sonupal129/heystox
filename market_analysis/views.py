@@ -10,6 +10,11 @@ from market_analysis.tasks.users_tasks import login_upstox_user
 from market_analysis.tasks.intraday_indicator import prepare_n_call_backtesting_strategy
 # Create your views here.
 
+class HomeView(BasePermissionMixin, TemplateView):
+
+    def get(self, request, **kwargs):
+        return HttpResponse("Welcome to Heystox")
+        
 
 class UpstoxLogin(BasePermissionMixin, View):
     http_method_names = ["get"]
@@ -190,7 +195,7 @@ class BacktestSortedStocksView(View):
                         context["response"] = "Backtesting request for strategy already sent before, please try after 5 minute to check status"
                         return render(request, self.template_name, self.get_context_data(request, **context))
                     prepare_n_call_backtesting_strategy.delay(**data)
-                    redis_cache.set(backtest_form.create_form_cache_key(), True, 60*3)
+                    redis_cache.set(backtest_form.create_form_cache_key(), True, 60*5)
                     context["response"] = "Backtesting request sent, Please try after 5 minute to check backtest result"
                     return render(request, self.template_name, self.get_context_data(request, **context))
                 

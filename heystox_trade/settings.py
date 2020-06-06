@@ -104,10 +104,11 @@ DATABASES = {
         'PASSWORD': '123456',
         'HOST': 'localhost',
         'PORT': '5432',
+        'CONN_MAX_AGE': 600,
     }
 }
 
-
+SESSION_ENGINE = "django.contrib.sessions.backends.file"
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -182,10 +183,6 @@ NSE_HEADERS = {'Accept': '*/*',
            'X-Requested-With': 'XMLHttpRequest'}
 
 
-
-# UPSTOX API
-UPSTOX_REDIRECT_URL = "http://127.0.0.1:8000/"
-
 # CELERY STUFF
 CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
@@ -249,6 +246,9 @@ MAX_DAILY_TRADE = 7
 # SITE URL
 SITE_URL = "http://127.0.0.1:8000/"
 
+
+# UPSTOX API
+UPSTOX_REDIRECT_URL = SITE_URL + "heystox/login/complete/"
 
 
 # Imports Additional Settings File

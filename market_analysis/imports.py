@@ -38,7 +38,7 @@ from requests.exceptions import HTTPError
 from json.decoder import JSONDecodeError
 
 # Django Signals
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.dispatch import receiver, Signal
 
 # Rest Frame Work

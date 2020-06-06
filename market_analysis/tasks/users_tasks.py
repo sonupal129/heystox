@@ -37,7 +37,7 @@ def authenticate_users_in_morning():
         message = "Login URL for " + user_profile.user.get_full_name() + ": " + user_profile.get_authentication_url()
         slack_message_sender.delay(text=message)
 
-@celery_app.task(queue="low_priority", autoretry_for=(HTTPError,), retry_kwargs={'max_retries': 2, 'countdown': 10})
+@celery_app.task(queue="low_priority", autoretry_for=(HTTPError,), retry_kwargs={'max_retries': 2, 'countdown': 10}, max_retries=10)
 def login_upstox_user(email):
     user_profile = UserProfile.objects.get(user__email=email)
     try:

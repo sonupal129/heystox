@@ -20,7 +20,8 @@ class Symbol(BaseModel):
     exchange = models.ForeignKey(MasterContract, related_name="symbols", on_delete=models.DO_NOTHING)
     token = models.IntegerField(blank=True, null=True)
     symbol = models.CharField(max_length=100)
-    strategy = models.ManyToManyField("Strategy", related_name="symbols")
+    entry_strategy = models.ManyToManyField("Strategy", related_name="entry_strategy_symbols", blank=True, limit_choices_to={"strategy_type": "ET"})
+    exit_strategy = models.ManyToManyField("Strategy", related_name="exit_strategy_symbols", blank=True, limit_choices_to={"strategy_type": "EX"})
     name = models.CharField(max_length=100)
     last_day_closing_price = models.FloatField(blank=True, null=True)
     last_day_opening_price = models.FloatField(blank=True, null=True)
@@ -34,6 +35,18 @@ class Symbol(BaseModel):
 
     def __str__(self):
         return self.symbol
+
+    def get_strategies(self, strategy_type="Entry", cached=True):
+        cache_key = "_".join([self.symbol, strategy_type, "strategies"])
+        cached_value = redis_cache.get(cache_key)
+        if cached_value != None and cached:
+            return cached_value
+        if strategy_type == "Entry":
+            strategies = self.entry_strategy.all()
+        elif strategy_type == "Exit":
+            strategies = self.exit_strategy.all()
+        redis_cache.set(cache_key, strategies, 60*60*24)
+        return strategies
 
     def get_last_trading_day_count(self, date_obj=None):
         """date_obj should be date only, return last trading day count from today"""
@@ -599,9 +612,15 @@ class Order(BaseModel):
 
 
 class Strategy(BaseModel):
+    strategy_choices = {
+        ("ET", "Entry"),
+        ("EX", "Exit"),
+    }
+    
     strategy_name = models.CharField(max_length=200, blank=True, null=True)
     strategy_location = models.CharField(max_length=500)
-    # description = models.TextField(max_length=1000, blank=True, null=True)
+    strategy_type = models.CharField(max_length=20, choices=strategy_choices, default="ET")
+    description = models.TextField(max_length=1000, blank=True, null=True)
 
     def __str__(self):
         return self.get_strategy_name()
