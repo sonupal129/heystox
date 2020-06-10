@@ -1,4 +1,4 @@
-from market_analysis.models import SortedStocksList, Indicator, StrategyTimestamp, Symbol, Strategy
+from market_analysis.models import SortedStocksList, StrategyTimestamp, Symbol, Strategy
 from market_analysis.imports import *
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.orders import *
@@ -67,7 +67,9 @@ class BackTestStrategy:
         strategy = Strategy.objects.get(id=self.strategy_id)
         func_module = importlib.import_module(strategy.strategy_location)
         st_func = getattr(func_module, strategy.strategy_name)
-        return st_func()
+        if callable(st_func):
+            return st_func()
+        raise TypeError("Provided strategy is not callable please check strategy location again!")
         
     def get_cache_key(self, symbol, strategy):
         cache_key = "_".join([symbol.symbol, str(self.to_days), str(self.end_date), str(strategy.__name__), str(self.candle_type), self.entry_type, "backtest_strategy"])
@@ -172,67 +174,20 @@ def prepare_n_call_backtesting_strategy(*args, **kwargs):
 
 
 # STRATEGY GUIDELINES
-# 1. Strategy works on three indicator type Primary, Secondary or Support Indicators
-# 2. Primary Indicator mean if supporting indicator and secondary are with primary indicator then well n good else take entry basis or primary indicator only
-# 3. Secondary indicator can only take entry if there is 2 or more supporting indicators available with it
+# 1. Strategy works on three Strategy type Primary, Secondary or Support Strategy
+# 2. Primary Strategy mean if supporting indicator and secondary are with primary indicator then well n good else take entry basis or primary indicator only
+# 3. Secondary Strategy can only take entry if there is 2 or more supporting indicators available with it
 # 4. Please do not make any change backtest function unless it is required
 # 5. There is a way to right strategy, So please understand previouse strategy function parameter then implement new strategy
 
 # Strategies
-@celery_app.task(queue="low_priority")
-def find_ohl_stocks():
-    """Based on Open high low strategy, it is supporting strategy only"""
-    current_time = get_local_time().time()
-    start_time = time(9,25)
-    if current_time > start_time:
-        cache_key = str(get_local_time().date()) + "_todays_sorted_stocks"
-        sorted_stocks = redis_cache.get(cache_key)
-        if sorted_stocks:
-            todays_timestamps = StrategyTimestamp.objects.select_related("stock", "indicator").filter(indicator__name="OHL", timestamp__date=get_local_time().date())
-            for stock in sorted_stocks:
-                timestamps = todays_timestamps.filter(stock=stock)
-                ohl_condition = stock.symbol.is_stock_ohl()
-                if ohl_condition:
-                    if stock.entry_type == ohl_condition and not timestamps.exists():
-                        ohl_indicator = Indicator.objects.get(name="OHL")
-                        StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=get_local_time().now())
-                    elif stock.entry_type != ohl_condition:
-                        timestamps.delete()
-                    elif timestamps.count() > 1:
-                        timestamps.exclude(id=timestamps.first().id).delete()
-            return "OHL Updated"
-        return "No Sorted Stocks Cached"
-    return f"Time {current_time} not > 9:25"
-
-
-@celery_app.task(queue="low_priority") # Will Work on These Functions Later
-def is_stock_pdhl(obj_id): 
-    """Based on previouse day high low strategy, supporting strategy"""
-    stock = SortedStocksList.objects.get(id=obj_id)
-    if stock.symbol.is_stock_pdhl() == stock.entry_type:
-        pdhl_indicator = Indicator.objects.get(name="PDHL")
-        pdhl, is_created = StrategyTimestamp.objects.get_or_create(indicator=pdhl_indicator, stock=stock)
-        pdhl.timestamp = get_local_time().now()
-        pdhl.save()
-        return "Stamp Created"
-
-@celery_app.task(queue="low_priority") # Will Work on These Functions Later
-def has_entry_for_long_short(obj_id):
-    """Entry available of long or short position, Supporting strategy"""
-    stock = SortedStocksList.objects.get(id=obj_id)
-    if stock.symbol.has_entry_for_long_short() == stock.entry_type:
-        long_short_entry = Indicator.objects.get(name="LONGSHORT")
-        long_short, is_created = StrategyTimestamp.objects.get_or_create(indicator=long_short_entry, stock=stock)
-        long_short.timestamp = get_local_time().now()
-        long_short.save()
-
-
 class BaseStrategyTask(celery_app.Task):
     ignore_result = False
     queue = "high_priority"
     name = "base_strategy"
-    strategy_type = "ET"
-    strategy_against = None
+    strategy_type = "Entry"
+    against_strategy = None
+    strategy_priority = "Primary"
 
     
     def create_backtesting_dataframe(self, json_data:str):
@@ -247,36 +202,39 @@ class BaseStrategyTask(celery_app.Task):
             raise JSONDecodeError ("Passed data type is not Json Data")
         return df
 
+    def check_strategy_priority(self):
+        if self.strategy_type == "Entry" and not self.strategy_priority:
+            raise AttributeError("Attribute strategy_priority not Defined")
 
-    def create_indicator_timestamp(self, stock, entry_type, indicator_name:str, entry_price:float, entry_time:object, backtest=False, time_range:int=20):
+    def create_indicator_timestamp(self, stock, entry_type, entry_price:float, entry_time:object, backtest=False, time_range:int=20):
         """This function create timestamp object if signal found using strategy, or if it's backtest parameter is true
         it return only object data do not create any timestamp"""
         if backtest:
             context = {
                 "symbol_name" : stock.symbol,
-                "indicator_name" : indicator_name,
+                "strategy_name" : self.__class__.__name__,
                 "entry_price" : entry_price,
                 "entry_time" : entry_time
             }
             return context
-        
-        indicator = Indicator.objects.get(name=indicator_name)
-        sorted_stock = stock.get_sorted_stock(entry_type)
-        stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, indicator=indicator, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
-        if not stamp.exists():
-            stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, indicator=indicator, timestamp=entry_time)
-            stamp.entry_price = entry_price
-            stamp.save()
-        elif stamp.count() > 1:
-            stamp.exclude(id=stamp.first().id).delete()
-        return "Signal Found"
+        else:
+            strategy = Strategy.objects.get(strategy_name=self.__class__.__name__, strategy_location=self.__class__.__module__, strategy_type="ET" if self.strategy_type == "Entry" else "EX")
+            sorted_stock = stock.get_sorted_stock(entry_type)
+            stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, strategy=strategy, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
+            if not stamp.exists():
+                stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, strategy=strategy, timestamp=entry_time)
+                stamp.entry_price = entry_price
+                stamp.save()
+            elif stamp.count() > 1:
+                stamp.exclude(id=stamp.first().id).delete()
+            return "Signal Found"
 
     def base_strategy(self, stock_id, entry_type, backtest, backtesting_json_data_frame=None):
         pass
 
     def verify_against_strategy(self):
-        if self.strategy_type == "EX" and not self.strategy_against:
-            raise AttributeError("Attribute strategy_against not assigned while strategy is type of EX(exit) strategy")
+        if self.strategy_type == "Exit" and not self.against_strategy:
+            raise AttributeError("Attribute against_strategy not assigned while strategy is type of EX(exit) strategy")
 
     def run(self, stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
         self.verify_against_strategy()
@@ -292,7 +250,7 @@ class BaseStrategyTask(celery_app.Task):
 
 class StochasticBollingerCrossover(BaseStrategyTask):
     name = "find_stochastic_bollingerband_crossover"
-    strategy_type = "ET"
+    strategy_type = "Entry"
 
     def find_stochastic_bollingerband_crossover(self, stock_id, entry_type, backtest, backtesting_json_data_frame):
         """Find Bollinger crossover with adx and stochastic crossover, Supporting Strategy"""
@@ -362,7 +320,7 @@ class StochasticBollingerCrossover(BaseStrategyTask):
                 if not stochastic_crossover.empty:
                     time_diff = bollinger_signal.date - stochastic_crossover.date
                     if time_diff <= timedelta(minutes=25) and bollinger_signal.adx <= 23:
-                        response = (stock, entry_type, "STOCHASTIC_BOLLINGER", float(bollinger_signal.close_price), bollinger_signal.date, backtest, 20)  
+                        response = (stock, entry_type, float(bollinger_signal.close_price), bollinger_signal.date, backtest, 20)
                         return response
                 return "Stochastic Crossover Not Found"
             return "Bollinger Signal Not Found"
@@ -375,7 +333,7 @@ celery_app.tasks.register(StochasticBollingerCrossover)
 class StochasticMacdCrossover(BaseStrategyTask):
     name = "find_stochastic_macd_crossover"
     queue = "medium_priority"
-    strategy_type = "ET"
+    strategy_type = "Entry"
 
     def find_stochastic_macd_crossover(self, stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
         """(Custom Macd Crossover) This function find crossover between macd and macd signal and return signal as buy or sell"""
@@ -450,7 +408,7 @@ class StochasticMacdCrossover(BaseStrategyTask):
                     if not stochastic_crossover_signal.empty:
                         time_diff = (macd_crossover_signal.date - stochastic_crossover_signal.date)
                         if time_diff < timedelta(minutes=30):
-                            response = self.create_indicator_timestamp(stock, entry_type, "STOCHASTIC_MACD", macd_crossover_signal.close_price, macd_crossover_signal.date, backtest, 10)
+                            response = (stock, entry_type, float(macd_crossover_signal.close_price), macd_crossover_signal.date, backtest, 10)
                             return response
                     return "Stochastic Signal not Found"
                 return "Stochastic Crossover not Found"
@@ -463,7 +421,7 @@ celery_app.tasks.register(StochasticMacdCrossover)
 class AdxBollingerCrossover(BaseStrategyTask):
     name = "find_adx_bollinger_crossover"
     queue = "medium_priority"
-    strategy_type = "ET"
+    strategy_type = "Entry"
 
     def find_adx_bollinger_crossover(self, stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
         """Find bolling corssover with help of adx"""
@@ -504,13 +462,78 @@ class AdxBollingerCrossover(BaseStrategyTask):
 
             if not bollinger_crossover.empty:
                 if bollinger_crossover.adx <= 23:
-                    response = self.create_indicator_timestamp(stock, entry_type, "ADX_BOLLINGER", bollinger_crossover.close_price, bollinger_crossover.date, backtest, 15)
+                    response = (stock, entry_type, float(bollinger_crossover.close_price), bollinger_crossover.date, backtest, 15)
                     return response
             return "Crossover Not Found"
         return "Dataframe not created"
 
 celery_app.tasks.register(AdxBollingerCrossover)
 
-@celery_app.task(queue="medium_priority")
-def rampat_harami(a,b):
-    return a * b
+
+# class OHLCrossover(BaseStrategyTask):
+#     queue = "low_priority"
+#     strategy_type = "Entry"
+#     strategy_priority = "Support"
+#     name = "find_ohl_in_stock"
+
+#     def find_ohl_in_stock(self, stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
+#         stock = Symbol.objects.get(id=stock_id)
+#         today_date = get_local_time().date()
+#         df = stock.get_stock_live_data(with_live_candle=False)
+        
+#         if backtest:
+#             df = self.create_backtesting_dataframe(backtesting_json_data_frame)
+        
+#         ohl_condition = stock.is_stock_ohl()
+#         if ohl_condition:
+#             if entry_type == ohl_condition a
+
+
+
+
+# @celery_app.task(queue="low_priority")
+# def find_ohl_stocks():
+#     """Based on Open high low strategy, it is supporting strategy only"""
+#     current_time = get_local_time().time()
+#     start_time = time(9,25)
+#     if current_time > start_time:
+#         cache_key = str(get_local_time().date()) + "_todays_sorted_stocks"
+#         sorted_stocks = redis_cache.get(cache_key)
+#         if sorted_stocks:
+#             todays_timestamps = StrategyTimestamp.objects.select_related("stock", "strategy").filter(indicator__name="OHL", timestamp__date=get_local_time().date())
+#             for stock in sorted_stocks:
+#                 timestamps = todays_timestamps.filter(stock=stock)
+#                 ohl_condition = stock.symbol.is_stock_ohl()
+#                 if ohl_condition:
+#                     if stock.entry_type == ohl_condition and not timestamps.exists():
+#                         ohl_indicator = Indicator.objects.get(name="OHL")
+#                         StrategyTimestamp.objects.create(indicator=ohl_indicator, stock=stock, timestamp=get_local_time().now())
+#                     elif stock.entry_type != ohl_condition:
+#                         timestamps.delete()
+#                     elif timestamps.count() > 1:
+#                         timestamps.exclude(id=timestamps.first().id).delete()
+#             return "OHL Updated"
+#         return "No Sorted Stocks Cached"
+#     return f"Time {current_time} not > 9:25"
+
+
+# @celery_app.task(queue="low_priority") # Will Work on These Functions Later
+# def is_stock_pdhl(obj_id): 
+#     """Based on previouse day high low strategy, supporting strategy"""
+#     stock = SortedStocksList.objects.get(id=obj_id)
+#     if stock.symbol.is_stock_pdhl() == stock.entry_type:
+#         pdhl_indicator = Indicator.objects.get(name="PDHL")
+#         pdhl, is_created = StrategyTimestamp.objects.get_or_create(indicator=pdhl_indicator, stock=stock)
+#         pdhl.timestamp = get_local_time().now()
+#         pdhl.save()
+#         return "Stamp Created"
+
+# @celery_app.task(queue="low_priority") # Will Work on These Functions Later
+# def has_entry_for_long_short(obj_id):
+#     """Entry available of long or short position, Supporting strategy"""
+#     stock = SortedStocksList.objects.get(id=obj_id)
+#     if stock.symbol.has_entry_for_long_short() == stock.entry_type:
+#         long_short_entry = Indicator.objects.get(name="LONGSHORT")
+#         long_short, is_created = StrategyTimestamp.objects.get_or_create(indicator=long_short_entry, stock=stock)
+#         long_short.timestamp = get_local_time().now()
+#         long_short.save()

@@ -4,12 +4,9 @@ from django.db import migrations, models
 
 def create_international_index(apps, schema_editor):
     MasterContract = apps.get_model("market_analysis", "MasterContract")
-    Indicator = apps.get_model("market_analysis", "Indicator")
     MasterContract.objects.get_or_create(name="DOW_JONES")
     MasterContract.objects.get_or_create(name="SGX")
     MasterContract.objects.get_or_create(name="HSI")
-    Indicator.objects.get_or_create(name="STOCHASTIC_BOLLINGER", value=0)
-    Indicator.objects.get_or_create(name="STOCHASTIC_MACD", value=0)
 
 
 class Migration(migrations.Migration):

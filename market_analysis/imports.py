@@ -132,3 +132,7 @@ def is_time_between_range(obj_time, last_minutes):
     if obj_time >= after_time:
         return True
     return False
+
+
+# Django Models Choices
+# Strategy Model

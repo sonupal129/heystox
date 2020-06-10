@@ -100,25 +100,10 @@ def send_order_place_request(signal_detail:dict=None):
     order_schema["order_type"] = "LIMIT"
     order_schema["product_type"] = "INTRADAY"
     if entry_time.time() > order_place_start_time and entry_time.time() < order_place_end_time:
-        user = get_upstox_user()
-        symbol = Symbol.objects.get(symbol=name)
-        user.get_master_contract(symbol.exchange.name.upper())
-        data = user.get_live_feed(user.get_instrument_by_symbol(symbol.exchange.name.upper(), symbol.symbol.upper()), LiveFeedType.Full)
         obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
         add_expected_target_stoploss.delay(obj.id)
         slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
-        percentage_calculator = lambda higher_number, lower_number : (higher_number - lower_number) / lower_number * 100
-        buy_qty = data["total_buy_qty"]
-        sell_qty = data["total_sell_qty"]
-        if entry_type == "BUY" and (percentage_calculator(sell_qty, buy_qty) < 30 or percentage_calculator(buy_qty, sell_qty) > 20):
-            # Send Order Place Request
-            send_order_request.delay(order_schema)
-        elif entry_type == "SELL" and (percentage_calculator(buy_qty, sell_qty) < 30 or percentage_calculator(sell_qty, buy_qty) > 20):
-            # Send Order Place Request
-            send_order_request.delay(order_schema)
-        else:
-            return "Buy or Sell percentage are not matching"
-        # Do All Function Logic Here
+        send_order_request.delay(order_schema)
 
 @celery_app.task(queue="low_priority")
 def add_expected_target_stoploss(stock_report_id):

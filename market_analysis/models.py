@@ -416,8 +416,6 @@ class SortedStocksList(BaseModel):
     entry_choices = {
         ("BUY", "BUY"),
         ("SELL", "SELL"),
-        ("SB", "SIDEWAYS_BUY"),
-        ("SS", "SIDEWAYS_SELL"),
     }
 
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="sorted_stocks")
@@ -436,29 +434,13 @@ class SortedStocksList(BaseModel):
     def get_second_last_timestamp(self):
         return self.timestamps.order_by("timestamp").reverse()[1]
 
-    def get_indicator_timestamp(self, indicator_name=None):
-        return self.timestamps.filter(indicator__name=indicator_name).order_by("timestamp").last() or None
-
-class Indicator(BaseModel):
-    indicator_type_choices = {
-        ("PR", "PRIMARY"),
-        ("SC", "SECONDARY"),
-        ("SP", "SUPPORTING")
-    }
-
-    name = models.CharField(max_length=50)
-    description = models.TextField(null=True, blank=True)
-    indicator_type = models.CharField(choices=indicator_type_choices, max_length=10, default="SC")
-    value = models.IntegerField()
-
-
-    def __str__(self):
-        return self.name
+    def get_strategy_timestamp(self, strategy_name=None):
+        return self.timestamps.filter(strategy__strategy_name=strategy_name).order_by("timestamp").last() or None
 
 
 class StrategyTimestamp(BaseModel):
     stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE, related_name="timestamps")
-    indicator = models.ForeignKey(Indicator, on_delete=models.CASCADE)
+    strategy = models.ForeignKey("Strategy", on_delete=models.CASCADE, blank=True, null=True)
     timestamp = models.DateTimeField(null=True, blank=True)
     entry_price = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
 
@@ -616,10 +598,17 @@ class Strategy(BaseModel):
         ("ET", "Entry"),
         ("EX", "Exit"),
     }
+
+    priority_choices = {
+        ("PR", "Primary"),
+        ("SC", "Secondary"),
+        ("SP", "Support")
+    }
     
     strategy_name = models.CharField(max_length=200, blank=True, null=True)
     strategy_location = models.CharField(max_length=500)
     strategy_type = models.CharField(max_length=20, choices=strategy_choices, default="ET")
+    priority_type = models.CharField(max_length=20, choices=priority_choices, default="SU")
     description = models.TextField(max_length=1000, blank=True, null=True)
 
     def __str__(self):
@@ -628,6 +617,12 @@ class Strategy(BaseModel):
     def get_strategy_name(self):
         return self.strategy_name.replace("_", " ").strip().title()
 
+    def get_strategy(self):
+        func_module = importlib.import_module(self.strategy_location)  
+        st_func = getattr(func_module, self.strategy_name)
+        if callable(st_func):
+            return st_func()
+        raise TypeError("Strategy class is not callable")
 
     
 

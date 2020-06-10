@@ -6,9 +6,21 @@ from market_analysis.tasks.intraday_indicator import (StochasticBollingerCrossov
 
 def register_strategy(cls):
     """Function register strategy on strategy model"""
-    cache_key = ".".join([cls.__module__, cls.__name__])
-    is_strategy, created = Strategy.objects.get_or_create(strategy_location=cls.__module__, strategy_name=cls.__name__, strategy_type=cls.strategy_type)
-    redis_cache.set(cache_key, is_strategy, 30*60*48)
+    strategy_choices = {
+        "Entry": "ET",
+        "Exit": "EX",
+    }
+
+    priority_choices = {
+        "Primary": "PR",
+        "Secondary": "SC",
+        "Support": "SP"
+    }
+
+    is_strategy, created = Strategy.objects.update_or_create(strategy_location=cls.__module__, strategy_name=cls.__name__, defaults={
+        "strategy_type" : strategy_choices.get(cls.strategy_type),
+        "priority_type" : priority_choices.get(cls.strategy_priority)
+    })
     return is_strategy
 
 

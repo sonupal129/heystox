@@ -5,17 +5,6 @@ import django.contrib.postgres.fields.jsonb
 from django.db import migrations, models
 import django.db.models.deletion
 
-def create_market_indicator(apps, schema_editor):
-    indicators = ["MACD", "STOCHASTIC", "PDHL", "OHL", "LONGSHORT"]
-    Indicator = apps.get_model("market_analysis", "Indicator")
-    counter = 0
-    for i in indicators:
-        try:
-            indi = Indicator.objects.get(name=i)
-        except:
-            indi = Indicator.objects.create(name=i, value=counter)
-            counter += 1
-
 def create_master_contract(apps, schema_editor):
     contracts = ["NSE_EQ", "NSE_INDEX"]
     MasterContract = apps.get_model("market_analysis", "MasterContract")
@@ -246,6 +235,5 @@ class Migration(migrations.Migration):
                 'abstract': False,
             },
         ),
-        migrations.RunPython(create_market_indicator),
         migrations.RunPython(create_master_contract),
     ]

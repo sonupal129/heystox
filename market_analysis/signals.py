@@ -1,9 +1,9 @@
 from market_analysis.imports import *
-from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Indicator, Strategy, Symbol)
+from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Strategy, Symbol)
 
 from market_analysis.tasks.notification_tasks import slack_message_sender
-from market_analysis.tasks.indicator_signals import prepare_orderdata_from_signal
-from market_analysis.tasks.intraday_indicator import is_stock_pdhl, has_entry_for_long_short
+from market_analysis.tasks.indicator_signals import SignalRouter
+# from market_analysis.tasks.intraday_indicator import is_stock_pdhl, has_entry_for_long_short
 # Code Below
 
 @receiver(post_save, sender=User)
@@ -18,17 +18,15 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 
 
 @receiver(post_save, sender=StrategyTimestamp)
-def send_signal_on_indicator_object_creation(sender, instance, created, **kwargs):
-    if created:
-        if instance.indicator.name in Indicator.objects.filter(indicator_type="PR").values_list("name", flat=True):
-            prepare_orderdata_from_signal.delay(instance.id)
+def send_strategy_signal_to_router(sender, instance, **kwargs):
+    if instance.strategy.priority_type in ["PR", "SC"]:
+        signal = SignalRouter(instance).route_signal()
 
-
-@receiver(post_save, sender=SortedStocksList)
-def verify_stock_pdhl_longshort(sender, instance, **kwargs):
-    if kwargs.get("created"):
-        is_stock_pdhl.delay(instance.id)
-        has_entry_for_long_short.delay(instance.id)
+# @receiver(post_save, sender=SortedStocksList)
+# def verify_stock_pdhl_longshort(sender, instance, **kwargs):
+#     if kwargs.get("created"):
+#         is_stock_pdhl.delay(instance.id)
+#         has_entry_for_long_short.delay(instance.id)
 
 
 @receiver(post_save, sender=Order)
@@ -43,7 +41,6 @@ def send_slack_on_order_rejection(sender, instance, **kwargs):
 def invalidate_strategies_cache(sender, instance, action, **kwargs):
     entry_cache_key = "_".join([instance.symbol, "Entry", "strategies"])
     exit_cache_key = "_".join([instance.symbol, "Exit", "strategies"])
-    print("Signal Called")
     redis_cache.delete(entry_cache_key)
     redis_cache.delete(exit_cache_key)
 

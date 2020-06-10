@@ -1,59 +1,120 @@
 from market_analysis.imports import *
 from market_analysis.tasks.orders import send_order_place_request
+from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.models import StrategyTimestamp, OrderBook
 # CODE Below 
+# Signal Router for Routing Order Data Processing as per Strategy
+class SignalRouter:
 
-@celery_app.task(queue="high_priority")
-def prepare_orderdata_from_signal(timestamp_id):
-    """prepare order data on signal and verify order if order is already placed then do not place new order"""
-    timestamp = StrategyTimestamp.objects.get(id=timestamp_id)
-    sorted_stock = timestamp.stock
-    entry_price = float(timestamp.entry_price) if timestamp.entry_price else None
-    
-    if is_time_between_range(timestamp.timestamp, 20):
+    def __init__(self, timestamp):
+        self.timestamp = timestamp
 
-        if sorted_stock.entry_type == "BUY":
-            if timestamp.entry_price > timestamp.stock.symbol.get_stock_live_price(price_type="open") or entry_price == None:
-                entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="open")
-        elif sorted_stock.entry_type == "SELL":
-            if timestamp.entry_price < timestamp.stock.symbol.get_stock_live_price(price_type="open") or entry_price == None:
-                entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="open")
+    def get_strategy_name(self):
+        return self.timestamp.strategy.get_strategy().__name__
 
-        entry_available = False
-
+    def find_router_for_strategy(self):
+        strategy_name = self.get_strategy_name()
+        router_name = strategy_name + "Router"
+        func_module = importlib.import_module(self.__module__)
         try:
-            existing_order = OrderBook.objects.get(symbol=sorted_stock.symbol, date=get_local_time().date())
-            last_order = existing_order.get_last_order_by_status()
-            if last_order.entry_type == "EX":
-                entry_available = True
+            st_func = getattr(func_module, router_name)
         except:
-            existing_order = None
+            st_func = getattr(func_module, "GlobalSignalTask")
+            slack_message_sender.delay(text=f"No Custom signal found for strategy {strategy_name}, Calling Base Signal")
+        return st_func()
 
-        sorted_stock.entry_price = entry_price
-        sorted_stock.save()
+    def route_signal(self):
+        signal = find_router_for_strategy()
+        return signal.delay(self.timestamp_id)
+
+
+# Custom Signal Tasks for Every Strategy
+class BaseSignalTask(celery_app.Task):
+    ignore_result = False
+    name = "base_signal_task"
+    queue = "high_priority"
+
+    def prepare_orderdata(self, timestamp):
+        sorted_stock = timestamp.sorted_stock
         order_detail = {}
         order_detail["name"] = sorted_stock.symbol.symbol
         order_detail["entry_time"] = timestamp.timestamp
         order_detail["entry_type"] = sorted_stock.entry_type
-        order_detail["entry_price"] = entry_price
-        
-        if existing_order == None or entry_available:
-            send_order_place_request.delay(order_detail)
-            return "Order Request Sent"
-        elif existing_order:
-            strength = existing_order.strength if existing_order.strength else ""
-            existing_order.strength = ", ".join([strength, timestamp.indicator.name])
-            existing_order.save()
-    else:
-        slack_message_sender.delay(text=f"Stock Entry Time is Out of Limit Could Not Place Order for {sorted_stock}")
-        return "Crossover out of time limit"
-        
+        order_detail["entry_price"] = sorted_stock.entry_price
+        return order_detail
 
-# def indicator_routers(timestamp_id):
-#     timestamp = StrategyTimestamp.objects.get(id=timestamp_id)
-#     sorted_stock = timestamp.stock
-#     if instance.indicator.indicator_type == "PR":
-#         prepare_orderdata_from_signal.delay(timestamp_id)
+    def base_signal_task(self, timestamp):
+        pass
+
+    def update_entry_price(self, timestamp):
+        sorted_stock = timestamp.stock
+        
+        if is_time_between_range(timestamp.timestamp, 20):
+            if sorted_stock.entry_type == "BUY":
+                if timestamp.entry_price > timestamp.stock.symbol.get_stock_live_price(price_type="open") or entry_price == None:
+                    entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="open")
+            elif sorted_stock.entry_type == "SELL":
+                if timestamp.entry_price < timestamp.stock.symbol.get_stock_live_price(price_type="open") or entry_price == None:
+                    entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="open")
+
+            entry_available = False
+
+            try:
+                existing_order = OrderBook.objects.get(symbol=sorted_stock.symbol, date=get_local_time().date())
+                last_order = existing_order.get_last_order_by_status()
+                if last_order.entry_type == "EX":
+                    entry_available = True
+            except:
+                existing_order = None
+                entry_available = True
+
+            sorted_stock.entry_price = entry_price
+            sorted_stock.save()
+            
+            if entry_available:
+                return entry_available
+        else:
+            slack_message_sender.delay(text=f"Stock Entry Time is Out of Limit Could Not Place Order for {sorted_stock}")
+            return "Crossover out of time limit"
+
+    def run(self, timestamp_id):
+        timestamp = StrategyTimestamp.objects.get(id=timestamp_id)
+        self.update_entry_price(timestamp)
+
+        signal_function = None
+
+        try:
+            signal_function = getattr(self.__class__, self.name)
+        except:
+            raise AttributeError("Function name should be same as name attribute")
+        
+        if signal_function(self, timestamp) == True:
+            order_data = self.prepare_orderdata(timestamp)
+            send_order_place_request.delay(**order_data)
+
+
+class GlobalSignalTask(BaseSignalTask):
+    """This is Global Signal Task which will work if no individual signal task found for strategy,
+    Inherited data from Base Signal Task"""
+    name = "global_signal_tasks"
+
+    def global_signal_tasks(self, timestamp):
+        user = get_upstox_user()
+        symbol = timestamp.stock.symbol
+        sorted_stock = timestamp.stock
+        user.get_master_contract(symbol.exchange.name.upper())
+        data = user.get_live_feed(user.get_instrument_by_symbol(symbol.exchange.name.upper(), symbol.symbol.upper()), LiveFeedType.Full)
+        percentage_calculator = lambda higher_number, lower_number : (higher_number - lower_number) / lower_number * 100
+        buy_qty = data["total_buy_qty"]
+        sell_qty = data["total_sell_qty"]
+        if entry_type == "BUY" and (percentage_calculator(sell_qty, buy_qty) < 30 or percentage_calculator(buy_qty, sell_qty) > 20):
+            return True
+        elif entry_type == "SELL" and (percentage_calculator(buy_qty, sell_qty) < 30 or percentage_calculator(sell_qty, buy_qty) > 20):
+            return True
+        else:
+            return False
+
+celery_app.tasks.register(GlobalSignalTask)
 
 
 

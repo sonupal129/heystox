@@ -22,7 +22,7 @@ class CandleAdmin(admin.ModelAdmin):
 
 class StrategyTimestampInline(admin.TabularInline):
     model = StrategyTimestamp
-    fields = ('indicator', 'timestamp', 'entry_price', "created_at")
+    fields = ('strategy', 'timestamp', 'entry_price', "created_at")
     readonly_fields = ("entry_price", "created_at")
     extra = 0
 
@@ -69,20 +69,16 @@ class OrderBookAdmin(admin.ModelAdmin):
     readonly_fields = ["symbol", "strength", "date"]
 
 
-class IndicatorAdmin(admin.ModelAdmin):
-    list_display = ["name", "indicator_type", "value"]
-
-
 class StrategyAdmin(admin.ModelAdmin):
-    list_display = ["view_strategy_name", "strategy_location"]
+    list_display = ["view_strategy_name", "strategy_location", "strategy_type", "priority_type"]
     readonly_fields = ["strategy_name", "strategy_location"]
-    actions = ["discover_new_strategies"]
+    actions = ["discover_update_strategies"]
 
     def view_strategy_name(self, obj):
         return obj.get_strategy_name()
 
     
-    def discover_new_strategies(self, request, queryset):
+    def discover_update_strategies(self, request, queryset):
         from market_analysis.tasks.strategy_register import strategy_list
         registered_strategy = []
         for strategy in strategy_list:
@@ -99,7 +95,6 @@ admin.site.register(MasterContract)
 admin.site.register(BankDetail)
 admin.site.register(Credentials)
 admin.site.register(Earning)
-admin.site.register(Indicator, IndicatorAdmin)
 admin.site.register(SortedStocksList, SortedStocksListAdmin)
 admin.site.register(PreMarketOrderData, PreMarketOrderDataAdmin)
 admin.site.register(SortedStockDashboardReport, SortedStockDashboardReportAdmin)

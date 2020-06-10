@@ -1,6 +1,6 @@
 from .stock_data_import_tasks import (fetch_candles_data)
 from .notification_tasks import slack_message_sender
-from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle, Indicator, SortedStockDashboardReport)
+from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle, SortedStockDashboardReport)
 from .trading import *
 from market_analysis.imports import *
 from .intraday_indicator import *
@@ -127,14 +127,10 @@ def apply_intraday_indicator_on_sorted_stocks():
             sleep(3)
             cached_value = redis_cache.get(cache_key)
         for sorted_stock in cached_value:
-            try:
-                movement = sorted_stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(sorted_stock.entry_type))
-            except:
-                continue
-            if movement:
-                find_stochastic_bollingerband_crossover.apply_async(kwargs={"stock_id": sorted_stock.symbol.id, "entry_type": sorted_stock.entry_type})
-                find_stochastic_macd_crossover.apply_async(kwargs={"stock_id": sorted_stock.symbol.id, "entry_type": sorted_stock.entry_type})
-            find_adx_bollinger_crossover.apply_async(kwargs={"stock_id": sorted_stock.symbol.id, "entry_type": sorted_stock.entry_type})
+            strategies = sorted_stock.symbol.get_strategies()
+            if strategies:
+                for strategy in strategies:
+                    strategy.get_strategy().apply_async(kwargs={"stock_id": sorted_stock.symbol.id, "entry_type": sorted_stock.entry_type})
         return "Indicator Called"
     return f"Current time {current_time} not > 9:25"
 

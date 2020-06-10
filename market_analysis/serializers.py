@@ -18,7 +18,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class StrategyTimestampSerializer(serializers.ModelSerializer):
     class Meta:
         model = StrategyTimestamp
-        fields = ["timestamp", "indicator__name", "diff"]
+        fields = ["timestamp", "strategy__strategy_name", "diff"]
 
 class SortedStockDashboardSerializer(serializers.Serializer):
     stock_name = serializers.CharField(source="symbol.symbol")
@@ -30,10 +30,10 @@ class SortedStockDashboardSerializer(serializers.Serializer):
 
     def get_timestamps(self, obj):
         context = {
-            "macd": obj.get_indicator_timestamp("MACD").timestamp if obj.get_indicator_timestamp("MACD") else None,
-            "ohl": obj.get_indicator_timestamp("OHL").timestamp if obj.get_indicator_timestamp("OHL") else None,
-            "pdhl": obj.get_indicator_timestamp("PDHL").timestamp if obj.get_indicator_timestamp("PDHL") else None,
-            "stochastic": obj.get_indicator_timestamp("STOCHASTIC").timestamp if obj.get_indicator_timestamp("STOCHASTIC") else None,
+            "macd": obj.get_strategy_timestamp("MACD").timestamp if obj.get_strategy_timestamp("MACD") else None,
+            "ohl": obj.get_strategy_timestamp("OHL").timestamp if obj.get_strategy_timestamp("OHL") else None,
+            "pdhl": obj.get_strategy_timestamp("PDHL").timestamp if obj.get_strategy_timestamp("PDHL") else None,
+            "stochastic": obj.get_strategy_timestamp("STOCHASTIC").timestamp if obj.get_strategy_timestamp("STOCHASTIC") else None,
         }
         return context
 

@@ -51,40 +51,6 @@ class UpstoxLoginComplete(BasePermissionMixin, View):
         return redirect("market_analysis_urls:sorted-dashboard-report")
 
 
-# class UpstoxUserLogoutView(View):
-
-
-class SortedStocksDashBoardView(BasePermissionMixin, GroupRequiredMixins, ListView):
-    template_name = "sorted_stocks_dashboard.html"
-    context_object_name = "symbols"
-    group_required = ["trader"]
-
-    def get_queryset(self):
-        date = self.request.GET.get("created_at")
-        if date:
-            requested_date = get_local_time().strptime(date, "%Y-%m-%d").date()
-            timestamps = StrategyTimestamp.objects.filter(timestamp__date=requested_date, indicator__name="MACD")
-        else:
-            timestamps = StrategyTimestamp.objects.filter(timestamp__date=get_local_time().date(), indicator__name="MACD")
-        sorted_stock_id = []
-        
-        if self.request.GET.get("sara"):
-            sorted_stocks = SortedStocksList.objects.filter(created_at__date=get_local_time().date())
-            return sorted_stocks
-                   
-        for stamp in timestamps:
-            if stamp.is_last_timestamp():
-                try:
-                    secondlast_timestamp = stamp.stock.get_second_last_timestamp()
-                except:
-                    secondlast_timestamp = None
-                if secondlast_timestamp and secondlast_timestamp.indicator.name == "STOCHASTIC":
-                    if stamp.timestamp - secondlast_timestamp.timestamp < timedelta(minutes=50):
-                        sorted_stock_id.append(stamp.stock.id)
-        return SortedStocksList.objects.filter(id__in=sorted_stock_id)
-
-
-
 class SortedStocksDashBoardReportView(BasePermissionMixin, GroupRequiredMixins, ListView):
     template_name = "sorted_stocks_dashboard_report.html"
     context_object_name = "symbols"

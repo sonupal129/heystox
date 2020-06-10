@@ -7,8 +7,8 @@ app_name = 'market_analysis_api_urls'
 
 urlpatterns = [
     path('users/', api_views.UsersListView.as_view(), name="users"),
-    path('sorted-stocks/', api_views.SortedStocksListView.as_view(), name="sorted-stocks"),
-    path('sorted-stocks/<str:symbol>/', api_views.SortedStocksListView.as_view(), name="sorted-stock"),
+    # path('sorted-stocks/', api_views.SortedStocksListView.as_view(), name="sorted-stocks"),
+    # path('sorted-stocks/<str:symbol>/', api_views.SortedStocksListView.as_view(), name="sorted-stock"),
     path('cached-data/<str:symbol>/', api_views.CachedTickerDataView.as_view(), name="cached-data"),
 ]
 
