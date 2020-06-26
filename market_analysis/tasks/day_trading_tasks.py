@@ -3,7 +3,9 @@ from .notification_tasks import slack_message_sender
 from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle, SortedStockDashboardReport)
 from .trading import *
 from market_analysis.imports import *
-from .intraday_indicator import *
+
+
+from .strategies.intraday_entry_strategies import *
 from .upstox_events_handlers import start_upstox_websocket
 # CODE STARTS BELOW
 

@@ -20,8 +20,7 @@ class Symbol(BaseModel):
     exchange = models.ForeignKey(MasterContract, related_name="symbols", on_delete=models.DO_NOTHING)
     token = models.IntegerField(blank=True, null=True)
     symbol = models.CharField(max_length=100)
-    entry_strategy = models.ManyToManyField("Strategy", related_name="entry_strategy_symbols", blank=True, limit_choices_to={"strategy_type": "ET"})
-    exit_strategy = models.ManyToManyField("Strategy", related_name="exit_strategy_symbols", blank=True, limit_choices_to={"strategy_type": "EX"})
+    strategy = models.ManyToManyField("Strategy", related_name="symbols", blank=True, limit_choices_to={"strategy_type": "ET"})
     name = models.CharField(max_length=100)
     last_day_closing_price = models.FloatField(blank=True, null=True)
     last_day_opening_price = models.FloatField(blank=True, null=True)
@@ -122,9 +121,18 @@ class Symbol(BaseModel):
         }
         return df_ticker
 
-    def get_stock_live_price(self, price_type):
-        """Fetch stock realtime cached ticker data
+    def get_stock_live_price(self, price_type=None):
+        """Fetch stock realtime cached ticker data or 
         1 minute latency in data"""
+        data = None
+        try:
+            user = UserProfile.objects.get(user__email="sonupal129@gmail.com").get_upstox_user()
+            user.get_master_contract(self.exchange.name.upper())
+            data = user.get_live_feed(user.get_instrument_by_symbol(self.exchange.name.upper(), self.symbol.upper()), LiveFeedType.Full)
+        except:
+            pass
+        if data:
+            return data
         current_ticker = redis_cache.get(self.symbol)[-1]
         return current_ticker.get(price_type, None)
 
@@ -609,10 +617,16 @@ class Strategy(BaseModel):
     strategy_location = models.CharField(max_length=500)
     strategy_type = models.CharField(max_length=20, choices=strategy_choices, default="ET")
     priority_type = models.CharField(max_length=20, choices=priority_choices, default="SU")
+    exit_strategy = models.ForeignKey("self", related_name="strategy", blank=True, null=True, limit_choices_to={"strategy_type": "ET"}, on_delete=models.CASCADE)
     description = models.TextField(max_length=1000, blank=True, null=True)
 
     def __str__(self):
         return self.get_strategy_name()
+
+    def clean(self, *args, **kwargs):
+        if self.strategy_type == "EX" and self.exit_strategy:
+            raise ValidationError("Exit strategy can't assign, when strategy type is already exit strategy")
+        super(Strategy, self).clean(*args, **kwargs)
 
     def get_strategy_name(self):
         return self.strategy_name.replace("_", " ").strip().title()
@@ -620,6 +634,20 @@ class Strategy(BaseModel):
     def get_strategy(self):
         func_module = importlib.import_module(self.strategy_location)  
         st_func = getattr(func_module, self.strategy_name)
+        if callable(st_func):
+            return st_func()
+        raise TypeError("Strategy class is not callable")
+
+    def get_exit_strategy(self):
+        """Function will return exit strategy of strategy if not strategy assigned then return GlobalExitStrategy"""
+        if self.strategy_type == "EX":
+            return "Strategy is already Exit strategy"
+        if self.exit_strategy:
+            func_module = importlib.import_module(self.exit_strategy.strategy_location)
+            st_func = getattr(func_module, self.exit_strategy.strategy_name)
+        else:
+            func_module = importlib.import_module("market_analysis.tasks.intraday_entry_strategies")
+            st_func = getattr(func_module, "GlobalExitStrategy")
         if callable(st_func):
             return st_func()
         raise TypeError("Strategy class is not callable")

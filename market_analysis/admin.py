@@ -1,13 +1,15 @@
 from django.contrib import admin
 from market_analysis.models import *
+from market_analysis.csv_import_export import SortedStockDashboardReportResource
 # Register your models here.
 
-class SymbolAdmin(admin.ModelAdmin):
+class SymbolAdmin(ExportMixin, admin.ModelAdmin):
+    resource_class = Symbol
     list_display = ["symbol", "exchange"]
     list_filter = ["exchange"]
     search_fields = ["symbol", "name"]
     date_hierarchy = 'created_at'
-    filter_horizontal = ["entry_strategy", "exit_strategy"]
+    filter_horizontal = ["strategy"]
 
 
 class CandleAdmin(admin.ModelAdmin):
@@ -53,7 +55,8 @@ class PreMarketOrderDataAdmin(admin.ModelAdmin):
     list_display = ["symbol", "sector", "created_at"]
     search_fields = ["symbol__symbol"]
 
-class SortedStockDashboardReportAdmin(admin.ModelAdmin):
+class SortedStockDashboardReportAdmin(ExportMixin ,admin.ModelAdmin):
+    resource_class = SortedStockDashboardReportResource
     list_display = ["name", "entry_type", "entry_price", "entry_time"]
     search_fields = ["name"]
 
@@ -79,7 +82,7 @@ class StrategyAdmin(admin.ModelAdmin):
 
     
     def discover_update_strategies(self, request, queryset):
-        from market_analysis.tasks.strategy_register import strategy_list
+        from market_analysis.tasks.strategies.strategy_register import strategy_list
         registered_strategy = []
         for strategy in strategy_list:
             registered_strategy.append(strategy.id)

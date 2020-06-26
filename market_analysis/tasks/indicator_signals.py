@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.tasks.orders import send_order_place_request
+from market_analysis.tasks.orders import EntryOrder
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.models import StrategyTimestamp, OrderBook
 # CODE Below 
@@ -24,8 +24,8 @@ class SignalRouter:
         return st_func()
 
     def route_signal(self):
-        signal = find_router_for_strategy()
-        return signal.delay(self.timestamp_id)
+        signal = self.find_router_for_strategy()
+        return signal.delay(self.timestamp.id)
 
 
 # Custom Signal Tasks for Every Strategy
@@ -78,6 +78,7 @@ class BaseSignalTask(celery_app.Task):
             return "Crossover out of time limit"
 
     def run(self, timestamp_id):
+        print(timestamp_id)
         timestamp = StrategyTimestamp.objects.get(id=timestamp_id)
         self.update_entry_price(timestamp)
 
@@ -90,7 +91,7 @@ class BaseSignalTask(celery_app.Task):
         
         if signal_function(self, timestamp) == True:
             order_data = self.prepare_orderdata(timestamp)
-            send_order_place_request.delay(**order_data)
+            EntryOrder().delay(**order_data)
 
 
 class GlobalSignalTask(BaseSignalTask):

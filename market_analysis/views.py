@@ -7,7 +7,7 @@ from .forms import UserLoginRegisterForm, BacktestForm, StrategyDeployForm
 from .mixins import GroupRequiredMixins
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.users_tasks import login_upstox_user
-from market_analysis.tasks.intraday_indicator import prepare_n_call_backtesting_strategy
+from market_analysis.tasks.strategies.backtest import prepare_n_call_backtesting_strategy
 # Create your views here.
 
 class HomeView(BasePermissionMixin, TemplateView):
@@ -128,7 +128,44 @@ class BacktestSortedStocksView(View):
     def get(self, request, **kwargs):
         return render(request, self.template_name, self.get_context_data(request))
 
+    def get_cache_key(self, *args):
+        cache_key = "_".join([*args])
+        return cache_key
     
+    def get_backtested_cached_value(self, cache_key):
+        cached_value = redis_cache.get(cache_key)
+        if cached_value is not None:
+            return cached_value
+
+        all_redis_cache_keys = redis_cache.keys("*")
+        split_cache = cache_key.split("_")
+        matched_keys = [key for key in all_redis_cache_keys if key.endswith("_".join(split_cache[2:]))]
+        backtest_start_date = datetime.strptime(split_cache[0], "%Y-%m-%d").date()
+        backtest_end_date = datetime.strptime(split_cache[1], "%Y-%m-%d").date()
+        
+        key = None
+        for key in matched_keys:
+            split_key = key.split("_")
+            key_start_date = datetime.strptime(split_key[0], "%Y-%m-%d").date()
+            key_end_date = datetime.strptime(split_key[1], "%Y-%m-%d").date()
+            if key_end_date == backtest_end_date and backtest_start_date < key_start_date:
+                break
+        
+        if key:
+            cached_value = redis_cache.get(key)
+            if cached_value is not None:
+                if cached_value.empty:
+                    return cached_value
+                return cached_value.loc[cached_value["entry_time"] >= pd.to_datetime(backtest_start_date)]
+        return None
+
+    def get_cached_value(self, cache_key):
+        cached_value = redis_cache.get(cache_key)
+        if cached_value != None:
+            return cached_value
+        return None
+
+
     def post(self, request, *args, **kwargs):
         context = {}
         
@@ -152,8 +189,8 @@ class BacktestSortedStocksView(View):
                     "candle_type": backtest_form.cleaned_data["candle_type"]
                 }
 
-                cache_key = "_".join([symbol.symbol, str(to_days), str(current_date), str(strategy.strategy_name), str(candle_type), entry_type, "backtest_strategy"])
-                cached_value = redis_cache.get(cache_key)
+                cache_key = self.get_cache_key(str(current_date - timedelta(to_days)), str(current_date), symbol.symbol, str(strategy.strategy_name), str(candle_type), entry_type, "backtest_strategy")
+                cached_value = self.get_backtested_cached_value(cache_key)
                 
                 if cached_value is None:
                     is_function_called_before = redis_cache.get(backtest_form.create_form_cache_key()) # This will check if function called 5 minute before is yest, it will as to wait

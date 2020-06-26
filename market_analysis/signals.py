@@ -19,8 +19,9 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 
 @receiver(post_save, sender=StrategyTimestamp)
 def send_strategy_signal_to_router(sender, instance, **kwargs):
-    if instance.strategy.priority_type in ["PR", "SC"]:
-        signal = SignalRouter(instance).route_signal()
+    if kwargs.get("created"):
+        if instance.strategy.priority_type in ["PR", "SC"]:
+            transaction.on_commit(lambda : SignalRouter(instance).route_signal())
 
 # @receiver(post_save, sender=SortedStocksList)
 # def verify_stock_pdhl_longshort(sender, instance, **kwargs):
@@ -36,8 +37,7 @@ def send_slack_on_order_rejection(sender, instance, **kwargs):
         slack_message_sender.delay(f"Order {instance.order_id}, {instance.get_status_display()}, Please Check!")
 
     
-@receiver(m2m_changed, sender=Symbol.entry_strategy.through)
-@receiver(m2m_changed, sender=Symbol.exit_strategy.through)
+@receiver(m2m_changed, sender=Symbol.strategy.through)
 def invalidate_strategies_cache(sender, instance, action, **kwargs):
     entry_cache_key = "_".join([instance.symbol, "Entry", "strategies"])
     exit_cache_key = "_".join([instance.symbol, "Exit", "strategies"])

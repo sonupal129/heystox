@@ -32,6 +32,7 @@ from django.core.exceptions import ValidationError, PermissionDenied, Improperly
 from django.http import (HttpResponseRedirect, HttpResponseForbidden, HttpResponse, JsonResponse)
 from django.shortcuts import redirect, render, get_object_or_404, resolve_url
 import requests, functools, importlib, sys
+from django.db import transaction
 
 # Exception Errors
 from requests.exceptions import HTTPError
@@ -71,6 +72,11 @@ from celery import group
 
 # Import Redis
 import redis
+
+
+# Import Export Library
+from import_export import resources
+from import_export.admin import ExportMixin
 
 # ATTRIBUTE & FUNCTIONS FOR IMPORTS
 
@@ -133,6 +139,53 @@ def is_time_between_range(obj_time, last_minutes):
         return True
     return False
 
+
+def get_stock_stoploss_price(price, entry_type):
+    if price < 100:
+        sl = settings.DEFAULT_STOPLOSS + 0.10
+    elif price < 200:
+        sl = settings.DEFAULT_STOPLOSS + 0.20
+    elif price < 300:
+        sl = settings.DEFAULT_STOPLOSS + 0.40
+    else:
+        sl = settings.DEFAULT_STOPLOSS + 0.70
+    if entry_type == "SELL":
+        stoploss = price + (price * sl /100)
+    elif entry_type == "BUY":
+        stoploss = price - (price * sl /100)
+    return roundup(stoploss)
+
+def get_stock_target_price(price, entry_type):
+    if price < 100:
+        tg = settings.DEFAULT_TARGET + 0.5
+    elif price < 200:
+        tg = settings.DEFAULT_TARGET + 0.20
+    elif price < 300:
+        tg = settings.DEFAULT_TARGET + 0.40
+    else:
+        tg = settings.DEFAULT_TARGET + 0.70
+    if entry_type == "SELL":
+        target = price - (price * tg /100)
+    elif entry_type == "BUY":
+        target = price + (price * tg /100)
+    return roundup(target)
+
+def get_auto_exit_price(price, entry_type):
+    fixed_auto_exit_percentage = settings.DEFAULT_STOPLOSS / 2
+    if price < 100:
+        sl = fixed_auto_exit_percentage
+    elif price < 200:
+        sl = fixed_auto_exit_percentage + 0.10
+    elif price < 300:
+        sl = fixed_auto_exit_percentage + 0.15
+    else:
+        sl = fixed_auto_exit_percentage + 0.20
+    if entry_type == "SELL":
+        stoploss = price - (price * sl /100)
+        return roundup(stoploss)
+    elif entry_type == "BUY":
+        stoploss = price + (price * sl /100)
+        return roundup(stoploss)
 
 # Django Models Choices
 # Strategy Model

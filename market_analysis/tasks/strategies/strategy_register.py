@@ -1,6 +1,7 @@
 from market_analysis.imports import *
 from market_analysis.models import Strategy
-from market_analysis.tasks.intraday_indicator import (StochasticBollingerCrossover, AdxBollingerCrossover, StochasticMacdCrossover)
+from .intraday_entry_strategies import (StochasticBollingerCrossover, AdxBollingerCrossover, StochasticMacdCrossover)
+from .intraday_exit_strategy import GlobalExitStrategy
 
 # Start Code Below
 
@@ -27,6 +28,6 @@ def register_strategy(cls):
 strategy_list = [
     register_strategy(StochasticBollingerCrossover),
     register_strategy(AdxBollingerCrossover),
-    register_strategy(StochasticMacdCrossover)
+    register_strategy(StochasticMacdCrossover),
 ]
 

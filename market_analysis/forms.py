@@ -30,7 +30,7 @@ class BacktestForm(forms.Form):
     }
 
     symbol = forms.ModelChoiceField(queryset=get_liquid_stocks(max_price=300), to_field_name="id", label="Select Stock")
-    strategy = forms.ModelChoiceField(queryset=Strategy.objects.all(), to_field_name="id", label="Strategy")
+    strategy = forms.ModelChoiceField(queryset=Strategy.objects.filter(strategy_type="ET"), to_field_name="id", label="Strategy")
     entry_type = forms.ChoiceField(choices=entry_choices)
     candle_type = forms.ChoiceField(choices=candle_choices)
     from_date = forms.DateField(required=True, widget=forms.DateInput(attrs={'type': 'date'}))
@@ -56,6 +56,6 @@ class BacktestForm(forms.Form):
 
 class StrategyDeployForm(forms.Form):
     symbol = forms.ModelChoiceField(queryset=get_liquid_stocks(max_price=300), to_field_name="id", label="Select Stock", required=False)
-    strategy = forms.ModelMultipleChoiceField(queryset=Strategy.objects.all())
+    strategy = forms.ModelMultipleChoiceField(queryset=Strategy.objects.filter(strategy_type="ET"))
     remove_all = forms.BooleanField(required=False, label="Remove Strategy from All Stocks")
     add_all = forms.BooleanField(required=False, label="Add Strategy to All Stocks")

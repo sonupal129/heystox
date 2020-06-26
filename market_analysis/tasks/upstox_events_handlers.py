@@ -1,5 +1,5 @@
 from upstox_api.api import *
-from .orders import create_update_order_on_update, cache_symbol_ticker_data
+from .orders import UpdateOrder, cache_symbol_ticker_data
 from .trading import get_upstox_user
 from .notification_tasks import slack_message_sender
 from market_analysis.imports import *
@@ -13,7 +13,8 @@ def event_handler_on_quote_update(message):
 def event_handler_on_order_update(message):
     order_statuses = ["cancelled", "open", "complete", "rejected"]
     if message.get("status") in order_statuses:
-        create_update_order_on_update.delay(message)
+        update_order = UpdateOrder()
+        update_order.delay(message)
     return "Order Updated"
 
 def event_handler_on_trade_update(message):

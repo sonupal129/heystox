@@ -1,5 +1,5 @@
 from django.test import TestCase
-from .base import BaseModelTest
+from .base_test import BaseModelTest
 from market_analysis.models import *
 from model_mommy import mommy
 # Code Start
