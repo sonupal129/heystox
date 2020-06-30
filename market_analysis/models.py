@@ -121,7 +121,7 @@ class Symbol(BaseModel):
         }
         return df_ticker
 
-    def get_stock_live_price(self, price_type=None):
+    def get_stock_live_price(self, price_type):
         """Fetch stock realtime cached ticker data or 
         1 minute latency in data"""
         data = None
@@ -132,12 +132,39 @@ class Symbol(BaseModel):
         except:
             pass
         if data:
-            return data
+            return data.get("ltp", None)
         current_ticker = redis_cache.get(self.symbol)[-1]
         return current_ticker.get(price_type, None)
 
-      
-    def get_stock_live_data(self, date_obj=None, with_live_candle=True): # Currently caching is for testing only, later will remove it
+    def get_stock_dataframe(self, candle_queryset, candle_type="M5"):
+        candles_type = {
+            "M5" : "5T",
+            "M10" : "10T",
+            "M15" : "15T",
+            "M30" : "30T",
+            "1D" : "1D",
+            }
+        if not isinstance(candle_queryset, QuerySet):
+            raise TypeError("candle_queryset is not a itearable queryset")
+        
+        candles = candle_queryset.values("open_price", "high_price", "low_price", "close_price", "volume", "date")
+        candle_type = candles_type.get(candle_type, "5T")
+        df = pd.DataFrame(candles)
+        df = df.set_index("date")
+        candle_open = df.open_price.resample(candle_type).ohlc()
+        candle_close = df.close_price.resample(candle_type).ohlc()
+        candle_high = df.high_price.resample(candle_type).ohlc()
+        candle_low = df.low_price.resample(candle_type).ohlc()
+        candle_volume = df.volume.resample(candle_type).ohlc()
+        new_df = pd.concat([candle_open.open, candle_close.close, candle_high.high, candle_low.low, candle_volume.close], axis=1, keys=["open_price", "close_price", "high_price", "low_price", "volume"])
+        new_df["date"] = new_df.index
+        new_df.index = np.arange(0, len(new_df))
+        new_df = new_df.dropna()
+        new_df = new_df.reset_index().drop("index", axis=1)
+        return new_df
+
+
+    def get_stock_live_data(self, date_obj=None, with_live_candle=True):
         if date_obj == None:
             date_obj = get_local_time().date()
         stock_data = self.get_stock_data(end_date=date_obj).values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
@@ -295,13 +322,8 @@ class CandleManager(models.Manager):
     
 
 class Candle(BaseModel):
-    candle_type_choice = {
-        ("M5", "5 Minute"),
-        ("M10", "10 Minute"),
-        ("M15", "15 Minute"),
-        ("M60", "60 Minute"),
-        ("1D", "1 Day"),
-    }
+    candle_type_choice = {(k,v) for k,v in candles_types.items()}
+
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="candles", null=True)
     candle_type = models.CharField(choices=candle_type_choice, max_length=50, blank=False, null=True, default=None)
     open_price = models.FloatField("Candle Open Price", blank=True, null=True)

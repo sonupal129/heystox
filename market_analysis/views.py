@@ -188,7 +188,6 @@ class BacktestSortedStocksView(View):
                     "entry_type": entry_type,
                     "candle_type": backtest_form.cleaned_data["candle_type"]
                 }
-
                 cache_key = self.get_cache_key(str(current_date - timedelta(to_days)), str(current_date), symbol.symbol, str(strategy.strategy_name), str(candle_type), entry_type, "backtest_strategy")
                 cached_value = self.get_backtested_cached_value(cache_key)
                 

@@ -25,9 +25,7 @@ class BacktestForm(forms.Form):
         ("SELL", "SELL")
     }
 
-    candle_choices = {
-        ("M5", "5 Minute")
-    }
+    candle_choices = {(k,v) for k,v in candles_types.items()}
 
     symbol = forms.ModelChoiceField(queryset=get_liquid_stocks(max_price=300), to_field_name="id", label="Select Stock")
     strategy = forms.ModelChoiceField(queryset=Strategy.objects.filter(strategy_type="ET"), to_field_name="id", label="Strategy")

@@ -2,7 +2,7 @@ from market_analysis.imports import *
 from .trading import get_upstox_user
 from market_analysis.models import Symbol, SortedStockDashboardReport, OrderBook, Order
 from market_analysis.tasks.notification_tasks import slack_message_sender
-
+from market_analysis.custom_exception import *
 # Code Below
 
 
@@ -19,6 +19,8 @@ class BaseOrderTask(celery_app.Task):
         balance = user.get_balance()
         if balance:
             available_margin = balance["equity"].get("available_margin")
+            if available_margin <= 1000:
+                raise NotEnoughFundError("Not enough fund availble to trade")
             bearable_loss = available_margin * settings.DEFAULT_STOPLOSS / 100
             stoploss = get_stock_stoploss_price(share_price, entry_type)
             diff = abs(share_price - stoploss)
@@ -72,6 +74,7 @@ class BaseOrderTask(celery_app.Task):
         else:
             last_order = last_completed_order or last_open_order
         
+        # order = None
         if is_created:
             order = Order.objects.create(order_book=order_book, transaction_type=transaction_type)
         elif last_order:
@@ -146,13 +149,14 @@ class EntryOrder(BaseOrderTask):
         order_schema["duarion_type"] = "DAY"
         order_schema["order_type"] = "LIMIT"
         order_schema["product_type"] = "INTRADAY"
+        print(order_schema)
         if entry_time.time() > order_place_start_time and entry_time.time() < order_place_end_time:
             obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
             self.add_expected_target_stoploss(obj.id)
             slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
             self.send_order_request(order_schema)
 
-    def run(self, signal_detail:dict, *args, **kwargs):
+    def run(self, signal_detail:dict):
         self.send_order_place_request(signal_detail)
         return "Order Place Request Sent"
 

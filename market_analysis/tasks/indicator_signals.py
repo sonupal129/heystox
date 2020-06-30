@@ -2,6 +2,7 @@ from market_analysis.imports import *
 from market_analysis.tasks.orders import EntryOrder
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.models import StrategyTimestamp, OrderBook
+from market_analysis.tasks.trading import get_upstox_user
 # CODE Below 
 # Signal Router for Routing Order Data Processing as per Strategy
 class SignalRouter:
@@ -35,7 +36,7 @@ class BaseSignalTask(celery_app.Task):
     queue = "high_priority"
 
     def prepare_orderdata(self, timestamp):
-        sorted_stock = timestamp.sorted_stock
+        sorted_stock = timestamp.stock
         order_detail = {}
         order_detail["name"] = sorted_stock.symbol.symbol
         order_detail["entry_time"] = timestamp.timestamp
@@ -51,11 +52,11 @@ class BaseSignalTask(celery_app.Task):
         
         if is_time_between_range(timestamp.timestamp, 20):
             if sorted_stock.entry_type == "BUY":
-                if timestamp.entry_price > timestamp.stock.symbol.get_stock_live_price(price_type="open") or entry_price == None:
-                    entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="open")
+                if timestamp.entry_price == None or timestamp.entry_price > timestamp.stock.symbol.get_stock_live_price(price_type="ltp"):
+                    entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="ltp")
             elif sorted_stock.entry_type == "SELL":
-                if timestamp.entry_price < timestamp.stock.symbol.get_stock_live_price(price_type="open") or entry_price == None:
-                    entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="open")
+                if timestamp.entry_price == None or timestamp.entry_price < timestamp.stock.symbol.get_stock_live_price(price_type="ltp"):
+                    entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="ltp")
 
             entry_available = False
 
@@ -78,7 +79,6 @@ class BaseSignalTask(celery_app.Task):
             return "Crossover out of time limit"
 
     def run(self, timestamp_id):
-        print(timestamp_id)
         timestamp = StrategyTimestamp.objects.get(id=timestamp_id)
         self.update_entry_price(timestamp)
 
@@ -91,7 +91,7 @@ class BaseSignalTask(celery_app.Task):
         
         if signal_function(self, timestamp) == True:
             order_data = self.prepare_orderdata(timestamp)
-            EntryOrder().delay(**order_data)
+            EntryOrder().delay(order_data)
 
 
 class GlobalSignalTask(BaseSignalTask):
@@ -108,9 +108,9 @@ class GlobalSignalTask(BaseSignalTask):
         percentage_calculator = lambda higher_number, lower_number : (higher_number - lower_number) / lower_number * 100
         buy_qty = data["total_buy_qty"]
         sell_qty = data["total_sell_qty"]
-        if entry_type == "BUY" and (percentage_calculator(sell_qty, buy_qty) < 30 or percentage_calculator(buy_qty, sell_qty) > 20):
+        if sorted_stock.entry_type == "BUY" and (percentage_calculator(sell_qty, buy_qty) < 30 or percentage_calculator(buy_qty, sell_qty) > 20):
             return True
-        elif entry_type == "SELL" and (percentage_calculator(buy_qty, sell_qty) < 30 or percentage_calculator(sell_qty, buy_qty) > 20):
+        elif sorted_stock.entry_type == "SELL" and (percentage_calculator(buy_qty, sell_qty) < 30 or percentage_calculator(sell_qty, buy_qty) > 20):
             return True
         else:
             return False

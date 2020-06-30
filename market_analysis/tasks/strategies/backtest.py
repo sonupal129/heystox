@@ -157,7 +157,7 @@ class BackTestStrategy:
             strategy_output_df = strategy_output_df.drop("time", axis=1)
 
         cache_key = self.get_cache_key(symbol, strategy)
-        redis_cache.set(cache_key, strategy_output_df, 15*20*12*2)
+        redis_cache.set(cache_key, strategy_output_df, 15*20*12*2*3)
         return strategy_output_df
 
 
@@ -171,5 +171,8 @@ def prepare_n_call_backtesting_strategy(*args, **kwargs):
         "candle_type" : kwargs.get("candle_type"),
         "strategy_id" : kwargs.get("strategy_id")
     }
+
+    print(kwargs.get("candle_type"))
+
     BackTestStrategy(**data).run()
     return "Backtesting Completed!, Run function again to get output"

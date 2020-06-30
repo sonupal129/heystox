@@ -54,6 +54,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 # Defaul Djnago Models
 from django.contrib.auth.models import User, Group, Permission
 from django.db.models import Max, Min, Sum
+from django.db.models.query import QuerySet
 
 # Default Djnago Views
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -126,6 +127,15 @@ stock_movement = {
     "SELL" : settings.MARKET_BEARISH_MOVEMENT
 }
 
+# Candle Choices
+candles_types = {
+        "M5": "5 Minute",
+        "M10": "10 Minute",
+        "M15": "15 Minute",
+        "M30": "30 Minute",
+        "M60": "60 Minute",
+        "1D": "1 Day"
+}
 
 
 def roundup(x, prec=2, base=.05):
