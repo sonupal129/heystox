@@ -16,17 +16,16 @@ class StochasticBollingerCrossover(BaseEntryStrategy):
     name = "find_stochastic_bollingerband_crossover"
     strategy_type = "Entry"
 
-    def find_stochastic_bollingerband_crossover(self, stock_id, entry_type, backtest, backtesting_json_data_frame):
+    def find_stochastic_bollingerband_crossover(self, stock_id, entry_type, backtest, backtesting_candles_data):
         """Find Bollinger crossover with adx and stochastic crossover, Supporting Strategy"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
         df = stock.get_stock_live_data(with_live_candle=False)
         if backtest:
-            df = self.create_backtesting_dataframe(backtesting_json_data_frame)
+            df = self.create_backtesting_dataframe(backtesting_candles_data)
         
         df["medium_band"] = bollinger_mavg(df.close_price)
         df["adx"] = adx(df.high_price, df.low_price, df.close_price)
-        df = df.drop(columns=["total_buy_quantity", "total_sell_quantity"])
         df["medium_band"] = df.medium_band.apply(roundup)
         df["bollinger_signal"] = np.where(df.close_price < df.medium_band, "SELL", "BUY")
         if not backtest:
@@ -99,13 +98,13 @@ class StochasticMacdCrossover(BaseEntryStrategy):
     queue = "medium_priority"
     strategy_type = "Entry"
 
-    def find_stochastic_macd_crossover(self, stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
+    def find_stochastic_macd_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None):
         """(Custom Macd Crossover) This function find crossover between macd and macd signal and return signal as buy or sell"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
         df = stock.get_stock_live_data()
         if backtest:
-            df = self.create_backtesting_dataframe(backtesting_json_data_frame)
+            df = self.create_backtesting_dataframe(backtesting_candles_data)
         
         df["macd"] = macd(df.close_price)
         df["macd_signal"] = macd_signal(df.close_price)
@@ -123,7 +122,7 @@ class StochasticMacdCrossover(BaseEntryStrategy):
         df.loc[(df["stochastic_crossover"].shift() == "SELL") & (df["stochastic_crossover"] == "BUY") & (df["stochastic_crossover"].shift(-1) == "SELL"), "stochastic_crossover"] = "SELL"
         df.loc[(df["stochastic_crossover"] != df["stochastic_crossover"].shift()) & (df["stochastic_crossover"] == "BUY"), "stochastic_crossover"] = "BUY_CROSSOVER"
         df.loc[(df["stochastic_crossover"] != df["stochastic_crossover"].shift()) & (df["stochastic_crossover"] == "SELL"), "stochastic_crossover"] = "SELL_CROSSOVER"
-        df = df.drop(columns=["total_buy_quantity", "total_sell_quantity"])
+        
         if not backtest:
             df = df.loc[df["date"] > str(today_date)]
         
@@ -187,19 +186,19 @@ class AdxBollingerCrossover(BaseEntryStrategy):
     queue = "medium_priority"
     strategy_type = "Entry"
 
-    def find_adx_bollinger_crossover(self, stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
+    def find_adx_bollinger_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None):
         """Find bolling corssover with help of adx"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
         df = stock.get_stock_live_data(with_live_candle=False)
         
         if backtest:
-            df = self.create_backtesting_dataframe(backtesting_json_data_frame)
+            df = self.create_backtesting_dataframe(backtesting_candles_data)
         
         df["high_band"] = bollinger_hband(df.close_price)
         # df["medium_band"] = bollinger_mavg(df.close_price)
         df["low_band"] = bollinger_lband(df.close_price)
-        df = df.drop(columns=["total_buy_quantity", "total_sell_quantity"])
+        
         df["adx"] = adx(df.high_price, df.low_price, df.close_price)
         df["adx_neg"] = adx_neg(df.high_price, df.low_price, df.close_price)
         df["adx_pos"] = adx_pos(df.high_price, df.low_price, df.close_price)
@@ -242,13 +241,13 @@ celery_app.tasks.register(AdxBollingerCrossover)
 #     strategy_priority = "Support"
 #     name = "find_ohl_in_stock"
 
-#     def find_ohl_in_stock(self, stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
+#     def find_ohl_in_stock(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None):
 #         stock = Symbol.objects.get(id=stock_id)
 #         today_date = get_local_time().date()
 #         df = stock.get_stock_live_data(with_live_candle=False)
         
 #         if backtest:
-#             df = self.create_backtesting_dataframe(backtesting_json_data_frame)
+#             df = self.create_backtesting_dataframe(backtesting_candles_data)
         
 #         ohl_condition = stock.is_stock_ohl()
 #         if ohl_condition:

@@ -176,7 +176,7 @@ class BacktestSortedStocksView(View):
                 strategy = backtest_form.cleaned_data["strategy"]
                 entry_type = backtest_form.cleaned_data["entry_type"]
                 from_date = backtest_form.cleaned_data["from_date"]
-                candle_type = "M5"
+                candle_type = backtest_form.cleaned_data["candle_type"]
                 current_date = get_local_time().date()
                 to_days = (current_date - from_date).days
                 
@@ -206,6 +206,7 @@ class BacktestSortedStocksView(View):
                     df_extrct = dict(zip(strt, strt_count))
                     df_extrct["Profit or Loss"] = round(cached_value["p/l"].sum(), 2)
                     df_extrct["Entry Type"] = entry_type
+                    df_extrct["Candle Type"] = candles_types.get(candle_type)
                     context["vars"] = df_extrct
                 context["df"] = cached_value.to_html() if not cached_value.empty else "No Entry Point Found for Strategy"
                 return render(request, self.template_name, self.get_context_data(request, **context))

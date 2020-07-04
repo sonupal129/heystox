@@ -142,33 +142,38 @@ class Symbol(BaseModel):
             "M10" : "10T",
             "M15" : "15T",
             "M30" : "30T",
+            "1H" : "60T",
+            # "2H" : "120T",
+            # "3H" : "180T",
             "1D" : "1D",
             }
+
         if not isinstance(candle_queryset, QuerySet):
             raise TypeError("candle_queryset is not a itearable queryset")
         
         candles = candle_queryset.values("open_price", "high_price", "low_price", "close_price", "volume", "date")
-        candle_type = candles_type.get(candle_type, "5T")
+        candle_type_timing = candles_type.get(candle_type, "5T")
         df = pd.DataFrame(candles)
         df = df.set_index("date")
-        candle_open = df.open_price.resample(candle_type).ohlc()
-        candle_close = df.close_price.resample(candle_type).ohlc()
-        candle_high = df.high_price.resample(candle_type).ohlc()
-        candle_low = df.low_price.resample(candle_type).ohlc()
-        candle_volume = df.volume.resample(candle_type).ohlc()
-        new_df = pd.concat([candle_open.open, candle_close.close, candle_high.high, candle_low.low, candle_volume.close], axis=1, keys=["open_price", "close_price", "high_price", "low_price", "volume"])
+        candle_open = df.open_price.resample(candle_type_timing, base=15).first()
+        candle_close = df.close_price.resample(candle_type_timing, base=15).last()
+        candle_high = df.high_price.resample(candle_type_timing, base=15).max()
+        candle_low = df.low_price.resample(candle_type_timing, base=15).min()
+        candle_volume = df.volume.resample(candle_type_timing, base=15).last()
+        new_df = pd.concat([candle_open, candle_close, candle_high, candle_low, candle_volume], axis=1, keys=["open_price", "close_price", "high_price", "low_price", "volume"])
         new_df["date"] = new_df.index
         new_df.index = np.arange(0, len(new_df))
         new_df = new_df.dropna()
+        new_df["candle_type"] = candles_types.get(candle_type) if candle_type_timing != "5T" else candles_types.get("M5")
         new_df = new_df.reset_index().drop("index", axis=1)
         return new_df
 
 
-    def get_stock_live_data(self, date_obj=None, with_live_candle=True):
+    def get_stock_live_data(self, date_obj=None, with_live_candle=True, candle_type="M5"):
         if date_obj == None:
             date_obj = get_local_time().date()
-        stock_data = self.get_stock_data(end_date=date_obj).values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
-        df = pd.DataFrame(list(stock_data))
+        stock_data = self.get_stock_data(end_date=date_obj)
+        df = self.get_stock_dataframe(stock_data, candle_type=candle_type)
         if with_live_candle:
             try:
                 current_candle_data = self.get_stock_current_candle()

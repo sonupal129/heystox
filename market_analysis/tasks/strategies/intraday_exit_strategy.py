@@ -60,8 +60,8 @@ class GlobalExitStrategy(BaseExitStrategy):
                     slack_message_sender.delay(text="{0} Hit Order Sent for trade {1}".format(order_hit, symbol_name), channel="#random")
                     redis_cache.set(stoploss_target_cache_key, True)
     
-    def run(self, stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
-        if backtest or backtesting_json_data_frame:
+    def run(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None):
+        if backtest or backtesting_candles_data:
             raise TypeError(f"Backtesting is not allowed on {self.__class__.__name__}")
         stock = Symbol.objects.get(id=stock_id)
         self.exit_on_stoploss_target_hit(stock.symbol)

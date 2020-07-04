@@ -134,6 +134,7 @@ candles_types = {
         "M15": "15 Minute",
         "M30": "30 Minute",
         "M60": "60 Minute",
+        "1H": "1 Hour", 
         "1D": "1 Day"
 }
 

@@ -83,18 +83,20 @@ class BackTestStrategy:
     def run(self, **kwargs):
         strategy = self.get_strategy()    
         symbol = Symbol.objects.get(id=self.stock_id)
-        candles = symbol.get_stock_data(days=self.to_days, end_date=self.end_date, candle_type=self.candle_type).values("candle_type", "open_price", "high_price", "low_price", "close_price", "volume", "total_buy_quantity", "total_sell_quantity", "date")
-        candles_backtest_df = pd.DataFrame()
+        candles = symbol.get_stock_data(days=self.to_days, end_date=self.end_date)
+        candles_df = symbol.get_stock_dataframe(candles, self.candle_type)
         output = []
+        candles_obj = []
         print("Please wait while strategy getting backtested...")
         
         cached_value = self.get_cached_value(symbol, strategy)
         if cached_value is not None and self.cached:
             return cached_value
         
-        for candle in candles:
-            candles_backtest_df = candles_backtest_df.append(candle, ignore_index=True)
-            output.append(strategy.s(self.stock_id, self.entry_type, backtest=True, backtesting_json_data_frame=candles_backtest_df.to_json()))
+        for df_index,candle in candles_df.iterrows():
+            candles_obj.append(candle)
+            backtest_df = pd.DataFrame(candles_obj)
+            output.append(strategy.s(self.stock_id, self.entry_type, backtest=True, backtesting_candles_data=backtest_df.to_json()))
         
         run_tasks = group(output)
         results = run_tasks.apply_async()
@@ -109,20 +111,20 @@ class BackTestStrategy:
             strategy_output_df = strategy_output_df.drop_duplicates(subset="entry_time")
             strategy_output_df["stoploss"] = [get_stock_stoploss_price(price, self.entry_type) for price in strategy_output_df.entry_price]
             strategy_output_df["target"] = [get_stock_target_price(price, self.entry_type) for price in strategy_output_df.entry_price]
-            
             default_exit_time = kwargs.get("default_exit_time", "14:30")
             exit_time = datetime.strptime(default_exit_time, "%H:%M")
-            candles_dataframe = pd.DataFrame(list(candles))
+            strategy_output_df["entry_time"] = pd.to_datetime(strategy_output_df.entry_time, format="%Y-%m-%dT%H:%M:%S")
+            strategy_output_df["time"] = [t.time() for t in strategy_output_df.entry_time]
+            strategy_output_df = strategy_output_df.loc[strategy_output_df["time"] < exit_time.time()]
             strategy_status = []
             exit_price = []
-            
+            exit_timing = []
             for d in strategy_output_df.itertuples():
-                df = candles_dataframe
-                entry_time = datetime.strptime(d.entry_time, "%Y-%m-%dT%H:%M:%S")
+                df = candles_df
+                entry_time = d.entry_time
                 df = df.loc[df["date"] >= d.entry_time]
                 df = df.loc[df["date"].dt.date.astype(str) == str(entry_time.date())]
                 exit_date_time = entry_time.replace(hour=exit_time.hour, minute=exit_time.minute)
-
                 if self.entry_type == "BUY":
                     stoploss_row = df.loc[df["low_price"] <= d.stoploss].head(1)
                     target_row = df.loc[df["high_price"] >= d.target].head(1)
@@ -137,25 +139,27 @@ class BackTestStrategy:
                     elif exit_row.get("hit") == "STOPLOSS":
                         exit_price.append(d.stoploss)
                     strategy_status.append(exit_row.get("hit"))
+                    exit_timing.append(d.entry_time)
 
                 else:
                     strategy_status.append("SIDEWAYS")
-                    last_trading_row = df.loc[df["date"] >= str(exit_date_time)].iloc[0]
-                    exit_price.append(last_trading_row.close_price)
+                    try:
+                        last_trading_row = df.loc[df["date"] >= str(exit_date_time)].iloc[0]
+                        exit_price.append(last_trading_row.close_price)
+                    except:
+                        exit_price.append(d.entry_price)
+                    exit_timing.append(d.entry_time)
             
             strategy_output_df["strategy_status"] = strategy_status
             strategy_output_df["exit_price"] = exit_price
+            strategy_output_df["exit_time"] = exit_timing
             if self.entry_type == "SELL":
                 strategy_output_df["p/l"] = strategy_output_df["entry_price"] - strategy_output_df["exit_price"]
             elif self.entry_type == "BUY":
-                strategy_output_df["p/l"] = strategy_output_df["exit_price"] - strategy_output_df["entry_price"]          
-            
-            strategy_output_df["entry_time"] = pd.to_datetime(strategy_output_df.entry_time, format="%Y-%m-%dT%H:%M:%S")
-            strategy_output_df = strategy_output_df.loc[(strategy_output_df.entry_time - strategy_output_df.entry_time.shift()) >= pd.Timedelta(minutes=20)]
-            strategy_output_df["time"] = [t.time() for t in strategy_output_df["entry_time"]]
-            strategy_output_df = strategy_output_df.loc[strategy_output_df["time"] < exit_time.time()]
+                strategy_output_df["p/l"] = strategy_output_df["exit_price"] - strategy_output_df["entry_price"]
+            if len(strategy_output_df) > 5:
+                strategy_output_df = strategy_output_df.loc[(strategy_output_df.entry_time - strategy_output_df.entry_time.shift()) >= pd.Timedelta(minutes=20)]
             strategy_output_df = strategy_output_df.drop("time", axis=1)
-
         cache_key = self.get_cache_key(symbol, strategy)
         redis_cache.set(cache_key, strategy_output_df, 15*20*12*2*3)
         return strategy_output_df
@@ -171,8 +175,5 @@ def prepare_n_call_backtesting_strategy(*args, **kwargs):
         "candle_type" : kwargs.get("candle_type"),
         "strategy_id" : kwargs.get("strategy_id")
     }
-
-    print(kwargs.get("candle_type"))
-
     BackTestStrategy(**data).run()
     return "Backtesting Completed!, Run function again to get output"

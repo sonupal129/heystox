@@ -10,16 +10,16 @@ class BaseStrategyTask(celery_app.Task):
     strategy_priority = "Primary"
 
     
-    def create_backtesting_dataframe(self, json_data:str):
+    def create_backtesting_dataframe(self, data:str):
         """Create pandas dataframe for backtesting only
         Parameter:
-        json_data : pandas dataframe data in json format"""
-        if not isinstance(json_data, str):
-            raise TypeError("json_data is not type of Json data string")
+        data : Json Data"""
+        if not isinstance(data, str):
+            raise TypeError("data is not type of json data string")
         try:
-            df = pd.read_json(json_data)
+            df = pd.read_json(data)
         except:
-            raise JSONDecodeError ("Passed data type is not Json Data")
+            raise JSONDecodeError ("Passed data type is not json data")
         return df
 
     def check_strategy_priority(self):
@@ -49,16 +49,16 @@ class BaseStrategyTask(celery_app.Task):
                 stamp.exclude(id=stamp.first().id).delete()
             return "Signal Found"
 
-    def base_strategy(self, stock_id, entry_type, backtest, backtesting_json_data_frame=None):
+    def base_strategy(self, stock_id, entry_type, backtest, backtesting_candles_data=None):
         pass
 
-    def run(self, stock_id, entry_type, backtest=False, backtesting_json_data_frame=None):
+    def run(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None):
         strategy_function = None
         try:
             strategy_function = getattr(self.__class__, self.name)
         except:
             return f"Strategy function name and task name should be same"
-        output = strategy_function(self, stock_id, entry_type, backtest, backtesting_json_data_frame)
+        output = strategy_function(self, stock_id, entry_type, backtest, backtesting_candles_data)
         if backtest and not isinstance(output, str):
             return self.create_indicator_timestamp(*output)
 
