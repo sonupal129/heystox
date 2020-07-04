@@ -45,8 +45,8 @@ stock_data_import_tasks = {
         "schedule": crontab(day_of_week="1-5", hour=19, minute=0),
         "kwargs": {"index": "NSE_EQ"},
     },
-    "update_stocks_candle_data": {
-        "task": "market_analysis.tasks.stock_data_import_tasks.update_stocks_candle_data",
+    "import_stocks_candle_data": {
+        "task": "market_analysis.tasks.stock_data_import_tasks.import_stocks_candle_data",
         "schedule": crontab(day_of_week="1-5", hour=17, minute=10),
     },
     "update_stocks_volume": {
