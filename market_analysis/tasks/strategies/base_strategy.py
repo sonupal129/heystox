@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import Strategy, StrategyTimestamp
+from market_analysis.models import Strategy, StrategyTimestamp, Symbol
 # CODE Below
 
 class BaseStrategyTask(celery_app.Task):
@@ -10,17 +10,33 @@ class BaseStrategyTask(celery_app.Task):
     strategy_priority = "Primary"
 
     
-    def create_backtesting_dataframe(self, data:str):
-        """Create pandas dataframe for backtesting only
+    def create_dataframe(self, data:str, backtest=False, **kwargs):
+        """Create pandas dataframe for backtesting and live analysis only
         Parameter:
         data : Json Data"""
-        if not isinstance(data, str):
-            raise TypeError("data is not type of json data string")
-        try:
-            df = pd.read_json(data)
-        except:
-            raise JSONDecodeError ("Passed data type is not json data")
-        return df
+        mandatory_keys = ["symbol", "with_live_candle"]
+
+        if backtest:
+            try:
+                df = pd.read_json(data)
+                return df
+            except:
+                raise JSONDecodeError ("Passed data type is not json data")
+        
+        elif not backtest:
+            for key in mandatory_keys:
+                if key not in kwargs.keys():
+                    raise AttributeError(f"{key} field is not in kwargs, Please send {key} with kwargs")
+            symbol = kwargs.get("symbol")
+            with_live_candle = kwargs.get("with_live_candle", False)
+            if not isinstance(symbol, Symbol):
+                raise TypeError(f"{symbol} if not {Symbol} class object")
+            
+            df = symbol.get_stock_live_data(with_live_candle=with_live_candle)
+            return df
+
+
+        
 
     def check_strategy_priority(self):
         if self.strategy_type == "Entry" and not self.strategy_priority:

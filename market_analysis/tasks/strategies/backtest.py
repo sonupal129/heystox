@@ -160,6 +160,7 @@ class BackTestStrategy:
             if len(strategy_output_df) > 5:
                 strategy_output_df = strategy_output_df.loc[(strategy_output_df.entry_time - strategy_output_df.entry_time.shift()) >= pd.Timedelta(minutes=20)]
             strategy_output_df = strategy_output_df.drop("time", axis=1)
+            strategy_output_df = strategy_output_df.loc[strategy_output_df["entry_price"] != strategy_output_df["exit_price"]]
         cache_key = self.get_cache_key(symbol, strategy)
         redis_cache.set(cache_key, strategy_output_df, 15*20*12*2*3)
         return strategy_output_df

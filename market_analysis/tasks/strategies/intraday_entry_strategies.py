@@ -20,10 +20,7 @@ class StochasticBollingerCrossover(BaseEntryStrategy):
         """Find Bollinger crossover with adx and stochastic crossover, Supporting Strategy"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = stock.get_stock_live_data(with_live_candle=False)
-        if backtest:
-            df = self.create_backtesting_dataframe(backtesting_candles_data)
-        
+        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False})        
         df["medium_band"] = bollinger_mavg(df.close_price)
         df["adx"] = adx(df.high_price, df.low_price, df.close_price)
         df["medium_band"] = df.medium_band.apply(roundup)
@@ -102,10 +99,7 @@ class StochasticMacdCrossover(BaseEntryStrategy):
         """(Custom Macd Crossover) This function find crossover between macd and macd signal and return signal as buy or sell"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = stock.get_stock_live_data()
-        if backtest:
-            df = self.create_backtesting_dataframe(backtesting_candles_data)
-        
+        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False})        
         df["macd"] = macd(df.close_price)
         df["macd_signal"] = macd_signal(df.close_price)
         df["macd_diff"] = macd_diff(df.close_price)
@@ -190,11 +184,7 @@ class AdxBollingerCrossover(BaseEntryStrategy):
         """Find bolling corssover with help of adx"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = stock.get_stock_live_data(with_live_candle=False)
-        
-        if backtest:
-            df = self.create_backtesting_dataframe(backtesting_candles_data)
-        
+        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False})        
         df["high_band"] = bollinger_hband(df.close_price)
         # df["medium_band"] = bollinger_mavg(df.close_price)
         df["low_band"] = bollinger_lband(df.close_price)
