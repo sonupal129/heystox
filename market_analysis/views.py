@@ -180,24 +180,25 @@ class BacktestSortedStocksView(View):
                 current_date = get_local_time().date()
                 to_days = (current_date - from_date).days
                 
+                cache_key = self.get_cache_key(str(current_date - timedelta(to_days)), str(current_date), symbol.symbol, str(strategy.strategy_name), str(candle_type), entry_type, "backtest_strategy")
+                cached_value = self.get_backtested_cached_value(cache_key)
+                
                 data = {
                     "stock_id": symbol.id,
                     "end_date": str(current_date),
                     "to_days": to_days,
                     "strategy_id": strategy.id,
                     "entry_type": entry_type,
-                    "candle_type": backtest_form.cleaned_data["candle_type"]
+                    "candle_type": backtest_form.cleaned_data["candle_type"],
+                    "cache_key" : cache_key
                 }
-                cache_key = self.get_cache_key(str(current_date - timedelta(to_days)), str(current_date), symbol.symbol, str(strategy.strategy_name), str(candle_type), entry_type, "backtest_strategy")
-                cached_value = self.get_backtested_cached_value(cache_key)
-                print(cache_key)
                 if cached_value is None:
                     is_function_called_before = redis_cache.get(cache_key + "_requested") # This will check if function called 5 minute before is yest, it will as to wait
                     if is_function_called_before:
                         context["response"] = "Backtesting request for strategy already sent before, please try after 5 minute to check status"
                         return render(request, self.template_name, self.get_context_data(request, **context))
                     prepare_n_call_backtesting_strategy.delay(**data)
-                    redis_cache.set(cache_key + "_requested", True, 60*5)
+                    redis_cache.set(cache_key + "_requested", True, 60*20)
                     context["response"] = "Backtesting request sent, Please try after 5 minute to check backtest result"
                     return render(request, self.template_name, self.get_context_data(request, **context))
                 

@@ -177,4 +177,5 @@ def prepare_n_call_backtesting_strategy(*args, **kwargs):
         "strategy_id" : kwargs.get("strategy_id")
     }
     BackTestStrategy(**data).run()
+    redis_cache.delete(kwargs.get("cache_key") + "_requested")
     return "Backtesting Completed!, Run function again to get output"
