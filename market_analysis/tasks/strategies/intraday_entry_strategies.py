@@ -16,11 +16,11 @@ class StochasticBollingerCrossover(BaseEntryStrategy):
     name = "find_stochastic_bollingerband_crossover"
     strategy_type = "Entry"
 
-    def find_stochastic_bollingerband_crossover(self, stock_id, entry_type, backtest, backtesting_candles_data):
+    def find_stochastic_bollingerband_crossover(self, stock_id, entry_type, backtest, backtesting_candles_data, **kwargs):
         """Find Bollinger crossover with adx and stochastic crossover, Supporting Strategy"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False})        
+        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "M5")})        
         df["medium_band"] = bollinger_mavg(df.close_price)
         df["adx"] = adx(df.high_price, df.low_price, df.close_price)
         df["medium_band"] = df.medium_band.apply(roundup)
@@ -180,11 +180,11 @@ class AdxBollingerCrossover(BaseEntryStrategy):
     queue = "medium_priority"
     strategy_type = "Entry"
 
-    def find_adx_bollinger_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None):
+    def find_adx_bollinger_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
         """Find bolling corssover with help of adx"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False})        
+        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "M5")})        
         df["high_band"] = bollinger_hband(df.close_price)
         # df["medium_band"] = bollinger_mavg(df.close_price)
         df["low_band"] = bollinger_lband(df.close_price)

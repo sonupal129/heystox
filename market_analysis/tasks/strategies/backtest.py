@@ -132,23 +132,22 @@ class BackTestStrategy:
                     stoploss_row = df.loc[df["high_price"] >= d.stoploss].head(1)
                     target_row = df.loc[df["low_price"] <= d.target].head(1)
                 exit_row = self.compare_target_stoploss_diffrent(target_row, stoploss_row)
-
                 if exit_row:
                     if exit_row.get("hit") == "TARGET":
                         exit_price.append(d.target)
                     elif exit_row.get("hit") == "STOPLOSS":
                         exit_price.append(d.stoploss)
                     strategy_status.append(exit_row.get("hit"))
-                    exit_timing.append(d.entry_time)
-
+                    exit_timing.append(exit_row["date"])
                 else:
                     strategy_status.append("SIDEWAYS")
                     try:
                         last_trading_row = df.loc[df["date"] >= str(exit_date_time)].iloc[0]
                         exit_price.append(last_trading_row.close_price)
+                        exit_timing.append(last_trading_row.date)
                     except:
                         exit_price.append(d.entry_price)
-                    exit_timing.append(d.entry_time)
+                        exit_timing.append("No Time Found")
             
             strategy_output_df["strategy_status"] = strategy_status
             strategy_output_df["exit_price"] = exit_price
@@ -161,6 +160,15 @@ class BackTestStrategy:
                 strategy_output_df = strategy_output_df.loc[(strategy_output_df.entry_time - strategy_output_df.entry_time.shift()) >= pd.Timedelta(minutes=20)]
             strategy_output_df = strategy_output_df.drop("time", axis=1)
             strategy_output_df = strategy_output_df.loc[strategy_output_df["entry_price"] != strategy_output_df["exit_price"]]
+
+            filtered_rows = []
+            for index, row in strategy_output_df.iterrows():
+                if len(filtered_rows) >= 1:
+                    if filtered_rows[-1].exit_time <= row["entry_time"]:
+                        filtered_rows.append(row)
+                else:
+                    filtered_rows.append(row)
+            strategy_output_df = pd.DataFrame(filtered_rows)
         cache_key = self.get_cache_key(symbol, strategy)
         redis_cache.set(cache_key, strategy_output_df, 15*20*12*2*3)
         return strategy_output_df

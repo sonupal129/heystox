@@ -88,6 +88,17 @@ class StrategyAdmin(admin.ModelAdmin):
             registered_strategy.append(strategy.id)
         Strategy.objects.exclude(id__in=registered_strategy).delete()
 
+    def has_add_permission(self, request):
+        return False
+
+
+class DeployedStrategiesAdmin(admin.ModelAdmin):
+    list_display = ["symbol", "strategy", "timeframe", "entry_type"]
+    search_fields = ["symbol"]
+    list_filter = ["strategy", "timeframe", "entry_type"]
+
+    def has_add_permission(self, request):
+        return True
 
 
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
@@ -103,3 +114,4 @@ admin.site.register(PreMarketOrderData, PreMarketOrderDataAdmin)
 admin.site.register(SortedStockDashboardReport, SortedStockDashboardReportAdmin)
 admin.site.register(OrderBook, OrderBookAdmin)
 admin.site.register(Strategy, StrategyAdmin)
+admin.site.register(DeployedStrategies, DeployedStrategiesAdmin)

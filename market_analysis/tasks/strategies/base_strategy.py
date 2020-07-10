@@ -32,11 +32,8 @@ class BaseStrategyTask(celery_app.Task):
             if not isinstance(symbol, Symbol):
                 raise TypeError(f"{symbol} if not {Symbol} class object")
             
-            df = symbol.get_stock_live_data(with_live_candle=with_live_candle)
+            df = symbol.get_stock_live_data(with_live_candle=with_live_candle, candle_type=kwargs.get("candle_type", "M5"))
             return df
-
-
-        
 
     def check_strategy_priority(self):
         if self.strategy_type == "Entry" and not self.strategy_priority:
@@ -68,13 +65,13 @@ class BaseStrategyTask(celery_app.Task):
     def base_strategy(self, stock_id, entry_type, backtest, backtesting_candles_data=None):
         pass
 
-    def run(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None):
+    def run(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
         strategy_function = None
         try:
             strategy_function = getattr(self.__class__, self.name)
         except:
             return f"Strategy function name and task name should be same"
-        output = strategy_function(self, stock_id, entry_type, backtest, backtesting_candles_data)
+        output = strategy_function(self, stock_id, entry_type, backtest, backtesting_candles_data, **kwargs)
         if backtest and not isinstance(output, str):
             return self.create_indicator_timestamp(*output)
 

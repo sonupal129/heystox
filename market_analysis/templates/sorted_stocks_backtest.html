@@ -37,19 +37,20 @@
 </head>
 
 <body>
-    <form action="" method="POST">
+    <form action="" method="">
         {% csrf_token %}
         {{ backtest_form.as_table }}
-        <button name="backtest_form" type="submit" class="button">Submit</button>
+        <button name="backtest_form" type="submit" class="button" formmethod="POST">Submit</button>
     </form>
 
     {% if strategy_deploy_form %}
     <p style="font-weight: 300;">Deploy or Remove Strategy</p>
-    <form action="" method="POST">
-        {% csrf_token %}
+    <form action="" method="">
         {{ strategy_deploy_form.as_table }}
-        <button name="strategy_deploy_form" type="submit" class="button">Deploy</button>
+        <button name="strategy_deploy_form" type="submit" class="button" formmethod="POST">Deploy</button>{% csrf_token %}
+        <button name="strategy_deploy_form" type="submit" class="button" formmethod="GET">Fetch Strategy</button>
     </form>
+    
     {% endif %}
 
     {% if vars%}
@@ -62,12 +63,9 @@
 
     {% if deploy_status %}
     <ul>
-        {% for status in deploy_status %}
-        <li>{{ status }}</li>
-        {% endfor %}
+        <li>{{ deploy_status }}</li>
     </ul>
     {% endif %}
-
     <!-- <h2>Total Sorted Stocks Count: <span>{% if symbols %}{{ symbols.count }}{% else %} 0 {% endif %}</span></h2> -->
     {% if response %}
     <p>{{response}}</p>

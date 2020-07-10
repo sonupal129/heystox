@@ -31,20 +31,24 @@ class Symbol(BaseModel):
     vtt = models.IntegerField("Total Traded Volume", blank=True, null=True)
     total_buy_quantity = models.IntegerField("Total Buy Quantity", blank=True, null=True)
     total_sell_quantity = models.IntegerField("Total Sell Quantity", blank=True, null=True)
+    trade_manually = models.BooleanField(default=False)
 
     def __str__(self):
         return self.symbol
 
-    def get_strategies(self, strategy_type="Entry", cached=True):
+    def get_strategies(self, strategy_type="Entry", entry_type="BUY", cached=True):
+        """Return Deployed Strategy Objects"""
+        strategy_choice = {
+            "Entry" : "ET",
+            "Exit" : "EX"
+        }
         cache_key = "_".join([self.symbol, strategy_type, "strategies"])
         cached_value = redis_cache.get(cache_key)
         if cached_value != None and cached:
             return cached_value
-        if strategy_type == "Entry":
-            strategies = self.entry_strategy.all()
-        elif strategy_type == "Exit":
-            strategies = self.exit_strategy.all()
-        redis_cache.set(cache_key, strategies, 60*60*24)
+        strategies = self.deployed_strategies.filter(strategy__strategy_type=strategy_choice.get(strategy_type), active=True, entry_type=entry_type).prefetch_related("strategy")
+        if strategies.exists():
+            redis_cache.set(cache_key, strategies, 60*60*24)
         return strategies
 
     def get_last_trading_day_count(self, date_obj=None):
@@ -453,7 +457,13 @@ class SortedStocksList(BaseModel):
         ("SELL", "SELL"),
     }
 
+    added_choice = {
+        ("AT", "Automatically"),
+        ("ML", "Manually")
+    }
+
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="sorted_stocks")
+    added = models.CharField(max_length=10, choices=added_choice, default="AT")
     entry_price = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     entry_type = models.CharField(max_length=20, choices=entry_choices, default="BUY")
 
@@ -678,6 +688,30 @@ class Strategy(BaseModel):
         if callable(st_func):
             return st_func()
         raise TypeError("Strategy class is not callable")
+
+
+class DeployedStrategies(BaseModel):
+    candle_type_choice = {(k,v) for k,v in candles_types.items()}
+
+    symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="deployed_strategies")
+    strategy = models.ForeignKey(Strategy, on_delete=models.CASCADE, limit_choices_to={"strategy_type": "ET"})
+    timeframe = models.CharField(choices=candle_type_choice, max_length=5, default="M5")
+    entry_type = models.CharField(default="BUY", max_length=10, choices={
+        ("BUY", "BUY"), ("SELL", "SELL") })
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name_plural = "Deployed Strategies"
+        unique_together = ("symbol", "strategy", "timeframe", "entry_type")
+    
+    def call_strategy(self, **kwargs):
+        strategy = self.strategy.get_strategy()
+        kwargs["candle_type"] = self.timeframe
+        kwargs["entry_type"] = self.entry_type
+        strategy.delay(**kwargs)
+        return True
+
+    
 
     
 

@@ -123,16 +123,18 @@ def apply_intraday_indicator_on_sorted_stocks():
     start_time = time(9,25)
     cache_key = str(get_local_time().date()) + "_todays_sorted_stocks"
     cached_value = redis_cache.get(cache_key)
+    manual_stocks = list(SortedStocksList.objects.filter(added="ML", created_at__date=get_local_time().date()))
     if current_time > start_time:
         if cached_value == None:
             add_today_movement_stocks.apply_async()
             sleep(3)
             cached_value = redis_cache.get(cache_key)
-        for sorted_stock in cached_value:
-            strategies = sorted_stock.symbol.get_strategies()
-            if strategies:
+        for sorted_stock in cached_value + manual_stocks:
+            strategies = sorted_stock.symbol.get_strategies(entry_type=sorted_stock.entry_type)
+            if strategies.exists():
                 for strategy in strategies:
-                    strategy.get_strategy().apply_async(kwargs={"stock_id": sorted_stock.symbol.id, "entry_type": sorted_stock.entry_type})
+                    data = {"stock_id": sorted_stock.symbol.id}
+                    strategy.call_strategy(**data)
         return "Indicator Called"
     return f"Current time {current_time} not > 9:25"
 

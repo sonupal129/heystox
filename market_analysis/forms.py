@@ -1,5 +1,5 @@
 from django import forms
-from market_analysis.models import Symbol, User, SortedStocksList, Strategy
+from market_analysis.models import Symbol, User, SortedStocksList, Strategy, DeployedStrategies
 from market_analysis.imports import *
 from market_analysis.tasks.trading import get_liquid_stocks
 # Code Starts
@@ -52,8 +52,9 @@ class BacktestForm(forms.Form):
         return cache_key
     
 
-class StrategyDeployForm(forms.Form):
-    symbol = forms.ModelChoiceField(queryset=get_liquid_stocks(max_price=300), to_field_name="id", label="Select Stock", required=False)
-    strategy = forms.ModelMultipleChoiceField(queryset=Strategy.objects.filter(strategy_type="ET"))
-    remove_all = forms.BooleanField(required=False, label="Remove Strategy from All Stocks")
-    add_all = forms.BooleanField(required=False, label="Add Strategy to All Stocks")
+class StrategyDeployForm(forms.ModelForm):
+    symbol = forms.ModelChoiceField(queryset=get_liquid_stocks(max_price=300), label="Select Stock")
+    
+    class Meta:
+        model = DeployedStrategies
+        fields = ["symbol", "strategy", "timeframe", "entry_type"]

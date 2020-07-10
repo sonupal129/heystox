@@ -44,7 +44,7 @@ def get_cached_liquid_stocks(cached=True, trade_volume=5000000, max_price=300):
 
 def get_stocks_for_trading():
     f"""Get stocks whose movement is greater or lower then"""
-    today_date = get_local_time().date()
+    
     stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks())
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     if nifty_50 == "BUY":
@@ -74,21 +74,20 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
     if nifty_50 == "BUY" or nifty_50 == "SELL":
         for stock in get_stocks_for_trading():
             try:
-                obj, is_created = SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50, created_at__date=today_date)
+                SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50, created_at__date=today_date)
                 # sorted_stocks_name.append(obj.symbol.symbol)
             except:
                 continue
         # slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
-    sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date).select_related("symbol").prefetch_related("timestamps")
+    sorted_stocks = SortedStocksList.objects.filter(created_at__date=today_date, added="AT").select_related("symbol").prefetch_related("timestamps")
     nifty_imported_stocks_cache_key = str(get_local_time().date()) + "_nifty_daily_gainers_loosers"
     nifty_imported_stocks_cached_value = redis_cache.get(nifty_imported_stocks_cache_key)
     if nifty_imported_stocks_cached_value == None:
-        imported_stocks = SortedStocksList.objects.filter(created_at__date=today_date).exclude(symbol_id__in=get_cached_liquid_stocks()).values_list("symbol__symbol", flat=True)
+        imported_stocks = SortedStocksList.objects.filter(created_at__date=today_date, added="AT").exclude(symbol_id__in=get_cached_liquid_stocks()).values_list("symbol__symbol", flat=True)
         redis_cache.set(nifty_imported_stocks_cache_key, imported_stocks, 60*30)
     cached_value = redis_cache.get(cache_key)
     if sorted_stocks:
         deleted_stocks = []
-        counter = 0
         for stock in sorted_stocks:
             try:
                 not_good_movement = stock.created_at <= get_local_time().now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all()
@@ -143,3 +142,14 @@ def add_stock_on_market_sideways():
         if nifty_50_point < -30:
             stocks_for_trade  = [SortedStocksList.objects.get_or_create(symbol=stock, entry_type="BUY", created_at__date=today_date) for stock in liquid_stocks if stock.is_stock_moved_good_for_trading(movement_percent=settings.MARKET_BULLISH_MOVEMENT)]
             slack_message_sender.delay(text=f"List of Sideways Buy Stocks: " + ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))
+
+
+@celery_app.task(queue="low_priority")
+def add_manual_sorted_stocks():
+    """Fucntion add stocks automatically as manual stocks which get stocks get seleted by manually
+    and stocks dosen't affect by movement strategy directly applied on these stocks"""
+    symbols  = Symbol.objects.filter(trade_manually=True)
+    today_date = get_local_time().date()
+    for symbol in symbol:
+        SortedStocksList.objects.get_or_create(symbol=symbol, entry_type="SELL", created_at__date=today_date)
+        SortedStocksList.objects.get_or_create(symbol=symbol, entry_type="BUY", created_at__date=today_date)

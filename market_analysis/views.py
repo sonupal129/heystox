@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol, StrategyTimestamp, SortedStockDashboardReport
+from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol, StrategyTimestamp, SortedStockDashboardReport, DeployedStrategies
 from market_analysis.filters import SymbolFilters, SortedStocksFilter
 from market_analysis.tasks.trading import get_cached_liquid_stocks, get_liquid_stocks
 from market_analysis.view_mixins import BasePermissionMixin
@@ -126,6 +126,10 @@ class BacktestSortedStocksView(View):
         return kwargs
 
     def get(self, request, **kwargs):
+        context = {}
+        if request.method == "GET":
+        #     if ""
+            print(request.GET)
         return render(request, self.template_name, self.get_context_data(request))
 
     def get_cache_key(self, *args):
@@ -143,16 +147,17 @@ class BacktestSortedStocksView(View):
         backtest_start_date = datetime.strptime(split_cache[0], "%Y-%m-%d").date()
         backtest_end_date = datetime.strptime(split_cache[1], "%Y-%m-%d").date()
         
-        key = None
+        new_cache_key = None
         for key in matched_keys:
             split_key = key.split("_")
             key_start_date = datetime.strptime(split_key[0], "%Y-%m-%d").date()
             key_end_date = datetime.strptime(split_key[1], "%Y-%m-%d").date()
-            if key_end_date == backtest_end_date and backtest_start_date < key_start_date:
+            if key_end_date == backtest_end_date and key_start_date <= backtest_start_date:
+                cache_key = key
                 break
-        
-        if key:
-            cached_value = redis_cache.get(key)
+
+        if new_cache_key:
+            cached_value = redis_cache.get(new_cache_key)
             if cached_value is not None:
                 if cached_value.empty:
                     return cached_value
@@ -217,40 +222,9 @@ class BacktestSortedStocksView(View):
 
         elif "strategy_deploy_form" in request.POST:
             strategy_form = StrategyDeployForm(request.POST)
-            form_name = "strategy_deploy_form"
             if strategy_form.is_valid():
-                symbol = strategy_form.cleaned_data["symbol"]
-                strategies = strategy_form.cleaned_data["strategy"]
-                remove_all = strategy_form.cleaned_data["remove_all"]
-                add_all = strategy_form.cleaned_data["add_all"]
-                output = []
-                if not remove_all and not add_all:
-                    if symbol:
-                        symbol_strategis = symbol.strategy.all()
-                        for strategy in strategies:
-                            if strategy in symbol_strategis:
-                                symbol.strategy.remove(strategy)
-                                output.append(f"{strategy.get_strategy_name().title()} strategy removed from {symbol.symbol}, if removed incorrect please add it again.")
-                            else:
-                                symbol.strategy.add(strategy)
-                                output.append(f"{strategy.get_strategy_name().title()} strategy deployed in {symbol.symbol}.")
-                    else:
-                        strategy_form.add_error("symbol", "Symbol not selected")
-                        context["strategy_deploy_form"] = strategy_form
-                        return render(request, self.template_name, self.get_context_data(request, **context))
-
-                symbols = get_liquid_stocks(max_price=300)
-                updated = None
-                if remove_all:
-                    for symbol in symbols : symbol.strategy.remove(*strategies)
-                    updated = "Removed"
-                elif add_all:
-                    for symbol in symbols : symbol.strategy.add(*strategies)
-                    updated = "Added"
-
-                if updated:
-                    output.append(f"Strategies {updated} to all stock")
-                context["deploy_status"] = output
+                strategy_form.save()
+                context["deploy_status"] = "Strategy Deployed Successfully"
                 return render(request, self.template_name, self.get_context_data(request, **context))
             
             context["strategy_deploy_form"] = strategy_form
