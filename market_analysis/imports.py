@@ -74,6 +74,8 @@ from celery import group
 # Import Redis
 import redis
 
+# Custom Exceptions
+from .custom_exception import *
 
 # Import Export Library
 from import_export import resources

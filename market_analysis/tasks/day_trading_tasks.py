@@ -134,7 +134,7 @@ def apply_intraday_indicator_on_sorted_stocks():
             if strategies.exists():
                 for strategy in strategies:
                     data = {"stock_id": sorted_stock.symbol.id}
-                    strategy.call_strategy(**data)
+                    strategy.call_entry_strategy(**data)
         return "Indicator Called"
     return f"Current time {current_time} not > 9:25"
 

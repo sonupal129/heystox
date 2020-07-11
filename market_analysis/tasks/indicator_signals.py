@@ -5,17 +5,22 @@ from market_analysis.models import StrategyTimestamp, OrderBook
 from market_analysis.tasks.trading import get_upstox_user
 # CODE Below 
 # Signal Router for Routing Order Data Processing as per Strategy
+
 class SignalRouter:
+    """Signal router route to the correct entry signal by strategy name for ex let say if we strategy 
+    find a signal and before making entry entry into that stock we wanted to make sure using few additional
+    function let say sell and buy quantity ratio or volumen calculation for that we can ccreate a signal for that based on that 
+    strategy and router will route/ call that signal only to doing this we need to make sure that signal name should be Strategy Name + Router"""
 
     def __init__(self, timestamp):
         self.timestamp = timestamp
 
     def get_strategy_name(self):
-        return self.timestamp.strategy.get_strategy().__name__
+        return self.timestamp.strategy.strategy.get_strategy().__name__
 
     def find_router_for_strategy(self):
         strategy_name = self.get_strategy_name()
-        router_name = strategy_name + "Router"
+        router_name = strategy_name + "SignalTask"
         func_module = importlib.import_module(self.__module__)
         try:
             st_func = getattr(func_module, router_name)

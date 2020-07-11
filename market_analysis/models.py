@@ -485,7 +485,7 @@ class SortedStocksList(BaseModel):
 
 class StrategyTimestamp(BaseModel):
     stock = models.ForeignKey(SortedStocksList, on_delete=models.CASCADE, related_name="timestamps")
-    strategy = models.ForeignKey("Strategy", on_delete=models.CASCADE, blank=True, null=True)
+    strategy = models.ForeignKey("DeployedStrategies", on_delete=models.CASCADE, blank=True, null=True)
     timestamp = models.DateTimeField(null=True, blank=True)
     entry_price = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
 
@@ -654,7 +654,7 @@ class Strategy(BaseModel):
     strategy_location = models.CharField(max_length=500)
     strategy_type = models.CharField(max_length=20, choices=strategy_choices, default="ET")
     priority_type = models.CharField(max_length=20, choices=priority_choices, default="SU")
-    exit_strategy = models.ForeignKey("self", related_name="strategy", blank=True, null=True, limit_choices_to={"strategy_type": "ET"}, on_delete=models.CASCADE)
+    exit_strategy = models.ForeignKey("self", related_name="strategy", blank=True, null=True, limit_choices_to={"strategy_type": "EX"}, on_delete=models.CASCADE)
     description = models.TextField(max_length=1000, blank=True, null=True)
 
     def __str__(self):
@@ -678,12 +678,12 @@ class Strategy(BaseModel):
     def get_exit_strategy(self):
         """Function will return exit strategy of strategy if not strategy assigned then return GlobalExitStrategy"""
         if self.strategy_type == "EX":
-            return "Strategy is already Exit strategy"
+            raise AlreadyExitStrategyError("Strategy is already Exit strategy")
         if self.exit_strategy:
             func_module = importlib.import_module(self.exit_strategy.strategy_location)
             st_func = getattr(func_module, self.exit_strategy.strategy_name)
         else:
-            func_module = importlib.import_module("market_analysis.tasks.intraday_entry_strategies")
+            func_module = importlib.import_module("market_analysis.tasks.strategies.intraday_exit_strategies")
             st_func = getattr(func_module, "GlobalExitStrategy")
         if callable(st_func):
             return st_func()
@@ -703,12 +703,22 @@ class DeployedStrategies(BaseModel):
     class Meta:
         verbose_name_plural = "Deployed Strategies"
         unique_together = ("symbol", "strategy", "timeframe", "entry_type")
+
+    def __str__(self):
+        return " | ".join([self.symbol.symbol, str(self.strategy), str(self.timeframe), str(self.entry_type)])
     
-    def call_strategy(self, **kwargs):
+    def call_entry_strategy(self, **kwargs):
         strategy = self.strategy.get_strategy()
         kwargs["candle_type"] = self.timeframe
         kwargs["entry_type"] = self.entry_type
         strategy.delay(**kwargs)
+        return True
+
+    def call_exit_strategy(self, **kwargs):
+        exit_strategy = self.strategy.get_exit_strategy()
+        kwargs["candle_type"] = self.timeframe
+        kwargs["entry_type"] = self.entry_type
+        exit_strategy.delay(**kwargs)
         return True
 
     

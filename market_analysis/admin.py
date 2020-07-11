@@ -25,10 +25,11 @@ class CandleAdmin(admin.ModelAdmin):
 class StrategyTimestampInline(admin.TabularInline):
     model = StrategyTimestamp
     fields = ('strategy', 'timestamp', 'entry_price', "created_at")
-    readonly_fields = ("entry_price", "created_at")
+    readonly_fields = ("entry_price", "created_at", 'strategy')
     extra = 0
 
-class SortedStocksListAdmin(admin.ModelAdmin):
+class SortedStocksListAdmin(ExportMixin,admin.ModelAdmin):
+    resource_class = SortedStocksList
     date_hierarchy = 'created_at'
     list_display = ["symbol", "entry_price", "entry_type"]
     readonly_fields = ("created_at",)

@@ -1,7 +1,7 @@
 from market_analysis.imports import *
 from market_analysis.models import Strategy
 from .intraday_entry_strategies import (StochasticBollingerCrossover, AdxBollingerCrossover, StochasticMacdCrossover)
-from .intraday_exit_strategy import GlobalExitStrategy
+from .intraday_exit_strategies import GlobalExitStrategy
 
 # Start Code Below
 

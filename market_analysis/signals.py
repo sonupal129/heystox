@@ -20,7 +20,7 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 @receiver(post_save, sender=StrategyTimestamp)
 def send_strategy_signal_to_router(sender, instance, **kwargs):
     if kwargs.get("created"):
-        if instance.strategy.priority_type in ["PR", "SC"]:
+        if instance.strategy.strategy.priority_type in ["PR", "SC"]:
             transaction.on_commit(lambda : SignalRouter(instance).route_signal())
 
 # @receiver(post_save, sender=SortedStocksList)

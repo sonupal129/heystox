@@ -5,6 +5,8 @@ from market_analysis.tasks.orders import ExitOrder
 # CODE BELOW
 
 class GlobalExitStrategy(BaseExitStrategy):
+    """This is global strategy function which work on simple method where risk to reward ratio is
+    1:2 mean on 1 rupee risk we are looking at 2 rupee target"""
     name = "exit_on_stoploss_target_hit"
    
     def exit_on_stoploss_target_hit(self, symbol_name:str):
@@ -62,7 +64,7 @@ class GlobalExitStrategy(BaseExitStrategy):
     
     def run(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None):
         if backtest or backtesting_candles_data:
-            raise TypeError(f"Backtesting is not allowed on {self.__class__.__name__}")
+            raise BacktestingNotAllowedError(f"Backtesting is not allowed on {self.__class__.__name__}")
         stock = Symbol.objects.get(id=stock_id)
         self.exit_on_stoploss_target_hit(stock.symbol)
 

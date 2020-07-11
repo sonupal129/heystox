@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import Strategy, StrategyTimestamp, Symbol
+from market_analysis.models import Strategy, StrategyTimestamp, Symbol, DeployedStrategies
 # CODE Below
 
 class BaseStrategyTask(celery_app.Task):
@@ -8,7 +8,6 @@ class BaseStrategyTask(celery_app.Task):
     name = "base_strategy"
     strategy_type = "Entry"
     strategy_priority = "Primary"
-
     
     def create_dataframe(self, data:str, backtest=False, **kwargs):
         """Create pandas dataframe for backtesting and live analysis only
@@ -39,7 +38,7 @@ class BaseStrategyTask(celery_app.Task):
         if self.strategy_type == "Entry" and not self.strategy_priority:
             raise AttributeError("Attribute strategy_priority not Defined")
 
-    def create_indicator_timestamp(self, stock, entry_type, entry_price:float, entry_time:object, backtest=False, time_range:int=20):
+    def create_indicator_timestamp(self, stock, entry_type, entry_price:float, entry_time:object, backtest=False, time_range:int=20, **kwargs):
         """This function create timestamp object if signal found using strategy, or if it's backtest parameter is true
         it return only object data do not create any timestamp"""
         if backtest:
@@ -52,10 +51,11 @@ class BaseStrategyTask(celery_app.Task):
             return context
         else:
             strategy = Strategy.objects.get(strategy_name=self.__class__.__name__, strategy_location=self.__class__.__module__, strategy_type="ET" if self.strategy_type == "Entry" else "EX")
+            deployed_strategy = DeployedStrategies.objects.get(symbol=stock, strategy=strategy, entry_type=entry_type, timeframe=kwargs.get("candle_type", "M5"))
             sorted_stock = stock.get_sorted_stock(entry_type)
-            stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, strategy=strategy, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
+            stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, strategy=deployed_strategy, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
             if not stamp.exists():
-                stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, strategy=strategy, timestamp=entry_time)
+                stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, strategy=deployed_strategy, timestamp=entry_time)
                 stamp.entry_price = entry_price
                 stamp.save()
             elif stamp.count() > 1:
@@ -72,7 +72,7 @@ class BaseStrategyTask(celery_app.Task):
         except:
             return f"Strategy function name and task name should be same"
         output = strategy_function(self, stock_id, entry_type, backtest, backtesting_candles_data, **kwargs)
-        if backtest and not isinstance(output, str):
+        if not isinstance(output, str):
             return self.create_indicator_timestamp(*output)
 
 

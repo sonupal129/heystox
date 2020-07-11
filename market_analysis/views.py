@@ -213,6 +213,8 @@ class BacktestSortedStocksView(View):
                     df_extrct["Profit or Loss"] = round(cached_value["p/l"].sum(), 2)
                     df_extrct["Entry Type"] = entry_type
                     df_extrct["Candle Type"] = candles_types.get(candle_type)
+                    df_extrct["Average Entry Price"] = round(cached_value.entry_price.mean(), 2)
+                    df_extrct["Average Exit Price"] = round(cached_value.exit_price.mean(), 2)
                     context["vars"] = df_extrct
                 context["df"] = cached_value.to_html() if not cached_value.empty else "No Entry Point Found for Strategy"
                 return render(request, self.template_name, self.get_context_data(request, **context))

@@ -110,6 +110,8 @@ class BaseOrderTask(celery_app.Task):
                 order.quantity = quantity
                 order.entry_price = price
                 order.save()
+                return True
+        return False
 
 
     def run(self, order_details:dict, ignore_max_trade_quantity:bool=False, **kwargs):

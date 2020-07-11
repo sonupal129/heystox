@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import SortedStockDashboardReport, Symbol
+from market_analysis.models import SortedStockDashboardReport, Symbol, SortedStocksList
 
 #  Code Below
 
@@ -13,3 +13,8 @@ class SymbolResource(resources.ModelResource):
 
     class Meta:
         model = Symbol
+
+class SortedStocksListResource(resources.ModelResource):
+
+    class Meta:
+        model = SortedStocksList

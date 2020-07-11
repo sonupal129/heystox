@@ -20,7 +20,7 @@ class StochasticBollingerCrossover(BaseEntryStrategy):
         """Find Bollinger crossover with adx and stochastic crossover, Supporting Strategy"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "M5")})        
+        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type")})        
         df["medium_band"] = bollinger_mavg(df.close_price)
         df["adx"] = adx(df.high_price, df.low_price, df.close_price)
         df["medium_band"] = df.medium_band.apply(roundup)
@@ -80,7 +80,7 @@ class StochasticBollingerCrossover(BaseEntryStrategy):
                 if not stochastic_crossover.empty:
                     time_diff = bollinger_signal.date - stochastic_crossover.date
                     if time_diff <= timedelta(minutes=25) and bollinger_signal.adx <= 23:
-                        response = (stock, entry_type, float(bollinger_signal.close_price), bollinger_signal.date, backtest, 20)
+                        response = (stock, entry_type, float(bollinger_signal.close_price), bollinger_signal.date, backtest, 20, kwargs.get("candle_type", "M5"))
                         return response
                 return "Stochastic Crossover Not Found"
             return "Bollinger Signal Not Found"
@@ -95,11 +95,11 @@ class StochasticMacdCrossover(BaseEntryStrategy):
     queue = "medium_priority"
     strategy_type = "Entry"
 
-    def find_stochastic_macd_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None):
+    def find_stochastic_macd_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
         """(Custom Macd Crossover) This function find crossover between macd and macd signal and return signal as buy or sell"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False})        
+        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type")})        
         df["macd"] = macd(df.close_price)
         df["macd_signal"] = macd_signal(df.close_price)
         df["macd_diff"] = macd_diff(df.close_price)
@@ -165,7 +165,7 @@ class StochasticMacdCrossover(BaseEntryStrategy):
                     if not stochastic_crossover_signal.empty:
                         time_diff = (macd_crossover_signal.date - stochastic_crossover_signal.date)
                         if time_diff < timedelta(minutes=30):
-                            response = (stock, entry_type, float(macd_crossover_signal.close_price), macd_crossover_signal.date, backtest, 10)
+                            response = (stock, entry_type, float(macd_crossover_signal.close_price), macd_crossover_signal.date, backtest, 10, kwargs.get("candle_type"))
                             return response
                     return "Stochastic Signal not Found"
                 return "Stochastic Crossover not Found"
@@ -215,7 +215,7 @@ class AdxBollingerCrossover(BaseEntryStrategy):
 
             if not bollinger_crossover.empty:
                 if bollinger_crossover.adx <= 23:
-                    response = (stock, entry_type, float(bollinger_crossover.close_price), bollinger_crossover.date, backtest, 15)
+                    response = (stock, entry_type, float(bollinger_crossover.close_price), bollinger_crossover.date, backtest, 15, kwargs.get("candle_type"))
                     return response
             return "Crossover Not Found"
         return "Dataframe not created"
