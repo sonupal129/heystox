@@ -4,7 +4,9 @@ from market_analysis.models import Strategy, Symbol
 
 
 # Backtesting Function
-class BackTestStrategy:
+class BaseBackTestStrategy:
+    """Backtest Strategy for Intraday Equity Trading"""
+
 
     def __init__(self, stock_id:int, to_days:int, end_date, strategy_id, candle_type="M5", entry_type:str="BUY", cached=True, **kwargs):
         """"Description : Class is used to back test strategy, Indicator Strategy
@@ -174,6 +176,14 @@ class BackTestStrategy:
         return strategy_output_df
 
 
+class BackTestEquityIntrdayStrategy(BaseBackTestStrategy):
+    pass
+
+class BacktestEquityFutureStrategy(BackTestEquityIntrdayStrategy):
+
+    def run(self, **kwargs):
+        pass
+
 @celery_app.task(queue="medium_priority")
 def prepare_n_call_backtesting_strategy(*args, **kwargs):
     data = {
@@ -184,6 +194,6 @@ def prepare_n_call_backtesting_strategy(*args, **kwargs):
         "candle_type" : kwargs.get("candle_type"),
         "strategy_id" : kwargs.get("strategy_id")
     }
-    BackTestStrategy(**data).run()
+    BackTestEquityIntrdayStrategy(**data).run()
     redis_cache.delete(kwargs.get("cache_key") + "_requested")
     return "Backtesting Completed!, Run function again to get output"

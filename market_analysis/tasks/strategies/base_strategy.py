@@ -8,6 +8,22 @@ class BaseStrategyTask(celery_app.Task):
     name = "base_strategy"
     strategy_type = "Entry"
     strategy_priority = "Primary"
+
+    def make_response(self, stock, entry_type, close_price, signal_date, backtest, time_range, **kwargs):
+        if not isinstance(stock, Symbol):
+            raise AttributeError("variable stock is not Symbol class objecct")
+        if not (entry_type == "BUY" or entry_type == "SELL"):
+            raise AttributeError("entry_type should be BUY or Sell")
+        data = {
+            "stock": stock,
+            "entry_type": entry_type,
+            "entry_price": float(close_price),
+            "entry_time": signal_date,
+            "backtest": backtest,
+            "time_range": time_range,
+            **kwargs
+            }
+        return data
     
     def create_dataframe(self, data:str, backtest=False, **kwargs):
         """Create pandas dataframe for backtesting and live analysis only
@@ -73,7 +89,7 @@ class BaseStrategyTask(celery_app.Task):
             return f"Strategy function name and task name should be same"
         output = strategy_function(self, stock_id, entry_type, backtest, backtesting_candles_data, **kwargs)
         if not isinstance(output, str):
-            return self.create_indicator_timestamp(*output)
+            return self.create_indicator_timestamp(**output)
 
 
 class BaseEntryStrategy(BaseStrategyTask):
