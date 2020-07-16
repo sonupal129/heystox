@@ -51,6 +51,24 @@ class Symbol(BaseModel):
             redis_cache.set(cache_key, strategies, 60*60*24)
         return strategies
 
+    def get_backtested_data(self, cache_key):
+        cached_value = redis_cache.get(cache_key)
+        dict_keys = ['start_date', 'end_date', 'symbol', 'strategy_name', 'candle_type', 'entry_type']
+        if cached_value != None:
+            return pd.DataFrame(list(cached_value.values()))
+        new_obj = cache_key.split("_")
+        new_obj.pop(-1)
+        obj_dict = dict(zip(dict_keys, new_obj))
+        obj_dict["start_date"] = datetime.strptime(obj_dict.get("start_date"), "%Y-%m-%d")
+        obj_dict["end_date"] = datetime.strptime(obj_dict.get("end_date"), "%Y-%m-%d")
+        reports = BacktestReport.objects.filter(entry_time__range=[obj_dict["start_date"], obj_dict["end_date"]],
+                                                strategy_name=obj_dict["strategy_name"], symbol_name=obj_dict["symbol"],
+                                                candle_type=obj_dict["candle_type"], entry_type=obj_dict["entry_type"])
+        if reports.exists():
+            redis_cache.set(cache_key, reports, 15*20*12*2*3)
+        return pd.DataFrame(list(reports.values()))
+        
+
     def get_last_trading_day_count(self, date_obj=None):
         """date_obj should be date only, return last trading day count from today"""
         if date_obj == None:
@@ -649,20 +667,34 @@ class Strategy(BaseModel):
         ("SC", "Secondary"),
         ("SP", "Support")
     }
-    
+
+        
     strategy_name = models.CharField(max_length=200, blank=True, null=True)
     strategy_location = models.CharField(max_length=500)
     strategy_type = models.CharField(max_length=20, choices=strategy_choices, default="ET")
     priority_type = models.CharField(max_length=20, choices=priority_choices, default="SU")
+    strategy_for = models.CharField(max_length=10, choices={(k,v) for k,v in strategies_for.items()}, default="EI")
     exit_strategy = models.ForeignKey("self", related_name="strategy", blank=True, null=True, limit_choices_to={"strategy_type": "EX"}, on_delete=models.CASCADE)
+    backtesting_ready = models.BooleanField(default=False, help_text="Check if you think that strategy is ready for backtesting, Please use this function carefully as this put burden on server")
     description = models.TextField(max_length=1000, blank=True, null=True)
 
     def __str__(self):
         return self.get_strategy_name()
 
+    def __init__(self, *args, **kwargs):
+        super(Strategy, self).__init__(*args, **kwargs)
+        self._backtesting_ready = self.backtesting_ready
+
+
     def clean(self, *args, **kwargs):
         if self.strategy_type == "EX" and self.exit_strategy:
             raise ValidationError("Exit strategy can't assign, when strategy type is already exit strategy")
+        backtest_start_time = time(23,55)
+        backtest_end_time = time(7,30)
+        current_day = get_local_time()
+        if current_day.weekday() not in [5,6] and self.backtesting_ready != self._backtesting_ready:
+            if (current_day.time() < backtest_start_time and current_day.time() > backtest_end_time):
+                raise ValidationError("Backtesting is only allowed after market hours, Please try after 4:30 PM")
         super(Strategy, self).clean(*args, **kwargs)
 
     def get_strategy_name(self):
@@ -722,8 +754,22 @@ class DeployedStrategies(BaseModel):
         return True
 
     
-
+class BacktestReport(BaseModel):
+    symbol_name = models.CharField(max_length=100)
+    strategy_name = models.CharField(max_length=100)
+    entry_price = models.DecimalField(decimal_places=2, max_digits=5)
+    entry_time = models.DateTimeField()
+    stoploss = models.DecimalField(decimal_places=2, max_digits=5, blank=True)
+    target = models.DecimalField(decimal_places=2, max_digits=5, blank=True)
+    strategy_status = models.CharField(max_length=50)
+    exit_price = models.DecimalField(decimal_places=2, max_digits=5)
+    exit_time = models.DateTimeField()
+    entry_type = models.CharField(max_length=10)
+    candle_type = models.CharField(max_length=20)
+    pl = models.DecimalField(decimal_places=2, max_digits=5)
     
+    def __str__(self):
+        return " | ".join([self.symbol_name, self.strategy_name, str(self.entry_time)])
 
 
 

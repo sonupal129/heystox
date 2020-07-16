@@ -149,6 +149,13 @@ orders = {
     },
 }
 
+backtest = {
+    "create_backtesting_data_async": {
+        "task": "market_analysis.tasks.strategies.backtest.create_backtesting_data_async",
+        "schedule": crontab(hour=4, minute=10),
+    },
+}
+
 # CRON JOB SCHEDULES
 
 celery_app.conf.beat_schedule = {
@@ -157,4 +164,5 @@ celery_app.conf.beat_schedule = {
     **stock_data_import_tasks,
     **day_trading_tasks,
     **orders,
+    **backtest
 }

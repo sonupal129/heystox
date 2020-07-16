@@ -39,7 +39,7 @@ from requests.exceptions import HTTPError
 from json.decoder import JSONDecodeError
 
 # Django Signals
-from django.db.models.signals import post_save, post_delete, m2m_changed
+from django.db.models.signals import post_save, post_delete, m2m_changed, pre_save
 from django.dispatch import receiver, Signal
 
 # Rest Frame Work
@@ -140,6 +140,10 @@ candles_types = {
         "1D": "1 Day"
 }
 
+strategies_for = {
+    "EI" : "EquityIntraday",
+    "EF" : "EquityFutures"
+}
 
 def roundup(x, prec=2, base=.05):
   return round(base * round(float(x)/base), prec)

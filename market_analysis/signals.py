@@ -1,6 +1,6 @@
 from market_analysis.imports import *
 from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Strategy, Symbol)
-
+from market_analysis.tasks.strategies.backtest import delete_backtesting_data, create_backtesting_data
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.indicator_signals import SignalRouter
 # from market_analysis.tasks.intraday_indicator import is_stock_pdhl, has_entry_for_long_short
@@ -44,5 +44,33 @@ def invalidate_strategies_cache(sender, instance, action, **kwargs):
     redis_cache.delete(entry_cache_key)
     redis_cache.delete(exit_cache_key)
 
+@receiver(pre_save, sender=Strategy)
+def call_delete_backtesting_data(sender, instance, **kwargs):
+    """Signal will call celery task which will delete all backtested report data when backtesting_ready
+    will be false from true also this function invalidate all cache key of that strategy"""
+    try:
+        new_value = instance.backtesting_ready
+        old_value = Strategy.objects.get(id=instance.id).backtesting_ready
+        if new_value == False and old_value == True:
+            # Call delete task which will delete all backtest reports
+            delete_backtesting_data.delay(instance.strategy_name)
+            for key in redis_cache.keys("*"):
+                if instance.strategy_name in key:
+                    redis_cache.delete(key)
+    except:
+        pass
+
+@receiver(pre_save, sender=Strategy)
+def call_create_backtesting_data(sender, instance, **kwargs):
+    """Signal will call celery task which will create all backtested report data for all stock(liquid stock) when backtesting_ready
+    will be true from false"""
+    try:
+        new_value = instance.backtesting_ready
+        old_value = Strategy.objects.get(id=instance.id).backtesting_ready
+        if new_value == True and old_value == False:
+            # Call task which will create backtest report for all stocks all backtest reports
+            create_backtesting_data.delay(instance.id)
+    except:
+        pass
 
 

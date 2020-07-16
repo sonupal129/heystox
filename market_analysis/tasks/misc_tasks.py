@@ -5,8 +5,8 @@ from market_analysis.tasks.notification_tasks import slack_message_sender
 
 @celery_app.task(queue="low_priority")    
 def delete_stocks_candles():
-    """Delete All candles older more than 30-120 days, currently 120 days"""
-    return Candle.objects.filter(date__lte=get_local_time().date() - timedelta(120)).delete()
+    """Delete All candles older more than 30-365 days, currently 365 days"""
+    return Candle.objects.filter(date__lte=get_local_time().date() - timedelta(365)).delete()
 
 @celery_app.task(queue="low_priority")
 def clear_all_cache():

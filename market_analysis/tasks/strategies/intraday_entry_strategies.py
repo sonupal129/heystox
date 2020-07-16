@@ -184,7 +184,7 @@ class AdxBollingerCrossover(BaseEntryStrategy):
         """Find bolling corssover with help of adx"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "M5")})        
+        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "M5")})
         df["high_band"] = bollinger_hband(df.close_price)
         # df["medium_band"] = bollinger_mavg(df.close_price)
         df["low_band"] = bollinger_lband(df.close_price)
@@ -222,7 +222,20 @@ class AdxBollingerCrossover(BaseEntryStrategy):
 
 celery_app.tasks.register(AdxBollingerCrossover)
 
-# class GlobalExitStrategy(BaseStrategyTask):
+class StochasticMacdSameTimeCrossover(BaseEntryStrategy):
+    """This strategy is for future/equity long, future short position trade where it will find
+    trading opportunity for hourly or 30 Minute candle """
+    strategy_for = "EquityFutures"
+    name = "find_stochastic_macd_same_time_crossover"
+    queue = "medium_priority"
+    strategy_type = "Entry"
+
+    def find_stochastic_macd_same_time_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
+        stock = Symbol.objects.get(id=stock_id)
+        today_date = get_local_time().date()
+        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "1H")})
+
+
 
 
 # class OHLCrossover(BaseStrategyTask):

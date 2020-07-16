@@ -74,8 +74,8 @@ class OrderBookAdmin(admin.ModelAdmin):
 
 
 class StrategyAdmin(admin.ModelAdmin):
-    list_display = ["view_strategy_name", "strategy_location", "strategy_type", "priority_type"]
-    readonly_fields = ["strategy_name", "strategy_location"]
+    list_display = ["view_strategy_name", "strategy_type", "priority_type", "strategy_for"]
+    readonly_fields = ["strategy_name", "strategy_location", "priority_type", "strategy_for"]
     actions = ["discover_update_strategies"]
 
     def view_strategy_name(self, obj):
@@ -101,6 +101,12 @@ class DeployedStrategiesAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return True
 
+class BacktestReportAdmin(ExportMixin, admin.ModelAdmin):
+    resource_class = BacktestReport
+    list_filter = ["strategy_name"]
+    # readonly_fields = "__all__"
+
+
 
 admin.site.register(MarketHoliday, MarketHolidayAdmin)
 admin.site.register(Candle, CandleAdmin)
@@ -116,3 +122,4 @@ admin.site.register(SortedStockDashboardReport, SortedStockDashboardReportAdmin)
 admin.site.register(OrderBook, OrderBookAdmin)
 admin.site.register(Strategy, StrategyAdmin)
 admin.site.register(DeployedStrategies, DeployedStrategiesAdmin)
+admin.site.register(BacktestReport, BacktestReportAdmin)

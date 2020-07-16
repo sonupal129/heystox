@@ -7,7 +7,7 @@ from .forms import UserLoginRegisterForm, BacktestForm, StrategyDeployForm
 from .mixins import GroupRequiredMixins
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.users_tasks import login_upstox_user
-from market_analysis.tasks.strategies.backtest import prepare_n_call_backtesting_strategy
+from market_analysis.tasks.strategies.backtest import SendBackTestingRequest
 # Create your views here.
 
 class HomeView(BasePermissionMixin, TemplateView):
@@ -136,9 +136,9 @@ class BacktestSortedStocksView(View):
         cache_key = "_".join([*args])
         return cache_key
     
-    def get_backtested_cached_value(self, cache_key):
-        cached_value = redis_cache.get(cache_key)
-        if cached_value is not None:
+    def get_backtested_cached_value(self, symbol, cache_key):
+        cached_value = symbol.get_backtested_data(cache_key)
+        if not cached_value.empty:
             return cached_value
 
         all_redis_cache_keys = redis_cache.keys("*")
@@ -153,11 +153,11 @@ class BacktestSortedStocksView(View):
             key_start_date = datetime.strptime(split_key[0], "%Y-%m-%d").date()
             key_end_date = datetime.strptime(split_key[1], "%Y-%m-%d").date()
             if key_end_date == backtest_end_date and key_start_date <= backtest_start_date:
-                cache_key = key
+                new_cache_key = key
                 break
 
         if new_cache_key:
-            cached_value = redis_cache.get(new_cache_key)
+            cached_value = symbol.get_backtested_data(new_cache_key)
             if cached_value is not None:
                 if cached_value.empty:
                     return cached_value
@@ -185,8 +185,8 @@ class BacktestSortedStocksView(View):
                 current_date = get_local_time().date()
                 to_days = (current_date - from_date).days
                 
-                cache_key = self.get_cache_key(str(current_date - timedelta(to_days)), str(current_date), symbol.symbol, str(strategy.strategy_name), str(candle_type), entry_type, "backtest_strategy")
-                cached_value = self.get_backtested_cached_value(cache_key)
+                cache_key = self.get_cache_key(str(current_date - timedelta(to_days)), str(current_date), symbol.symbol, str(strategy.strategy_name), str(candle_type), entry_type, "backteststrategy")
+                cached_value = self.get_backtested_cached_value(symbol, cache_key)
                 
                 data = {
                     "stock_id": symbol.id,
@@ -202,7 +202,7 @@ class BacktestSortedStocksView(View):
                     if is_function_called_before:
                         context["response"] = "Backtesting request for strategy already sent before, please try after 5 minute to check status"
                         return render(request, self.template_name, self.get_context_data(request, **context))
-                    prepare_n_call_backtesting_strategy.delay(**data)
+                    SendBackTestingRequest().delay(**data)
                     redis_cache.set(cache_key + "_requested", True, 60*20)
                     context["response"] = "Backtesting request sent, Please try after 5 minute to check backtest result"
                     return render(request, self.template_name, self.get_context_data(request, **context))
@@ -210,7 +210,7 @@ class BacktestSortedStocksView(View):
                 if not cached_value.empty:
                     strt, strt_count = np.unique(cached_value.strategy_status, return_counts=True)
                     df_extrct = dict(zip(strt, strt_count))
-                    df_extrct["Profit or Loss"] = round(cached_value["p/l"].sum(), 2)
+                    df_extrct["Profit or Loss"] = round(cached_value["pl"].sum(), 2)
                     df_extrct["Entry Type"] = entry_type
                     df_extrct["Candle Type"] = candles_types.get(candle_type)
                     df_extrct["Average Entry Price"] = round(cached_value.entry_price.mean(), 2)

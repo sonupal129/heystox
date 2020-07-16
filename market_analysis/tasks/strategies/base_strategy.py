@@ -8,6 +8,7 @@ class BaseStrategyTask(celery_app.Task):
     name = "base_strategy"
     strategy_type = "Entry"
     strategy_priority = "Primary"
+    strategy_for = "EquityIntraday"
 
     def make_response(self, stock, entry_type, close_price, signal_date, backtest, time_range, **kwargs):
         if not isinstance(stock, Symbol):
