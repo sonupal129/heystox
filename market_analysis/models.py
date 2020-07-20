@@ -668,11 +668,13 @@ class Strategy(BaseModel):
         ("SP", "Support")
     }
 
+    candle_type_choice = {(k,v) for k,v in candles_types.items()}
         
     strategy_name = models.CharField(max_length=200, blank=True, null=True)
     strategy_location = models.CharField(max_length=500)
     strategy_type = models.CharField(max_length=20, choices=strategy_choices, default="ET")
     priority_type = models.CharField(max_length=20, choices=priority_choices, default="SU")
+    timeframe = MultiSelectField(choices=candle_type_choice, blank=True, null=True)
     strategy_for = models.CharField(max_length=10, choices={(k,v) for k,v in strategies_for.items()}, default="EI")
     exit_strategy = models.ForeignKey("self", related_name="strategy", blank=True, null=True, limit_choices_to={"strategy_type": "EX"}, on_delete=models.CASCADE)
     backtesting_ready = models.BooleanField(default=False, help_text="Check if you think that strategy is ready for backtesting, Please use this function carefully as this put burden on server")

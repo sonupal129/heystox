@@ -19,6 +19,7 @@ def create_earning_object(sender, instance, update_fields, **kwargs):
 
 @receiver(post_save, sender=StrategyTimestamp)
 def send_strategy_signal_to_router(sender, instance, **kwargs):
+    today_date = get_local_time().date()
     if kwargs.get("created"):
         if instance.strategy.strategy.priority_type in ["PR", "SC"]:
             transaction.on_commit(lambda : SignalRouter(instance).route_signal())
@@ -45,32 +46,20 @@ def invalidate_strategies_cache(sender, instance, action, **kwargs):
     redis_cache.delete(exit_cache_key)
 
 @receiver(pre_save, sender=Strategy)
-def call_delete_backtesting_data(sender, instance, **kwargs):
-    """Signal will call celery task which will delete all backtested report data when backtesting_ready
-    will be false from true also this function invalidate all cache key of that strategy"""
-    try:
-        new_value = instance.backtesting_ready
-        old_value = Strategy.objects.get(id=instance.id).backtesting_ready
-        if new_value == False and old_value == True:
-            # Call delete task which will delete all backtest reports
-            delete_backtesting_data.delay(instance.strategy_name)
-            for key in redis_cache.keys("*"):
-                if instance.strategy_name in key:
-                    redis_cache.delete(key)
-    except:
-        pass
+def call_delete_create_backtesting_data(sender, instance, **kwargs):
+    """Signal will call celery task which will delete or create all backtested report data when backtesting_ready
+    will be true also this function invalidate all cache key of that strategy"""
+    if instance.backtesting_ready:       
+        new_value = instance.timeframe
+        old_value = Strategy.objects.get(id=instance.id).timeframe
 
-@receiver(pre_save, sender=Strategy)
-def call_create_backtesting_data(sender, instance, **kwargs):
-    """Signal will call celery task which will create all backtested report data for all stock(liquid stock) when backtesting_ready
-    will be true from false"""
-    try:
-        new_value = instance.backtesting_ready
-        old_value = Strategy.objects.get(id=instance.id).backtesting_ready
-        if new_value == True and old_value == False:
-            # Call task which will create backtest report for all stocks all backtest reports
-            create_backtesting_data.delay(instance.id)
-    except:
-        pass
+        for value in old_value:
+            if value not in new_value:
+                delete_backtesting_data.delay(strategy_name=instance.strategy_name, timeframe=value)
+
+        for value in new_value:
+            if value not in old_value:
+                create_backtesting_data.delay(strategy_id=instance.id, timeframe=value)
+        return True
 
 

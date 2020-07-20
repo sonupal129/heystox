@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_filters',
     'rest_framework.authtoken',
-    'import_export'
+    'import_export',
+    'multiselectfield'
 ]
 
 MIDDLEWARE = [

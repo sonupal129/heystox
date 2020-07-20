@@ -74,6 +74,9 @@ from celery import group
 # Import Redis
 import redis
 
+# Import Multiselect Field
+from multiselectfield import MultiSelectField
+
 # Custom Exceptions
 from .custom_exception import *
 

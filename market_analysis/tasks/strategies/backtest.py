@@ -6,7 +6,8 @@ from market_analysis.tasks.trading import get_liquid_stocks
 
 # Backtesting Function
 class BaseBackTestStrategy(celery_app.Task):
-    """Backtesting Base task with base requesired functions which will be used while backtesting"""
+    """Backtesting Base task with base requesired functions which will be used while backtesting,
+    Prepare data for backtesting"""
     ignore_result = False
     queue = "medium_priority"
     name = "base_backtest_strategy"
@@ -94,16 +95,16 @@ class BaseBackTestStrategy(celery_app.Task):
         "to_days" : kwargs.get("to_days"),
         "candle_type" : kwargs.get("candle_type"),
         "strategy" : Strategy.objects.get(id=int(kwargs.get("strategy_id"))),
-        "task_cache_key": self.create_cache_key(kwargs.values())
+        "task_cache_key": self.create_cache_key([*kwargs.values(),"temp_backtest_tasks_data"]),
+        "form_cache_key": kwargs.get("cache_key")
         }
-        redis_cache.delete(kwargs.get("cache_key", "no_key") + "_requested")
         return data
     
     def run(self, **kwargs):
         pass
 
 
-class BackTestEquityIntrdayData(BaseBackTestStrategy):
+class CalculateBackTestEquityIntrdayData(BaseBackTestStrategy):
     """Backtesting strategy for equity intraday stocks, get data from redis cache and then calculate and filter that 
     data for intraday purpose, it gets data from SendBacktest request class function"""
 
@@ -178,7 +179,8 @@ class BackTestEquityIntrdayData(BaseBackTestStrategy):
                     filtered_rows.append(row)
             strategy_output_df = pd.DataFrame(filtered_rows)
             redis_cache.delete(cache_key)
-            return strategy_output_df
+            redis_cache.delete(kwargs.get("form_cache_key", "no_key") + "_requested")   
+        return strategy_output_df
 
     def run(self, **kwargs):
         backtesting_df = self.calculate_backtest_data(**kwargs)
@@ -187,7 +189,7 @@ class BackTestEquityIntrdayData(BaseBackTestStrategy):
             self.add_backtest_data(backtesting_df, **kwargs)
             return True
 
-celery_app.tasks.register(BackTestEquityIntrdayData)
+celery_app.tasks.register(CalculateBackTestEquityIntrdayData)
 
 class SendBackTestingRequest(BaseBackTestStrategy):
     """This functions send data request for strategy function with backtesting true parameter
@@ -205,6 +207,8 @@ class SendBackTestingRequest(BaseBackTestStrategy):
         end_date = kwargs.get("end_date")
         candle_type = kwargs.get("candle_type")
         entry_type = kwargs.get("entry_type")
+        if candle_type in ["M30", "1H"]:
+            to_days += 40
         candles = symbol.get_stock_data(days=to_days, end_date=end_date)
         candles_df = symbol.get_stock_dataframe(candles, candle_type)
         print("Please wait data is getting prepared for strategy...")
@@ -222,10 +226,11 @@ class SendBackTestingRequest(BaseBackTestStrategy):
             "candle_type": candle_type,
             "cache_key": cache_key,
             "candles_df": candles_df.to_json(),
+            "form_cache_key": kwargs.get("form_cache_key")
         }
         redis_cache.set(cache_key, results, 30*60)
         # Call A celery function which will calculate the result of response
-        BackTestEquityIntrdayData().apply_async(kwargs=data, countdown=180)
+        CalculateBackTestEquityIntrdayData().apply_async(kwargs=data, countdown=180)
 
     def run(self, **kwargs):
         data = self.prepare_backtesting_data(**kwargs)
@@ -234,7 +239,7 @@ class SendBackTestingRequest(BaseBackTestStrategy):
 celery_app.tasks.register(SendBackTestingRequest)
 
 @celery_app.task(queue="medium_priority")
-def create_backtesting_data(strategy_id, to_days=None, task_run_after=300):
+def create_backtesting_data(strategy_id, to_days=None, timeframe=None, task_run_after=300):
     """Function trigger celery task to start backtesting, Please use this function very carefully
     as any one mistake will lead celery dead lock or database locked. this is a heavy function which call celery tasks for 
     longer time"""
@@ -249,10 +254,7 @@ def create_backtesting_data(strategy_id, to_days=None, task_run_after=300):
             return day_count + 10
         return day_count + 2
 
-    if strategy.strategy_for == "EI":
-        candle_choices = [key for key in candles_types.keys() if key not in ["1D", "M60", "1H"]]
-    elif strategy.strategy_for == "EF":
-        candle_choices = [key for key in candles_types.keys() if key not in ["1D", "M5", "M10", "M15", "M60"]]
+    timeframe = list(timeframe) if timeframe else strategy.timeframe
     run_task_after = 0
     for stock in liquid_stocks:
         data = {
@@ -262,7 +264,7 @@ def create_backtesting_data(strategy_id, to_days=None, task_run_after=300):
             "strategy_id" : strategy.id,
             "end_date" : str(get_local_time().date())
         }
-        for candle_choice in candle_choices:
+        for candle_choice in timeframe:
             data["candle_type"] = candle_choice
             reports = BacktestReport.objects.filter(symbol_name=stock.symbol, strategy_name=strategy.name, candle_type=candle_choice)
             buy_reports = reports.filter(candle_type=data["candle_type"])
@@ -286,6 +288,9 @@ def create_backtesting_data_async():
 
 
 @celery_app.task(queue="medium_priority")
-def delete_backtesting_data(strategy_name):
-    BacktestReport.objects.filter(strategy_name=strategy_name).delete()
+def delete_backtesting_data(strategy_name, timeframe):
+    BacktestReport.objects.filter(strategy_name=strategy_name, candle_type=timeframe).delete()
+    for key in redis_cache.keys("*"):
+        if strategy_name in key and timeframe in key:
+            redis_cache.delete(key)
     return True
