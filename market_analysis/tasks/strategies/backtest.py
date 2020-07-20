@@ -266,7 +266,7 @@ def create_backtesting_data(strategy_id, to_days=None, timeframe=None, task_run_
         }
         for candle_choice in timeframe:
             data["candle_type"] = candle_choice
-            reports = BacktestReport.objects.filter(symbol_name=stock.symbol, strategy_name=strategy.name, candle_type=candle_choice)
+            reports = BacktestReport.objects.filter(symbol_name=stock.symbol, strategy_name=strategy.strategy_name, candle_type=candle_choice)
             buy_reports = reports.filter(candle_type=data["candle_type"])
             if buy_reports.exists():
                 data["to_days"] = get_day_count(buy_reports.last().entry_time, data["candle_type"])
