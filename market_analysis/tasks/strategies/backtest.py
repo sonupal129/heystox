@@ -96,7 +96,7 @@ class BaseBackTestStrategy(celery_app.Task):
         "candle_type" : kwargs.get("candle_type"),
         "strategy" : Strategy.objects.get(id=int(kwargs.get("strategy_id"))),
         "task_cache_key": self.create_cache_key([*kwargs.values(),"temp_backtest_tasks_data"]),
-        "form_cache_key": kwargs.get("cache_key")
+        "form_cache_key": kwargs.get("cache_key", "no_key")
         }
         return data
     
@@ -226,7 +226,7 @@ class SendBackTestingRequest(BaseBackTestStrategy):
             "candle_type": candle_type,
             "cache_key": cache_key,
             "candles_df": candles_df.to_json(),
-            "form_cache_key": kwargs.get("form_cache_key")
+            "form_cache_key": kwargs.get("form_cache_key", "no_key")
         }
         redis_cache.set(cache_key, results, 30*60)
         # Call A celery function which will calculate the result of response
@@ -255,6 +255,7 @@ def create_backtesting_data(strategy_id, to_days=None, timeframe=None, task_run_
         return day_count + 2
 
     timeframe = list(timeframe) if timeframe else strategy.timeframe
+    print(timeframe)
     run_task_after = 0
     for stock in liquid_stocks:
         data = {
