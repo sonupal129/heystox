@@ -112,7 +112,7 @@ class CalculateBackTestEquityIntrdayData(BaseBackTestStrategy):
     queue = "tickers"
     
     def calculate_backtest_data(self, cache_key, entry_type, **kwargs):
-        cached_value = redis_cache.get(cache_key)
+        cached_value = cache.get(cache_key)
         success_tasks = [task.result for task in cached_value if isinstance(task.result, dict)]
         strategy_output_df = pd.DataFrame(success_tasks)
         candles_df = pd.read_json(kwargs.get("candles_df"))
@@ -178,7 +178,7 @@ class CalculateBackTestEquityIntrdayData(BaseBackTestStrategy):
                 else:
                     filtered_rows.append(row)
             strategy_output_df = pd.DataFrame(filtered_rows)
-            redis_cache.delete(cache_key)
+            cache.delete(cache_key)
             redis_cache.delete(kwargs.get("form_cache_key", "no_key") + "_requested")   
         return strategy_output_df
 
@@ -228,7 +228,7 @@ class SendBackTestingRequest(BaseBackTestStrategy):
             "candles_df": candles_df.to_json(),
             "form_cache_key": kwargs.get("form_cache_key", "no_key")
         }
-        redis_cache.set(cache_key, results, 30*60)
+        cache.set(cache_key, results, 30*60) # Used File based cache to store data
         # Call A celery function which will calculate the result of response
         CalculateBackTestEquityIntrdayData().apply_async(kwargs=data, countdown=180)
 
@@ -254,7 +254,11 @@ def create_backtesting_data(strategy_id, to_days=None, timeframe=None, task_run_
             return day_count + 10
         return day_count + 2
 
-    timeframe = list(timeframe) if timeframe else strategy.timeframe
+    if not isinstance(timeframe, str):
+        raise AttributeError("timeframe should be a string/ candle type")
+    
+    timeframe = [timeframe] if timeframe else strategy.timeframe
+    
     run_task_after = 0
     for stock in liquid_stocks:
         data = {
