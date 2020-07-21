@@ -15,6 +15,7 @@ from .base_strategy import BaseEntryStrategy
 class StochasticBollingerCrossover(BaseEntryStrategy):
     name = "find_stochastic_bollingerband_crossover"
     strategy_type = "Entry"
+    queue = "strategy"
 
     def find_stochastic_bollingerband_crossover(self, stock_id, entry_type, backtest, backtesting_candles_data, **kwargs):
         """Find Bollinger crossover with adx and stochastic crossover, Supporting Strategy"""
@@ -92,7 +93,7 @@ celery_app.tasks.register(StochasticBollingerCrossover)
 
 class StochasticMacdCrossover(BaseEntryStrategy):
     name = "find_stochastic_macd_crossover"
-    queue = "medium_priority"
+    queue = "strategy"
     strategy_type = "Entry"
 
     def find_stochastic_macd_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
@@ -177,7 +178,7 @@ celery_app.tasks.register(StochasticMacdCrossover)
 
 class AdxBollingerCrossover(BaseEntryStrategy):
     name = "find_adx_bollinger_crossover"
-    queue = "medium_priority"
+    queue = "strategy"
     strategy_type = "Entry"
 
     def find_adx_bollinger_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
@@ -226,7 +227,7 @@ class StochasticMacdSameTimeCrossover(BaseEntryStrategy):
     """This strategy is for future/equity long, future short position trade where it will find
     trading opportunity for hourly or 30 Minute candle, Combination of stochastic, macd and bollinger band """
     name = "find_stochastic_macd_same_time_crossover"
-    queue = "medium_priority"
+    queue = "strategy"
     strategy_type = "Entry"
 
     def create_dataframe(self, data:str, backtest=False, **kwargs):

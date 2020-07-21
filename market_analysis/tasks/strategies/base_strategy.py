@@ -4,7 +4,7 @@ from market_analysis.models import Strategy, StrategyTimestamp, Symbol, Deployed
 
 class BaseStrategyTask(celery_app.Task):
     ignore_result = False
-    queue = "high_priority"
+    queue = "strategy"
     name = "base_strategy"
     strategy_type = "Entry"
     strategy_priority = "Primary"

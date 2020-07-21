@@ -9,7 +9,7 @@ class BaseBackTestStrategy(celery_app.Task):
     """Backtesting Base task with base requesired functions which will be used while backtesting,
     Prepare data for backtesting"""
     ignore_result = False
-    queue = "medium_priority"
+    queue = "strategy"
     name = "base_backtest_strategy"
 
     def check_mandatory_fields(self, fields_list:list, mandatory_fields:list=['symbol_name', "strategy_name", 'entry_price', 'entry_time', 'stoploss',
@@ -197,7 +197,7 @@ class SendBackTestingRequest(BaseBackTestStrategy):
     instead that will resturn data in dict form which will be later calculated, so basically this function
     send multiple request to strategy function with diffrenty candles and that call those function using group method of celery
     and store the all result in redis"""
-
+    queue = "strategy"
     name = "send_backtesting_data_request"
 
     def send_backtesting_data_request(self, **kwargs):
@@ -255,7 +255,6 @@ def create_backtesting_data(strategy_id, to_days=None, timeframe=None, task_run_
         return day_count + 2
 
     timeframe = list(timeframe) if timeframe else strategy.timeframe
-    print(timeframe)
     run_task_after = 0
     for stock in liquid_stocks:
         data = {
