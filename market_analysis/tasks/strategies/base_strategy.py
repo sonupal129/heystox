@@ -26,15 +26,17 @@ class BaseStrategyTask(celery_app.Task):
             }
         return data
     
-    def create_dataframe(self, data:str, backtest=False, **kwargs):
+    def create_dataframe(self, cache_key:str, backtest=False, **kwargs):
         """Create pandas dataframe for backtesting and live analysis only
         Parameter:
         data : Json Data"""
         mandatory_keys = ["symbol", "with_live_candle"]
 
         if backtest:
+            if not kwargs.get("head_count"):
+                raise AttributeError("head_count is mandatory for backtesting")
             try:
-                df = pd.read_json(data)
+                df = cache.get(cache_key).head(kwargs.get("head_count", 1))
                 return df
             except:
                 raise JSONDecodeError ("Passed data type is not json data")
@@ -79,16 +81,16 @@ class BaseStrategyTask(celery_app.Task):
                 stamp.exclude(id=stamp.first().id).delete()
             return "Signal Found"
 
-    def base_strategy(self, stock_id, entry_type, backtest, backtesting_candles_data=None):
+    def base_strategy(self, stock_id, entry_type, backtest, backtesting_candles_cache_key=None):
         pass
 
-    def run(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
+    def run(self, stock_id, entry_type, backtest=False, backtesting_candles_cache_key=None, **kwargs):
         strategy_function = None
         try:
             strategy_function = getattr(self.__class__, self.name)
         except:
             return f"Strategy function name and task name should be same"
-        output = strategy_function(self, stock_id, entry_type, backtest, backtesting_candles_data, **kwargs)
+        output = strategy_function(self, stock_id, entry_type, backtest, backtesting_candles_cache_key, **kwargs)
         if not isinstance(output, str):
             return self.create_indicator_timestamp(**output)
 

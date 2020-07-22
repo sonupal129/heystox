@@ -17,11 +17,11 @@ class StochasticBollingerCrossover(BaseEntryStrategy):
     strategy_type = "Entry"
     queue = "strategy"
 
-    def find_stochastic_bollingerband_crossover(self, stock_id, entry_type, backtest, backtesting_candles_data, **kwargs):
+    def find_stochastic_bollingerband_crossover(self, stock_id, entry_type, backtest, backtesting_candles_cache_key, **kwargs):
         """Find Bollinger crossover with adx and stochastic crossover, Supporting Strategy"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type")})        
+        df = self.create_dataframe(backtesting_candles_cache_key, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type"), "head_count": kwargs.get("head_count")})        
         df["medium_band"] = bollinger_mavg(df.close_price)
         df["adx"] = adx(df.high_price, df.low_price, df.close_price)
         df["medium_band"] = df.medium_band.apply(roundup)
@@ -96,11 +96,11 @@ class StochasticMacdCrossover(BaseEntryStrategy):
     queue = "strategy"
     strategy_type = "Entry"
 
-    def find_stochastic_macd_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
+    def find_stochastic_macd_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_cache_key=None, **kwargs):
         """(Custom Macd Crossover) This function find crossover between macd and macd signal and return signal as buy or sell"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type")})        
+        df = self.create_dataframe(backtesting_candles_cache_key, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type"), "head_count": kwargs.get("head_count")})        
         df["macd"] = macd(df.close_price)
         df["macd_signal"] = macd_signal(df.close_price)
         df["macd_diff"] = macd_diff(df.close_price)
@@ -181,11 +181,11 @@ class AdxBollingerCrossover(BaseEntryStrategy):
     queue = "strategy"
     strategy_type = "Entry"
 
-    def find_adx_bollinger_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
+    def find_adx_bollinger_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_cache_key=None, **kwargs):
         """Find bolling corssover with help of adx"""
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "M5")})
+        df = self.create_dataframe(backtesting_candles_cache_key, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "M5"), "head_count": kwargs.get("head_count")})
         df["high_band"] = bollinger_hband(df.close_price)
         # df["medium_band"] = bollinger_mavg(df.close_price)
         df["low_band"] = bollinger_lband(df.close_price)
@@ -244,10 +244,10 @@ class StochasticMacdSameTimeCrossover(BaseEntryStrategy):
         return df
 
 
-    def find_stochastic_macd_same_time_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_data=None, **kwargs):
+    def find_stochastic_macd_same_time_crossover(self, stock_id, entry_type, backtest=False, backtesting_candles_cache_key=None, **kwargs):
         stock = Symbol.objects.get(id=stock_id)
         today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_data, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "1H")})
+        df = self.create_dataframe(backtesting_candles_cache_key, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "1H"), "head_count": kwargs.get("head_count")})
         df["macd"] = macd(df.close_price)
         df["macd_signal"] = macd_signal(df.close_price)
         df["macd_crossover"] = np.where(df.macd < df.macd_signal, "SELL", "BUY")

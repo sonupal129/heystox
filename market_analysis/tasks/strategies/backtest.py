@@ -211,12 +211,14 @@ class SendBackTestingRequest(BaseBackTestStrategy):
             to_days += 40
         candles = symbol.get_stock_data(days=to_days, end_date=end_date)
         candles_df = symbol.get_stock_dataframe(candles, candle_type)
+        df_cache_key = generate_random_string(10)
+        cache.set(df_cache_key, candles_df, 30*60)
         print("Please wait data is getting prepared for strategy...")
         output = []
 
         for i in range(1, len(candles_df) + 1):
-            backtest_df = candles_df.head(i)
-            output.append(strategy.s(symbol.id, entry_type, backtest=True, backtesting_candles_data=backtest_df.to_json()))
+            context = {"head_count": i}
+            output.append(strategy.s(symbol.id, entry_type, backtest=True, backtesting_candles_cache_key=df_cache_key, **context))
 
         run_tasks = group(output)
         results = run_tasks.apply_async()

@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 
 # Python Libraries
-import csv
+import csv, random, string
 
 # TA LIbrary for Stock Market
 from ta.trend import macd, macd_diff, macd_signal, ema, ema_indicator, adx, adx_neg, adx_pos
@@ -206,6 +206,12 @@ def get_auto_exit_price(price, entry_type):
     elif entry_type == "BUY":
         stoploss = price + (price * sl /100)
         return roundup(stoploss)
+
+
+def generate_random_string(length:str):
+    letters = string.ascii_letters
+    random_string = "".join(random.choice(letters) for i in range(length+1))
+    return random_string
 
 # Django Models Choices
 # Strategy Model
