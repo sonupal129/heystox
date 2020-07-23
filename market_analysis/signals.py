@@ -1,6 +1,6 @@
 from market_analysis.imports import *
-from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Strategy, Symbol)
-from market_analysis.tasks.strategies.backtest import delete_backtesting_data, create_backtesting_data
+from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Strategy, Symbol, BacktestReport)
+from market_analysis.tasks.strategies.backtest import delete_backtesting_data
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.indicator_signals import SignalRouter
 # from market_analysis.tasks.intraday_indicator import is_stock_pdhl, has_entry_for_long_short
@@ -45,21 +45,20 @@ def invalidate_strategies_cache(sender, instance, action, **kwargs):
     redis_cache.delete(entry_cache_key)
     redis_cache.delete(exit_cache_key)
 
+@receiver(pre_delete, sender=Strategy)
+def delete_backtesting_data_on_strategy_delete(sender, instance, **kwargs):
+    """Signal will delete all backtested report data that strategy when strategy get deleted"""
+    BacktestReport.objects.filter(strategy_name=instance.strategy_name).delete()
+
 @receiver(pre_save, sender=Strategy)
-def call_delete_create_backtesting_data(sender, instance, **kwargs):
-    """Signal will call celery task which will delete or create all backtested report data when backtesting_ready
-    will be true also this function invalidate all cache key of that strategy"""
-    if instance.backtesting_ready:       
+def delete_backtesting_data_by_timeframe(sender, instance, **kwargs):
+    """Signal will call celery task which will delete backtested report data when backtesting_ready
+    will be false also this function invalidate all cache key of that strategy, it deletes by timeframe"""
+    if not instance.backtesting_ready:
         new_value = instance.timeframe
         old_value = Strategy.objects.get(id=instance.id).timeframe
 
         for value in old_value:
             if value not in new_value:
                 delete_backtesting_data.delay(strategy_name=instance.strategy_name, timeframe=value)
-
-        for value in new_value:
-            if value not in old_value:
-                create_backtesting_data.delay(strategy_id=instance.id, timeframe=value)
         return True
-
-

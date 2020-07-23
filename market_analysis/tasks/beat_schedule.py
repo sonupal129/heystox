@@ -152,7 +152,7 @@ orders = {
 backtest = {
     "create_backtesting_data_async": {
         "task": "market_analysis.tasks.strategies.backtest.create_backtesting_data_async",
-        "schedule": crontab(hour=4, minute=10),
+        "schedule": crontab(minute="*/7"),
     },
 }
 

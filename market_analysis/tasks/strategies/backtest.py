@@ -241,12 +241,14 @@ class SendBackTestingRequest(BaseBackTestStrategy):
 celery_app.tasks.register(SendBackTestingRequest)
 
 @celery_app.task(queue="medium_priority")
-def create_backtesting_data(strategy_id, to_days=None, timeframe=None, task_run_after=300):
-    """Function trigger celery task to start backtesting, Please use this function very carefully
+def create_backtesting_data_async(to_days=None, task_run_after=300, max_price=300):
+    """Function will run on periodically basis start backtesting, Please use/modify this function very carefully
     as any one mistake will lead celery dead lock or database locked. this is a heavy function which call celery tasks for 
     longer time"""
-    strategy = Strategy.objects.get(id=strategy_id)
-    liquid_stocks = get_liquid_stocks(max_price=300)
+    strategies = Strategy.objects.filter(backtesting_ready=True)
+    liquid_stocks = get_liquid_stocks(max_price=max_price)
+    current_time = get_local_time().now()
+    task_counter = 0
 
     def get_day_count(entry_time:datetime, candle_type):
         entry_date = entry_time.date()
@@ -255,43 +257,45 @@ def create_backtesting_data(strategy_id, to_days=None, timeframe=None, task_run_
         if candle_type in ["1H", "M30"]:
             return day_count + 10
         return day_count + 2
-
-    if not isinstance(timeframe, str):
-        raise AttributeError("timeframe should be a string/ candle type")
-    
-    timeframe = [timeframe] if timeframe else strategy.timeframe
     
     run_task_after = 0
     for stock in liquid_stocks:
+        if task_counter >= 10:
+            break
         data = {
             "entry_type" : "BUY",
             "stock_id" : stock.id,
             "to_days" : to_days or 90,
-            "strategy_id" : strategy.id,
+            "strategy_id" : "",
             "end_date" : str(get_local_time().date())
         }
-        for candle_choice in timeframe:
-            data["candle_type"] = candle_choice
-            reports = BacktestReport.objects.filter(symbol_name=stock.symbol, strategy_name=strategy.strategy_name, candle_type=candle_choice)
-            buy_reports = reports.filter(candle_type=data["candle_type"])
-            if buy_reports.exists():
-                data["to_days"] = get_day_count(buy_reports.last().entry_time, data["candle_type"])
-            SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
-            data["entry_type"] = "SELL"
-            sell_reports = reports.filter(candle_type=data["candle_type"])
-            if sell_reports.exists():
-                data["to_days"] = get_day_count(sell_reports.last().entry_time, data["candle_type"])
-            SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
-        run_task_after += task_run_after # In seconds
-    return True
+        for strategy in strategies:
+            data["strategy_id"] = strategy.id
+            reports = BacktestReport.objects.filter(strategy_name=strategy.strategy_name, symbol_name=stock.symbol)
+            for candle_choice in strategy.timeframe:
+                candle_type_report = reports.filter(candle_type=candle_choice)
+                data["candle_type"] = candle_choice
+                buy_reports = candle_type_report.filter(entry_type=data["entry_type"])
+                if not buy_reports.exists():
+                    SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
+                    task_counter += 1
+                elif buy_reports.last().entry_time < (current_time - timedelta(7)):
+                    data["to_days"] = get_day_count(buy_reports.last().entry_time, data["candle_type"])
+                    SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
+                    task_counter += 1
 
-@celery_app.task(queue="low_priority")
-def create_backtesting_data_async():
-    strategies = Strategy.objects.filter(backtesting_ready=True)
-    for strategy in strategies:
-        create_backtesting_data.delay(strategy_id=strategy.id, task_run_after=180)
-    return True
+                data["entry_type"] = "SELL"
+                sell_reports = candle_type_report.filter(entry_type=data["entry_type"])
+                if not sell_reports.exists():
+                    SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
+                    task_counter += 1
+                elif sell_reports.last().entry_time < (current_time - timedelta(7)):
+                    data["to_days"] = get_day_count(sell_reports.last().entry_time, data["candle_type"])
+                    SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
+                    task_counter += 1
 
+                run_task_after += 180 # In seconds
+    return True
 
 @celery_app.task(queue="medium_priority")
 def delete_backtesting_data(strategy_name, timeframe):
