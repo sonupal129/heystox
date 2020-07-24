@@ -9,7 +9,6 @@ class SymbolAdmin(ExportMixin, admin.ModelAdmin):
     list_filter = ["exchange"]
     search_fields = ["symbol", "name"]
     date_hierarchy = 'created_at'
-    filter_horizontal = ["strategy"]
 
 
 class CandleAdmin(admin.ModelAdmin):

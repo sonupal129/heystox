@@ -37,14 +37,6 @@ def send_slack_on_order_rejection(sender, instance, **kwargs):
     if instance.status in ["CA", "RE"]:
         slack_message_sender.delay(f"Order {instance.order_id}, {instance.get_status_display()}, Please Check!")
 
-    
-@receiver(m2m_changed, sender=Symbol.strategy.through)
-def invalidate_strategies_cache(sender, instance, action, **kwargs):
-    entry_cache_key = "_".join([instance.symbol, "Entry", "strategies"])
-    exit_cache_key = "_".join([instance.symbol, "Exit", "strategies"])
-    redis_cache.delete(entry_cache_key)
-    redis_cache.delete(exit_cache_key)
-
 @receiver(pre_delete, sender=Strategy)
 def delete_backtesting_data_on_strategy_delete(sender, instance, **kwargs):
     """Signal will delete all backtested report data that strategy when strategy get deleted"""

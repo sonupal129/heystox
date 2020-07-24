@@ -20,7 +20,6 @@ class Symbol(BaseModel):
     exchange = models.ForeignKey(MasterContract, related_name="symbols", on_delete=models.DO_NOTHING)
     token = models.IntegerField(blank=True, null=True)
     symbol = models.CharField(max_length=100)
-    strategy = models.ManyToManyField("Strategy", related_name="symbols", blank=True, limit_choices_to={"strategy_type": "ET"})
     name = models.CharField(max_length=100)
     last_day_closing_price = models.FloatField(blank=True, null=True)
     last_day_opening_price = models.FloatField(blank=True, null=True)
