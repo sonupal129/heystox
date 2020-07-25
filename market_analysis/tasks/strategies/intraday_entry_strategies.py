@@ -267,11 +267,11 @@ class StochasticMacdSameTimeCrossover(BaseEntryStrategy):
         confirmed_matched_crossover = matched_crossover[((matched_crossover["macd_crossover"] == "SELL_CROSSOVER") & (matched_crossover["close_price"] < matched_crossover["medium_band"])) | ((matched_crossover["macd_crossover"] == "BUY_CROSSOVER") & (matched_crossover["close_price"] > matched_crossover["medium_band"]))]
         if not confirmed_matched_crossover.empty:
             last_candle = confirmed_matched_crossover.iloc[-1]
-            if (last_candle.macd_crossover and last_candle.stochastic_crossover) == "BUY_CROSSOVER" and last_candle.close_price > last_candle.medium_band:
-                entry_confirmed = True
-            elif (last_candle.macd_crossover and last_candle.stochastic_crossover) == "SELL_CROSSOVER" and last_candle.close_price < last_candle.medium_band:
-                entry_confirmed = True
-            
+            if entry_type == "BUY":
+                entry_confirmed = True if (last_candle.macd_crossover and last_candle.stochastic_crossover) == "BUY_CROSSOVER" and last_candle.close_price > last_candle.medium_band else False
+            elif entry_type == "SELL":
+                entry_confirmed = True if (last_candle.macd_crossover and last_candle.stochastic_crossover) == "SELL_CROSSOVER" and last_candle.close_price < last_candle.medium_band else False
+                    
             if entry_confirmed:
                 response = self.make_response(stock, entry_type, float(last_candle.close_price), last_candle.date, backtest, 20, **kwargs)
                 return response

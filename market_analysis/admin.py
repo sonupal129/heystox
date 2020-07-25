@@ -93,9 +93,10 @@ class StrategyAdmin(admin.ModelAdmin):
 
 
 class DeployedStrategiesAdmin(admin.ModelAdmin):
-    list_display = ["symbol", "strategy", "timeframe", "entry_type"]
+    list_display = ["symbol", "strategy", "timeframe", "entry_type", "active"]
     search_fields = ["symbol"]
     list_filter = ["strategy", "timeframe", "entry_type"]
+    readonly_fields = ["symbol", "strategy", "timeframe", "entry_type"]
 
     def has_add_permission(self, request):
         return True

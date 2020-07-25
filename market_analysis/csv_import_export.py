@@ -18,6 +18,7 @@ class SortedStocksListResource(resources.ModelResource):
 
     class Meta:
         model = SortedStocksList
+        fields = ["created_at", "symbol__symbol", "added", "entry_type"]
 
 
 class BacktestReportResource(resources.ModelResource):
