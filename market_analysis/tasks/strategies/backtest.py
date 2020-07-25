@@ -279,7 +279,7 @@ def create_backtesting_data_async(to_days=None, max_price=300):
                 if not buy_reports.exists():
                     SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                     task_counter += 1
-                elif buy_reports.last().entry_time < (current_time - timedelta(7)):
+                elif buy_reports.last().entry_time < (current_time - timedelta(10)):
                     data["to_days"] = get_day_count(buy_reports.last().entry_time, data["candle_type"])
                     SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                     task_counter += 1
@@ -289,11 +289,11 @@ def create_backtesting_data_async(to_days=None, max_price=300):
                 if not sell_reports.exists():
                     SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                     task_counter += 1
-                elif sell_reports.last().entry_time < (current_time - timedelta(7)):
+                elif sell_reports.last().entry_time < (current_time - timedelta(10)):
                     data["to_days"] = get_day_count(sell_reports.last().entry_time, data["candle_type"])
                     SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                     task_counter += 1
-                run_task_after += 120 # In seconds
+                run_task_after += 180 # In seconds
     return True
 
 @celery_app.task(queue="medium_priority")
