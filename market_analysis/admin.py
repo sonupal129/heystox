@@ -1,10 +1,10 @@
 from django.contrib import admin
 from market_analysis.models import *
-from market_analysis.csv_import_export import SortedStockDashboardReportResource
+from market_analysis.csv_import_export import *
 # Register your models here.
 
 class SymbolAdmin(ExportMixin, admin.ModelAdmin):
-    resource_class = Symbol
+    resource_class = SymbolResource
     list_display = ["symbol", "exchange"]
     list_filter = ["exchange"]
     search_fields = ["symbol", "name"]
@@ -28,7 +28,7 @@ class StrategyTimestampInline(admin.TabularInline):
     extra = 0
 
 class SortedStocksListAdmin(ExportMixin,admin.ModelAdmin):
-    resource_class = SortedStocksList
+    resource_class = SortedStocksListResource
     date_hierarchy = 'created_at'
     list_display = ["symbol", "entry_price", "entry_type"]
     readonly_fields = ("created_at",)
@@ -101,9 +101,8 @@ class DeployedStrategiesAdmin(admin.ModelAdmin):
         return True
 
 class BacktestReportAdmin(ExportMixin, admin.ModelAdmin):
-    resource_class = BacktestReport
+    resource_class = BacktestReportResource
     list_filter = ["strategy_name"]
-    # readonly_fields = "__all__"
 
 
 

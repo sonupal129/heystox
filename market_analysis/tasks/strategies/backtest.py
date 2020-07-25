@@ -253,7 +253,7 @@ def create_backtesting_data_async(to_days=None, max_price=300):
     def get_day_count(entry_time:datetime, candle_type):
         entry_date = entry_time.date()
         today_date = get_local_time().date()
-        day_count = (entry_date - today_date).days
+        day_count = (today_date - entry_date).days
         if candle_type in ["1H", "M30"]:
             return day_count + 10
         return day_count + 2

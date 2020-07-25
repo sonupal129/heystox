@@ -32,6 +32,10 @@ class Symbol(BaseModel):
     total_sell_quantity = models.IntegerField("Total Sell Quantity", blank=True, null=True)
     trade_manually = models.BooleanField(default=False)
 
+    class Meta:
+        unique_together = ("symbol", "exchange")
+
+
     def __str__(self):
         return self.symbol
 
@@ -483,6 +487,16 @@ class SortedStocksList(BaseModel):
     added = models.CharField(max_length=10, choices=added_choice, default="AT")
     entry_price = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     entry_type = models.CharField(max_length=20, choices=entry_choices, default="BUY")
+
+    # def clean(self, *args, **kwargs):
+    #     today_date = get_local_time().date()
+    #     sorted_stocks_count = SortedStocksList.objects.filter(symbol=self.symbol, entry_type=self.entry_type, created_at__date=today_date).count()
+        
+    #     if sorted_stocks_count == 1:
+    #         pass
+    #     elif sorted_stocks_count > 1:
+    #         raise ValidationError(f"""Sorted stock already available on date '{today_date}' with symbol '{self.symbol}' & entry type '{self.entry_type}'""")
+    #     super(SortedStocksList, self).clean   (*args, **kwargs)
 
     def __str__(self):
         return "{} | {}".format(self.symbol.__str__(), self.created_at.date())

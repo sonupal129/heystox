@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import SortedStockDashboardReport, Symbol, SortedStocksList
+from market_analysis.models import SortedStockDashboardReport, Symbol, SortedStocksList, BacktestReport
 
 #  Code Below
 
@@ -18,3 +18,9 @@ class SortedStocksListResource(resources.ModelResource):
 
     class Meta:
         model = SortedStocksList
+
+
+class BacktestReportResource(resources.ModelResource):
+
+    class Meta:
+        model = BacktestReport
