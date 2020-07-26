@@ -54,6 +54,12 @@ class Symbol(BaseModel):
             redis_cache.set(cache_key, strategies, 60*60*24)
         return strategies
 
+    def get_last_backtesting_log(self, strategy_name, timeframe, entry_type):
+        qs = BacktestLogs.objects.filter(entry_type=entry_type, strategy_name=strategy_name, symbol_name=self.symbol, candle_type=timeframe)
+        if qs.exists():
+            return qs.last()
+        return None
+
     def get_backtested_data(self, cache_key):
         cached_value = redis_cache.get(cache_key)
         dict_keys = ['start_date', 'end_date', 'symbol', 'strategy_name', 'candle_type', 'entry_type']
@@ -787,6 +793,13 @@ class BacktestReport(BaseModel):
         return " | ".join([self.symbol_name, self.strategy_name, str(self.entry_time)])
 
 
-
-    
+class BacktestLogs(BaseModel):
+    candle_type = models.CharField(max_length=20)
+    strategy_name = models.CharField(max_length=100)
+    symbol_name = models.CharField(max_length=100)
+    entry_type = models.CharField(max_length=10)
+    backtest_date = models.DateField(auto_now_add=True, editable=False)
+ 
+    def __str__(self):
+        return " | ".join([self.symbol_name, self.strategy_name, self.candle_type])
     

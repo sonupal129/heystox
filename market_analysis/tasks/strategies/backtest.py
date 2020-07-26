@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import Strategy, Symbol, BacktestReport
+from market_analysis.models import Strategy, Symbol, BacktestReport, BacktestLogs
 from market_analysis.tasks.trading import get_liquid_stocks
 # Code Start Below
 
@@ -95,7 +95,6 @@ class BaseBackTestStrategy(celery_app.Task):
         "to_days" : kwargs.get("to_days"),
         "candle_type" : kwargs.get("candle_type"),
         "strategy" : Strategy.objects.get(id=int(kwargs.get("strategy_id"))),
-        "task_cache_key": self.create_cache_key([*kwargs.values(),"temp_backtest_tasks_data"]),
         "form_cache_key": kwargs.get("cache_key", "no_key")
         }
         return data
@@ -111,8 +110,8 @@ class CalculateBackTestEquityIntrdayData(BaseBackTestStrategy):
     name = "calculate_intraday_strategies_data"
     queue = "tickers"
     
-    def calculate_backtest_data(self, cache_key, entry_type, **kwargs):
-        cached_value = cache.get(cache_key)
+    def calculate_backtest_data(self, task_cache_key, entry_type, **kwargs):
+        cached_value = cache.get(task_cache_key)
         success_tasks = [task.result for task in cached_value if isinstance(task.result, dict)]
         strategy_output_df = pd.DataFrame(success_tasks)
         candles_df = pd.read_json(kwargs.get("candles_df"))
@@ -178,7 +177,7 @@ class CalculateBackTestEquityIntrdayData(BaseBackTestStrategy):
                 else:
                     filtered_rows.append(row)
             strategy_output_df = pd.DataFrame(filtered_rows)
-            cache.delete(cache_key)
+            cache.delete(task_cache_key)
             redis_cache.delete(kwargs.get("form_cache_key", "no_key") + "_requested")   
         return strategy_output_df
 
@@ -222,17 +221,20 @@ class SendBackTestingRequest(BaseBackTestStrategy):
 
         run_tasks = group(output)
         results = run_tasks.apply_async()
-        cache_key = kwargs.get("task_cache_key")
+        task_cache_key = generate_random_string(20)
         data = {
             "entry_type" : entry_type,
             "candle_type": candle_type,
-            "cache_key": cache_key,
+            "task_cache_key": task_cache_key,
             "candles_df": candles_df.to_json(),
             "form_cache_key": kwargs.get("form_cache_key", "no_key")
         }
-        cache.set(cache_key, results, 30*60) # Used File based cache to store data
+        print(strategy)
+        cache.set(task_cache_key, results, 60*60) # Used File based cache to store data
+        BacktestLogs.objects.create(candle_type=candle_type, entry_type=entry_type, symbol_name=symbol.symbol, strategy_name=kwargs["strategy"].strategy_name)
         # Call A celery function which will calculate the result of response
         CalculateBackTestEquityIntrdayData().apply_async(kwargs=data, countdown=360)
+        return True
 
     def run(self, **kwargs):
         data = self.prepare_backtesting_data(**kwargs)
@@ -273,23 +275,25 @@ def create_backtesting_data_async(to_days=None, max_price=300):
             data["strategy_id"] = strategy.id
             reports = BacktestReport.objects.filter(strategy_name=strategy.strategy_name, symbol_name=stock.symbol)
             for candle_choice in strategy.timeframe:
+                last_backtest_log = stock.get_last_backtesting_log(strategy.strategy_name, candle_choice, "BUY")
                 candle_type_report = reports.filter(candle_type=candle_choice)
                 data["candle_type"] = candle_choice
                 buy_reports = candle_type_report.filter(entry_type=data["entry_type"])
                 if not buy_reports.exists():
                     SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                     task_counter += 1
-                elif buy_reports.last().entry_time < (current_time - timedelta(10)):
+                elif last_backtest_log and last_backtest_log.backtest_date < (current_time.date() - timedelta(10)):
                     data["to_days"] = get_day_count(buy_reports.last().entry_time, data["candle_type"])
                     SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                     task_counter += 1
 
                 data["entry_type"] = "SELL"
+                last_backtest_log = stock.get_last_backtesting_log(strategy.strategy_name, candle_choice, "SELL")
                 sell_reports = candle_type_report.filter(entry_type=data["entry_type"])
                 if not sell_reports.exists():
                     SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                     task_counter += 1
-                elif sell_reports.last().entry_time < (current_time - timedelta(10)):
+                elif last_backtest_log and last_backtest_log.backtest_date < (current_time.date() - timedelta(10)):
                     data["to_days"] = get_day_count(sell_reports.last().entry_time, data["candle_type"])
                     SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                     task_counter += 1
