@@ -232,7 +232,7 @@ class SendBackTestingRequest(BaseBackTestStrategy):
         }
         cache.set(cache_key, results, 30*60) # Used File based cache to store data
         # Call A celery function which will calculate the result of response
-        CalculateBackTestEquityIntrdayData().apply_async(kwargs=data, countdown=600)
+        CalculateBackTestEquityIntrdayData().apply_async(kwargs=data, countdown=360)
 
     def run(self, **kwargs):
         data = self.prepare_backtesting_data(**kwargs)
@@ -293,7 +293,7 @@ def create_backtesting_data_async(to_days=None, max_price=300):
                     data["to_days"] = get_day_count(sell_reports.last().entry_time, data["candle_type"])
                     SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                     task_counter += 1
-                run_task_after += 180 # In seconds
+                run_task_after += 30 # In seconds
     return True
 
 @celery_app.task(queue="medium_priority")
