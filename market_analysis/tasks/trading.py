@@ -23,7 +23,7 @@ def get_upstox_user(email="sonupal129@gmail.com"):
             sleep(2)
             if login_attempt_counter == 60:
                 cache.delete("login_attempt_counter")
-                slack_message_sender.delay(text=user.get_authentication_url(), channel="#random")
+                slack_message_sender.delay(text="Please Login Again Same error in authenticating", channel="#random")
     return cache.get(cache_key)
 
 def select_stocks_for_trading(min_price:int, max_price:int):

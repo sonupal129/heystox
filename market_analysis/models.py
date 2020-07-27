@@ -400,8 +400,8 @@ class UserProfile(BaseModel):
         """Returns upstox logged in user object"""
         user_email = self.get_user_email()
         if self.user.is_active and self.subscribed_historical_api or self.subscribed_live_api:
-            user = cache.get(user_email + "_upstox_login_user")
-            return user
+            cached_upstox_user = cache.get(user_email + "_upstox_login_user")
+            return cached_upstox_user
 
     def update_initial_balance(self):
         """This function will run on 1st of every month and update balance of user"""
