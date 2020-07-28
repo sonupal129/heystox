@@ -110,13 +110,11 @@ def update_nifty_50_price_data():
 @celery_app.task(queue="low_priority")
 def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
-    updated_stocks = []
     for symbol in Symbol.objects.filter(exchange__name="NSE_EQ"):
         if symbol.get_stock_data():
             symbol.last_day_closing_price = symbol.get_day_closing_price()
             symbol.last_day_opening_price = symbol.get_day_opening_price()
             symbol.save()
-            updated_stocks.append(symbol.id)
     return "Updated Symbols Closing Price"
 
 

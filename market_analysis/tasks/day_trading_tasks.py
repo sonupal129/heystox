@@ -28,7 +28,7 @@ def unsubscribe_today_trading_stocks():
 @celery_app.task(queue="high_priority") 
 def todays_movement_stocks_add():
     current_time = get_local_time().time()
-    start_time = time(9,20)
+    start_time = time(9,18)
     if current_time > start_time:
         add_today_movement_stocks.apply_async()
         return "Function Called"
@@ -120,7 +120,7 @@ def apply_intraday_indicator_on_sorted_stocks():
         "SELL": settings.MARKET_BEARISH_MOVEMENT,
     }
     current_time = get_local_time().time()
-    start_time = time(9,25)
+    start_time = time(9,21)
     cache_key = str(get_local_time().date()) + "_todays_sorted_stocks"
     cached_value = redis_cache.get(cache_key)
     manual_stocks = list(SortedStocksList.objects.filter(added="ML", created_at__date=get_local_time().date()))
@@ -129,7 +129,7 @@ def apply_intraday_indicator_on_sorted_stocks():
             add_today_movement_stocks.apply_async()
             sleep(3)
             cached_value = redis_cache.get(cache_key)
-        for sorted_stock in cached_value + manual_stocks:
+        for sorted_stock in cached_value:
             strategies = sorted_stock.symbol.get_strategies(entry_type=sorted_stock.entry_type)
             if strategies.exists():
                 for strategy in strategies:
