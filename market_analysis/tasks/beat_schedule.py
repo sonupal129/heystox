@@ -164,5 +164,5 @@ celery_app.conf.beat_schedule = {
     **stock_data_import_tasks,
     **day_trading_tasks,
     **orders
-    # **backtest
+    **backtest
 }

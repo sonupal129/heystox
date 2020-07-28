@@ -6,25 +6,14 @@ from .users_tasks import login_upstox_user
 # Codes Starts Below
 
 def get_upstox_user(email="sonupal129@gmail.com"):
-    user = UserProfile.objects.get(user__email=email)
-    cache_key = str(get_local_time().date()) +  "_local_upstox_user"
+    cache_key = "_".join([str(get_local_time().date()), email, "local_upstox_user"]
     profile = cache.get(cache_key)
-    login_attempt_counter = cache.get("login_attempt_counter")
     if profile is None:
-        try:
-            upstox_user_profile = user.get_upstox_user().get_profile()
-            cache.set(cache_key, user.get_upstox_user(), 30*10)
-        except:
-            if login_attempt_counter is None:
-                cache.set("login_attempt_counter", 1)
-            else:
-                cache.set("login_attempt_counter", login_attempt_counter + 1)
-            login_upstox_user.delay(email)
-            sleep(2)
-            if login_attempt_counter == 60:
-                cache.delete("login_attempt_counter")
-                slack_message_sender.delay(text="Please Login Again Same error in authenticating", channel="#random")
-    return cache.get(cache_key)
+        user = UserProfile.objects.get(user__email=email)
+        upstox_user_profile = user.get_upstox_user()
+        cache.set(cache_key, user.get_upstox_user(), 30*20)
+        return upstox_user_profile
+    return profile
 
 def select_stocks_for_trading(min_price:int, max_price:int):
       return Symbol.objects.filter(last_day_closing_price__range=(min_price, max_price)).exclude(exchange__name="NSE_INDEX")

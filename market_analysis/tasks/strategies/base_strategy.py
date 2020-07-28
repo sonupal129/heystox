@@ -60,6 +60,7 @@ class BaseStrategyTask(celery_app.Task):
     def create_indicator_timestamp(self, stock, entry_type, entry_price:float, entry_time:object, backtest=False, time_range:int=20, **kwargs):
         """This function create timestamp object if signal found using strategy, or if it's backtest parameter is true
         it return only object data do not create any timestamp"""
+        today_date = get_local_time().date()
         if backtest:
             context = {
                 "symbol_name" : stock.symbol,
@@ -74,9 +75,10 @@ class BaseStrategyTask(celery_app.Task):
             sorted_stock = stock.get_sorted_stock(entry_type)
             stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, strategy=deployed_strategy, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
             if not stamp.exists():
-                stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, strategy=deployed_strategy, timestamp=entry_time)
-                stamp.entry_price = entry_price
-                stamp.save()
+                if entry_time.date() == today_date:
+                    stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, strategy=deployed_strategy, timestamp=entry_time)
+                    stamp.entry_price = entry_price
+                    stamp.save()
             elif stamp.count() > 1:
                 stamp.exclude(id=stamp.first().id).delete()
             return "Signal Found"

@@ -251,54 +251,60 @@ def create_backtesting_data_async(to_days=None, max_price=300):
     liquid_stocks = get_liquid_stocks(max_price=max_price)
     current_time = get_local_time().now()
     task_counter = 0
+    start_time = time(16,30)
+    end_time = time(7,30)
+    current_time = get_local_time().time()
 
-    def get_day_count(entry_time:datetime, candle_type):
-        entry_date = entry_time.date()
-        today_date = get_local_time().date()
-        day_count = (today_date - entry_date).days
-        if candle_type in ["1H", "M30"]:
-            return day_count + 10
-        return day_count + 2
-    
-    run_task_after = 0
-    for stock in liquid_stocks:
-        if task_counter >= 10:
-            break
-        data = {
-            "entry_type" : "BUY",
-            "stock_id" : stock.id,
-            "to_days" : to_days or 90,
-            "strategy_id" : "",
-            "end_date" : str(get_local_time().date())
-        }
-        for strategy in strategies:
-            data["strategy_id"] = strategy.id
-            reports = BacktestReport.objects.filter(strategy_name=strategy.strategy_name, symbol_name=stock.symbol)
-            for candle_choice in strategy.timeframe:
-                last_backtest_log = stock.get_last_backtesting_log(strategy.strategy_name, candle_choice, "BUY")
-                candle_type_report = reports.filter(candle_type=candle_choice)
-                data["candle_type"] = candle_choice
-                buy_reports = candle_type_report.filter(entry_type=data["entry_type"])
-                if not buy_reports.exists():
-                    SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
-                    task_counter += 1
-                elif last_backtest_log == None or (last_backtest_log and last_backtest_log.backtest_date < (current_time.date() - timedelta(10))):
-                    data["to_days"] = get_day_count(buy_reports.last().entry_time, data["candle_type"])
-                    SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
-                    task_counter += 1
+    if current_time > start_time and current_time < end_time:
 
-                data["entry_type"] = "SELL"
-                last_backtest_log = stock.get_last_backtesting_log(strategy.strategy_name, candle_choice, "SELL")
-                sell_reports = candle_type_report.filter(entry_type=data["entry_type"])
-                if not sell_reports.exists():
-                    SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
-                    task_counter += 1
-                elif last_backtest_log == None or (last_backtest_log and last_backtest_log.backtest_date < (current_time.date() - timedelta(10))):
-                    data["to_days"] = get_day_count(sell_reports.last().entry_time, data["candle_type"])
-                    SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
-                    task_counter += 1
-                run_task_after += 30 # In seconds
-    return True
+        def get_day_count(entry_time:datetime, candle_type):
+            entry_date = entry_time.date()
+            today_date = get_local_time().date()
+            day_count = (today_date - entry_date).days
+            if candle_type in ["1H", "M30"]:
+                return day_count + 10
+            return day_count + 2
+        
+        run_task_after = 0
+        for stock in liquid_stocks:
+            if task_counter >= 10:
+                break
+            data = {
+                "entry_type" : "BUY",
+                "stock_id" : stock.id,
+                "to_days" : to_days or 90,
+                "strategy_id" : "",
+                "end_date" : str(get_local_time().date())
+            }
+            for strategy in strategies:
+                data["strategy_id"] = strategy.id
+                reports = BacktestReport.objects.filter(strategy_name=strategy.strategy_name, symbol_name=stock.symbol)
+                for candle_choice in strategy.timeframe:
+                    last_backtest_log = stock.get_last_backtesting_log(strategy.strategy_name, candle_choice, "BUY")
+                    candle_type_report = reports.filter(candle_type=candle_choice)
+                    data["candle_type"] = candle_choice
+                    buy_reports = candle_type_report.filter(entry_type=data["entry_type"])
+                    if not buy_reports.exists():
+                        SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
+                        task_counter += 1
+                    elif last_backtest_log == None or (last_backtest_log and last_backtest_log.backtest_date < (current_time.date() - timedelta(10))):
+                        data["to_days"] = get_day_count(buy_reports.last().entry_time, data["candle_type"])
+                        SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
+                        task_counter += 1
+
+                    data["entry_type"] = "SELL"
+                    last_backtest_log = stock.get_last_backtesting_log(strategy.strategy_name, candle_choice, "SELL")
+                    sell_reports = candle_type_report.filter(entry_type=data["entry_type"])
+                    if not sell_reports.exists():
+                        SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
+                        task_counter += 1
+                    elif last_backtest_log == None or (last_backtest_log and last_backtest_log.backtest_date < (current_time.date() - timedelta(10))):
+                        data["to_days"] = get_day_count(sell_reports.last().entry_time, data["candle_type"])
+                        SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
+                        task_counter += 1
+                    run_task_after += 30 # In seconds
+        return True
+    return False
 
 @celery_app.task(queue="medium_priority")
 def delete_backtesting_data(strategy_name, timeframe):
