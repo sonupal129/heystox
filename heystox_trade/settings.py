@@ -110,6 +110,8 @@ DATABASES = {
     }
 }
 
+CONN_MAX_AGE = 2
+
 SESSION_ENGINE = "django.contrib.sessions.backends.file"
 
 # Password validation
@@ -194,9 +196,10 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
-CELERY_RESULT_EXPIRES = 21600
+CELERY_RESULT_EXPIRES = 10800
 CELERY_IMPORTS = ('market_analysis.tasks')
 CELERY_DEFAULT_QUEUE = "low_priority"
+CELERYD_MAX_TASKS_PER_CHILD = 100
 
 
 CELERY_WORKER_POOL_RESTARTS = True
@@ -208,7 +211,9 @@ CELERY_QUEUES = (
     Queue("tickers"),
     Queue("strategy") # Please do not add any other task on this queue except ticker data anylysing tasks
 )
-CELERY_CACHE_BACKEND = "redis"
+
+CELERY_CACHE_BACKEND = "default"
+
 
 
 

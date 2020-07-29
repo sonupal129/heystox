@@ -229,7 +229,6 @@ class SendBackTestingRequest(BaseBackTestStrategy):
             "candles_df": candles_df.to_json(),
             "form_cache_key": kwargs.get("form_cache_key", "no_key")
         }
-        print(strategy)
         cache.set(task_cache_key, results, 60*60) # Used File based cache to store data
         BacktestLogs.objects.create(candle_type=candle_type, entry_type=entry_type, symbol_name=symbol.symbol, strategy_name=kwargs["strategy"].strategy_name)
         # Call A celery function which will calculate the result of response

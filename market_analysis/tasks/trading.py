@@ -6,7 +6,7 @@ from .users_tasks import login_upstox_user
 # Codes Starts Below
 
 def get_upstox_user(email="sonupal129@gmail.com"):
-    cache_key = "_".join([str(get_local_time().date()), email, "local_upstox_user"]
+    cache_key = "_".join([str(get_local_time().date()), email, "local_upstox_user"])
     profile = cache.get(cache_key)
     if profile is None:
         user = UserProfile.objects.get(user__email=email)
@@ -51,7 +51,7 @@ def get_stocks_for_trading():
     else:
         return None
     
-@celery_app.task(queue="high_priority")
+@celery_app.task(queue="high_priority", ignore_result=True)
 def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOVEMENT):
     nifty_50 = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     today_date = get_local_time().date()
@@ -118,7 +118,7 @@ def find_sideways_direction():
         elif nifty_low_variation > -30:
             return nifty_low_variation
  
-@celery_app.task(queue="high_priority")
+@celery_app.task(queue="high_priority", ignore_result=True)
 def add_stock_on_market_sideways():
     today_date = get_local_time().date()
     nifty_50_point = find_sideways_direction()
@@ -133,7 +133,7 @@ def add_stock_on_market_sideways():
             slack_message_sender.delay(text=f"List of Sideways Buy Stocks: " + ", ".join(stock[0].symbol.symbol for stock in stocks_for_trade))
 
 
-@celery_app.task(queue="low_priority")
+@celery_app.task(queue="low_priority", ignore_result=True)
 def add_manual_sorted_stocks():
     """Fucntion add stocks automatically as manual stocks which get stocks get seleted by manually
     and stocks dosen't affect by movement strategy directly applied on these stocks"""

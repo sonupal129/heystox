@@ -11,6 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'heystox_trade.settings')
 
 app = Celery('heystox_trade')
 
+
 # Using a string here means the worker will not have to
 # pickle the object when using Windows.
 

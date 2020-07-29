@@ -4,7 +4,7 @@ from .trading import get_upstox_user
 from market_analysis.imports import *
 # START CODE BELOW  
 
-@celery_app.task(queue="low_priority")
+@celery_app.task(queue="low_priority", ignore_result=True)
 def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_price:int=40, upstox_user_email="sonupal129@gmail.com"):
     """Update all stocks data after trading day"""
     user = get_upstox_user(email=upstox_user_email)
@@ -79,7 +79,7 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, u
     return "{0} Candles Data Imported Sucessfully".format(symbol)
 
 
-@celery_app.task(queue="high_priority")
+@celery_app.task(queue="high_priority", ignore_result=True)
 def import_stocks_candle_data(days=6, end_date=None):
     """Update all stocks candles data after trading day"""
     for q in Symbol.objects.filter(exchange__name__in=["NSE_EQ", "NSE_INDEX"]):
@@ -87,7 +87,7 @@ def import_stocks_candle_data(days=6, end_date=None):
     return "All Stocks Candle Data Imported Successfully"
 
 
-@celery_app.task(queue="low_priority")
+@celery_app.task(queue="low_priority", ignore_result=True)
 def update_stocks_volume():
     """Update total traded volume in stock"""
     for stock in Symbol.objects.exclude(exchange__name="NSE_INDEX"):
@@ -97,7 +97,7 @@ def update_stocks_volume():
             stock.save(update_fields=["last_day_vtt"])
     return "All Stocks Volume Updated"
 
-@celery_app.task(queue="low_priority")    
+@celery_app.task(queue="low_priority", ignore_result=True)    
 def update_nifty_50_price_data():
     nifty = Symbol.objects.get(symbol="nifty_50", exchange__name="NSE_INDEX")
     todays_candles = nifty.get_stock_data(days=0, cached=False)
@@ -107,7 +107,7 @@ def update_nifty_50_price_data():
         nifty.save()
         return "Updated Nifty_50 Data"
 
-@celery_app.task(queue="low_priority")
+@celery_app.task(queue="low_priority", ignore_result=True)
 def update_symbols_closing_opening_price():
     """Update all stocks opening and closing price"""
     for symbol in Symbol.objects.filter(exchange__name="NSE_EQ"):
@@ -118,7 +118,7 @@ def update_symbols_closing_opening_price():
     return "Updated Symbols Closing Price"
 
 
-@celery_app.task(queue="medium_priority")
+@celery_app.task(queue="medium_priority", ignore_result=True)
 def import_premarket_stocks_data():
     urls = {"NFTY" : "https://www.nseindia.com/api/market-data-pre-open?key=NIFTY",
             "NFTYBNK": "https://www.nseindia.com/api/market-data-pre-open?key=BANKNIFTY"}
@@ -169,7 +169,7 @@ def import_premarket_stocks_data():
     return f"No Trading Day on {today_date}"
 
 
-@celery_app.task(queue="medium_priority")
+@celery_app.task(queue="medium_priority", ignore_result=True)
 def import_daily_losers_gainers():
     current_time = get_local_time().time()
     start_time = time(9,30)
@@ -211,7 +211,7 @@ def import_daily_losers_gainers():
         return f"Added Stocks {created_stocks}"
 
 
-@celery_app.task(queue="low_priority")
+@celery_app.task(queue="low_priority", ignore_result=True)
 def import_international_market_index_data():
     """This function will import international market index daily chart data for ex -- Dow Jones,
         NIKKI, HENSENG, SGX Nifty, For importing data it is using yahoo finance api"""
