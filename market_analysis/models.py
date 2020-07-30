@@ -185,19 +185,20 @@ class Symbol(BaseModel):
         candles = candle_queryset.values("open_price", "high_price", "low_price", "close_price", "volume", "date")
         candle_type_timing = candles_type.get(candle_type, "5T")
         df = pd.DataFrame(candles)
-        df = df.set_index("date")
-        candle_open = df.open_price.resample(candle_type_timing, base=15).first()
-        candle_close = df.close_price.resample(candle_type_timing, base=15).last()
-        candle_high = df.high_price.resample(candle_type_timing, base=15).max()
-        candle_low = df.low_price.resample(candle_type_timing, base=15).min()
-        candle_volume = df.volume.resample(candle_type_timing, base=15).last()
-        new_df = pd.concat([candle_open, candle_close, candle_high, candle_low, candle_volume], axis=1, keys=["open_price", "close_price", "high_price", "low_price", "volume"])
-        new_df["date"] = new_df.index
-        new_df.index = np.arange(0, len(new_df))
-        new_df = new_df.dropna()
-        new_df["candle_type"] = candles_types.get(candle_type) if candle_type_timing != "5T" else candles_types.get("M5")
-        new_df = new_df.reset_index().drop("index", axis=1)
-        return new_df
+        if not df.empty:
+            df = df.set_index("date")
+            candle_open = df.open_price.resample(candle_type_timing, base=15).first()
+            candle_close = df.close_price.resample(candle_type_timing, base=15).last()
+            candle_high = df.high_price.resample(candle_type_timing, base=15).max()
+            candle_low = df.low_price.resample(candle_type_timing, base=15).min()
+            candle_volume = df.volume.resample(candle_type_timing, base=15).last()
+            new_df = pd.concat([candle_open, candle_close, candle_high, candle_low, candle_volume], axis=1, keys=["open_price", "close_price", "high_price", "low_price", "volume"])
+            new_df["date"] = new_df.index
+            new_df.index = np.arange(0, len(new_df))
+            new_df = new_df.dropna()
+            new_df["candle_type"] = candles_types.get(candle_type) if candle_type_timing != "5T" else candles_types.get("M5")
+            new_df = new_df.reset_index().drop("index", axis=1)
+            return new_df
 
 
     def get_stock_live_data(self, date_obj=None, with_live_candle=True, candle_type="M5"):

@@ -54,6 +54,7 @@ class BaseSignalTask(celery_app.Task):
 
     def update_entry_price(self, timestamp):
         sorted_stock = timestamp.stock
+        entry_price = None
         
         if is_time_between_range(timestamp.timestamp, 20):
             if sorted_stock.entry_type == "BUY":
@@ -74,7 +75,7 @@ class BaseSignalTask(celery_app.Task):
                 existing_order = None
                 entry_available = True
 
-            sorted_stock.entry_price = entry_price
+            sorted_stock.entry_price = entry_price if entry_price else sorted_stock.entry_price
             sorted_stock.save()
             
             if entry_available:

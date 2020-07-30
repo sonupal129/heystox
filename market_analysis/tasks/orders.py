@@ -217,7 +217,7 @@ class UpdateOrder(BaseOrderTask):
             last_open_order = order.order_book.get_last_order_by_status("OP")
             
             if last_completed_order and last_open_order:
-                last_order = find_last_order(last_open_order, last_completed_order)
+                last_order = self.find_last_order(last_open_order, last_completed_order)
             else:
                 last_order = last_completed_order or last_open_order
             
@@ -236,7 +236,7 @@ class UpdateOrder(BaseOrderTask):
             # Create Logic About when to Subscribe for instrument
             cache_key = "_".join([order_data["symbol"].lower(), "cached_ticker_data"])
             if order.entry_type == "ET":
-                get_or_update_order_quantity(True)
+                self.get_or_update_order_quantity(True)
                 data = {
                     "symbol": order_data.get("symbol"),
                     "target_price" : order.target_price,

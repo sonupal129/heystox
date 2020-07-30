@@ -9,7 +9,7 @@ def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_pri
     """Update all stocks data after trading day"""
     user = get_upstox_user(email=upstox_user_email)
     stock_list = user.get_master_contract(index)
-    bulk_symbol = []
+    
     index_obj = MasterContract.objects.get(name=index)
     for stock in stock_list:
         symbol = stock_list.get(stock)
@@ -17,10 +17,16 @@ def update_create_stocks_data(index:str, max_share_price:int=1000, min_share_pri
             if symbol.closing_price <= max_share_price or symbol.closing_price >= min_share_price:
                 try:
                     stock = Symbol.objects.get(token=symbol.token, isin=symbol.isin)
+                    stock.exchange = index_obj
+                    stock.symbol = symbol.symbol
+                    stock.name = symbol.name
+                    stock.last_day_closing_price = symbol.closing_price
+                    stock.tick_size = symbol.tick_size
+                    stock.instrument_type = symbol.instrument_type
+                    stock.save()
                 except Symbol.DoesNotExist:
-                    bulk_symbol.append(Symbol(exchange=index_obj, token=symbol.token, symbol=symbol.symbol, name=symbol.name,
-                        last_day_closing_price=symbol.closing_price, tick_size=symbol.tick_size, instrument_type=symbol.instrument_type, isin=symbol.isin))
-    Symbol.objects.bulk_create(bulk_symbol)
+                    continue
+    
     Symbol.objects.filter(last_day_closing_price__lt=min_share_price, exchange__name="NSE_EQ").delete()
     Symbol.objects.filter(last_day_closing_price__gt=max_share_price, exchange__name="NSE_EQ").delete()
     return "All Stocks Data Updated Sucessfully"
@@ -62,18 +68,25 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, u
         high_price = float(data.get("high"))
         low_price = float(data.get("low"))
         volume = int(data.get("volume"))
+        candle = None
         try:
             candle = Candle.objects.get(date=datetime.fromtimestamp(timestamp), symbol=stock)
+        except MultipleObjectsReturned:
+            candles = Candle.objects.filter(date=datetime.fromtimestamp(timestamp), symbol=stock).values_list("id", flat=True)
+            candle = Candle.objects.get(id=candles[0])
+            Candle.objects.filter(id__in=candles[1:]).delete()
+        except Candle.DoesNotExist:
+            bulk_candle_data.append(Candle(open_price=open_price, close_price=close_price, low_price=low_price,
+                                        high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),
+                                        symbol=stock, candle_type="M5"))
+        if candle:
             candle.open_price = open_price
             candle.close_price = close_price
             candle.high_price = high_price
             candle.low_price = low_price
             candle.volume = volume
             candle.save()
-        except Candle.DoesNotExist:
-            bulk_candle_data.append(Candle(open_price=open_price, close_price=close_price, low_price=low_price,
-                                        high_price=high_price, volume=volume, date=datetime.fromtimestamp(timestamp),
-                                        symbol=stock, candle_type="M5"))
+            
     Candle.objects.bulk_create(bulk_candle_data)
     stock.get_stock_data(cached=False)
     return "{0} Candles Data Imported Sucessfully".format(symbol)
