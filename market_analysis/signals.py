@@ -7,7 +7,7 @@ from market_analysis.tasks.indicator_signals import SignalRouter
 # Code Below
 
 @receiver(post_save, sender=User)
-def save_user_profile(sender, instance, created, **kwargs):
+def create_token_and_user_profile(sender, instance, created, **kwargs):
     user_profile = UserProfile.objects.get_or_create(user=instance)
     Token.objects.get_or_create(user=instance)
 

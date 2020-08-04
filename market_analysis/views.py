@@ -113,8 +113,9 @@ class UserLoginRegisterView(LoginView):
         return super(UserLoginRegisterView, self).get(request, *args, **kwargs)
 
 
-class BacktestSortedStocksView(View):
+class BacktestSortedStocksView(BasePermissionMixin, GroupRequiredMixins, View):
     template_name = "sorted_stocks_backtest.html"
+    group_required = ["trader"]
     http_method_names = ["get", "post"]
     success_url = "/backtest-stocks/"
 
@@ -127,9 +128,9 @@ class BacktestSortedStocksView(View):
 
     def get(self, request, **kwargs):
         context = {}
-        if request.method == "GET":
-        #     if ""
-            print(request.GET)
+        # if request.method == "GET":
+        # #     if ""
+        #     print(request.GET)
         return render(request, self.template_name, self.get_context_data(request))
 
     def get_cache_key(self, *args):

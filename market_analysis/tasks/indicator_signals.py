@@ -26,7 +26,7 @@ class SignalRouter:
             st_func = getattr(func_module, router_name)
         except:
             st_func = getattr(func_module, "GlobalSignalTask")
-            slack_message_sender.delay(text=f"No Custom signal found for strategy {strategy_name}, Calling Base Signal")
+            slack_message_sender.delay(text=f"No Custom signal found for strategy {strategy_name} & symbol {self.timestamp.stock}, Calling Base Signal")
         return st_func()
 
     def route_signal(self):
@@ -52,41 +52,37 @@ class BaseSignalTask(celery_app.Task):
     def base_signal_task(self, timestamp):
         pass
 
-    def update_entry_price(self, timestamp):
+    def check_entry(self, timestamp):
         sorted_stock = timestamp.stock
         entry_price = None
+        entry_available = False
+        order_place_time = time(14,30)
+        current_time = get_local_time().time()
         
-        if is_time_between_range(timestamp.timestamp, 20):
+        if is_time_between_range(timestamp.timestamp, 20) and current_time < order_place_time:
             if sorted_stock.entry_type == "BUY":
                 if timestamp.entry_price == None or timestamp.entry_price > timestamp.stock.symbol.get_stock_live_price(price_type="ltp"):
                     entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="ltp")
             elif sorted_stock.entry_type == "SELL":
                 if timestamp.entry_price == None or timestamp.entry_price < timestamp.stock.symbol.get_stock_live_price(price_type="ltp"):
                     entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="ltp")
-
-            entry_available = False
-
             try:
                 existing_order = OrderBook.objects.get(symbol=sorted_stock.symbol, date=get_local_time().date())
                 last_order = existing_order.get_last_order_by_status()
                 if last_order.entry_type == "EX":
                     entry_available = True
             except:
-                existing_order = None
                 entry_available = True
-
-            sorted_stock.entry_price = entry_price if entry_price else sorted_stock.entry_price
-            sorted_stock.save()
-            
             if entry_available:
-                return entry_available
+                sorted_stock.entry_price = entry_price if entry_price else timestamp.entry_price
+                sorted_stock.save()
         else:
-            slack_message_sender.delay(text=f"Stock Entry Time is Out of Limit Could Not Place Order for {sorted_stock}")
-            return "Crossover out of time limit"
+            slack_message_sender.delay(text=f"Stock Entry Time is Out of Limit Could Not Place Order for {sorted_stock}", channel="#random")
+        return entry_available
 
     def run(self, timestamp_id):
         timestamp = StrategyTimestamp.objects.get(id=timestamp_id)
-        self.update_entry_price(timestamp)
+        entry_available = self.check_entry(timestamp)
 
         signal_function = None
 
@@ -95,7 +91,7 @@ class BaseSignalTask(celery_app.Task):
         except:
             raise AttributeError("Function name should be same as name attribute")
         
-        if signal_function(self, timestamp) == True:
+        if (signal_function(self, timestamp) and entry_available) == True:
             order_data = self.prepare_orderdata(timestamp)
             EntryOrder().delay(order_data)
 

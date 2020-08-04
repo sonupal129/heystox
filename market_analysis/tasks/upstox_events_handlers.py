@@ -13,8 +13,7 @@ def event_handler_on_quote_update(message):
 def event_handler_on_order_update(message):
     order_statuses = ["cancelled", "open", "complete", "rejected"]
     if message.get("status") in order_statuses:
-        update_order = UpdateOrder()
-        update_order.delay(message)
+        UpdateOrder().delay(message)
     return "Order Updated"
 
 def event_handler_on_trade_update(message):

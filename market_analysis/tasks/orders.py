@@ -12,7 +12,10 @@ class BaseOrderTask(celery_app.Task):
     name = "place_order"
     queue = "high_priority"
 
-    find_last_order = lambda order1, order2 : order1 if order1.entry_time > order2.entry_time else order2
+    def find_last_order(self, order1, order2):
+        if order1.entry_time > order2.entry_time:
+            return order1
+        return order2
 
     def calculate_order_quantity(self, share_price, entry_type):
         user = get_upstox_user()
@@ -194,7 +197,7 @@ class UpdateOrder(BaseOrderTask):
         order_id = order_data.get("order_id")
         user = get_upstox_user()
         user.get_master_contract(order_data.get("exchange"))
-        exchange_time = get_local_time().strptime(order_data.get("exchange_time"), "%d-%b-%Y %H:%M:%S") if order_data.get("exchange_time") else get_local_time().now()
+        exchange_time = get_local_time().now()
         order, is_created = Order.objects.get_or_create(order_id=order_id)
         
         if is_created:
@@ -389,8 +392,11 @@ def update_orders_status():
     orders_history = user.get_order_history()
     if orders.exists():
         for order in orders:
-            order_detail = list(filter(lambda o: o.get("order_id") == int(order.order_id) and o.get("status") in ["complete", "cancelled", "rejected"] , orders_history))[0]
-            UpdateOrder().delay(order_detail)
+            try:
+                order_detail = list(filter(lambda o: o.get("order_id") == int(order.order_id) and o.get("status") in ["complete", "cancelled", "rejected"] , orders_history))[0]
+                UpdateOrder().delay(order_detail)
+            except:
+                continue
     order_ids = Order.objects.filter(entry_time__date=get_local_time().date()).values_list("order_id", flat=True)
     new_orders = [order for order in orders_history if str(order.get("order_id")) not in order_ids]
     if new_orders:
