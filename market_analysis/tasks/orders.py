@@ -390,9 +390,9 @@ def update_orders_status():
     if orders.exists():
         for order in orders:
             order_detail = list(filter(lambda o: o.get("order_id") == int(order.order_id) and o.get("status") in ["complete", "cancelled", "rejected"] , orders_history))[0]
-            create_update_order_on_update.delay(order_detail)
+            UpdateOrder().delay(order_detail)
     order_ids = Order.objects.filter(entry_time__date=get_local_time().date()).values_list("order_id", flat=True)
     new_orders = [order for order in orders_history if str(order.get("order_id")) not in order_ids]
     if new_orders:
         for order in new_orders:
-            create_update_order_on_update.delay(order)
+            UpdateOrder().delay(order)
