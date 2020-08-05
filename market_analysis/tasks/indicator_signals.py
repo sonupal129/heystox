@@ -30,8 +30,13 @@ class SignalRouter:
         return st_func()
 
     def route_signal(self):
-        signal = self.find_router_for_strategy()
-        return signal.delay(self.timestamp.id)
+        order_place_time = time(14,30)
+        current_time = get_local_time().time()
+        if current_time < order_place_time:
+            signal = self.find_router_for_strategy()
+            return signal.delay(self.timestamp.id)
+        slack_message_sender.delay(text=f"Order place time ended, order can't place after {order_place_time}")
+        return False
 
 
 # Custom Signal Tasks for Every Strategy
@@ -56,10 +61,8 @@ class BaseSignalTask(celery_app.Task):
         sorted_stock = timestamp.stock
         entry_price = None
         entry_available = False
-        order_place_time = time(14,30)
-        current_time = get_local_time().time()
         
-        if is_time_between_range(timestamp.timestamp, 20) and current_time < order_place_time:
+        if is_time_between_range(timestamp.timestamp, 20):
             if sorted_stock.entry_type == "BUY":
                 if timestamp.entry_price == None or timestamp.entry_price > timestamp.stock.symbol.get_stock_live_price(price_type="ltp"):
                     entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="ltp")

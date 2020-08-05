@@ -1,5 +1,6 @@
 from upstox_api.api import *
-from .orders import UpdateOrder, cache_symbol_ticker_data
+from .orders import UpdateOrder
+from .strategies.intraday_exit_strategies import cache_symbol_ticker_data
 from .trading import get_upstox_user
 from .notification_tasks import slack_message_sender
 from market_analysis.imports import *

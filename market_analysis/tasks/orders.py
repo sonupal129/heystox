@@ -126,6 +126,8 @@ class BaseOrderTask(celery_app.Task):
 class EntryOrder(BaseOrderTask):
     """Place entry order receive data from router signals class is used only for placing entry orders"""
     name = "place_market_entry_order"
+    autoretry_for = (HTTPError,)
+    retry_kwargs = {'max_retries': 2, 'countdown': 8}
     
     def add_expected_target_stoploss(self, stock_report_id):
         report = SortedStockDashboardReport.objects.get(id=stock_report_id)
@@ -152,9 +154,8 @@ class EntryOrder(BaseOrderTask):
         order_schema["quantity"] = self.calculate_order_quantity(entry_price, entry_type)
         order_schema["price"] = entry_price
         order_schema["duarion_type"] = "DAY"
-        order_schema["order_type"] = "LIMIT"
+        order_schema["order_type"] = "MARKET" #Changed order type from limit order to market order to check if this is feasible or not
         order_schema["product_type"] = "INTRADAY"
-        print(order_schema)
         if entry_time.time() > order_place_start_time and entry_time.time() < order_place_end_time:
             obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
             self.add_expected_target_stoploss(obj.id)
@@ -279,38 +280,6 @@ def cancel_not_executed_orders(from_last_minutes=20):
             user.cancel_order(order.order_id)
 
 
-def cache_symbol_ticker_data(data:dict):
-    cache_key = "_".join([data["symbol"].lower(), "cached_ticker_data"])
-    cached_value = redis_cache.get(cache_key)
-    price_type = "high" if cached_value.get("transaction_type") == "BUY" else "low"
-    new_price = data[price_type]
-    if not cached_value.get(price_type):
-        cached_value[price_type] = new_price
-    old_price = cached_value.get(price_type)
-    if price_type == "high" and new_price > old_price:
-        cached_value[price_type] = new_price
-    elif price_type == "low" and new_price < old_price:
-        cached_value[price_type] = new_price
-    context = {
-            "high": data["high"],
-            "low": data["low"],
-            "open": data["open"],
-            "close": data["close"],
-            "ltp": data["ltp"],
-            "timestamp": data["timestamp"][:10],
-            "total_buy_qty": data["total_buy_qty"],
-            "total_sell_qty": data["total_sell_qty"]
-        }
-    if not cached_value.get("stock_data"):
-        cached_value["stock_data"] = [context]
-    if data["ltp"] != cached_value["stock_data"][-1]["ltp"]:
-        cached_value["stock_data"].append(context)
-    redis_cache.set(cache_key, cached_value)
-    exit_on_stoploss_target_hit.delay(data["symbol"].lower())
-    # exit_on_auto_hit_price.delay(data["symbol"].lower())
-    return cached_value
-
-
 @celery_app.task(queue="tickers")
 def exit_on_auto_hit_price(symbol_name:str):
     """This function will take exit if price after reaching a certain price coming down or vice versa"""
@@ -384,7 +353,7 @@ def exit_on_auto_hit_price(symbol_name:str):
                     redis_cache.set(auto_exit_cache_key)
 
 
-@celery_app.task(queue="high_priority")
+@celery_app.task(queue="high_priority", autoretry_for=(HTTPError,))
 def update_orders_status():
     """This function will run asynchrously to check if order status not get updated by socket will update it"""
     orders = Order.objects.filter(entry_time__date=get_local_time().date(), status="OP")
