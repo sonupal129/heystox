@@ -152,7 +152,7 @@ class EntryOrder(BaseOrderTask):
         order_schema["transaction_type"] = entry_type
         order_schema["symbol"] = name
         order_schema["quantity"] = self.calculate_order_quantity(entry_price, entry_type)
-        order_schema["price"] = entry_price
+        order_schema["price"] = 0 #entry_price
         order_schema["duarion_type"] = "DAY"
         order_schema["order_type"] = "MARKET" #Changed order type from limit order to market order to check if this is feasible or not
         order_schema["product_type"] = "INTRADAY"
