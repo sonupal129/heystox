@@ -1,6 +1,6 @@
 from market_analysis.imports import *
 from .trading import get_upstox_user
-from market_analysis.models import Symbol, SortedStockDashboardReport, OrderBook, Order
+from market_analysis.models import Symbol, SortedStockDashboardReport, OrderBook, Order, DeployedStrategies
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.custom_exception import *
 # Code Below
@@ -47,7 +47,7 @@ class BaseOrderTask(celery_app.Task):
             return cached_value
         return cached_value
 
-    def send_order_request(self, order_details:dict, ignore_max_trade_quantity:bool=False): # Don't Change This Function Format, Because This is As per Upstox Format, 
+    def send_order_request(self, order_details:dict, ignore_max_trade_quantity:bool=False, **kwargs): # Don't Change This Function Format, Because This is As per Upstox Format, 
         user = get_upstox_user()
         today_date = get_local_time().date()
         orders_qty = self.get_or_update_order_quantity()
@@ -112,6 +112,12 @@ class BaseOrderTask(celery_app.Task):
                     order.target_price = get_stock_target_price(price, transaction_type)
                 order.quantity = quantity
                 order.entry_price = price
+                try:
+                    strategy_id = kwargs.get("strategy_id")
+                    strategy = DeployedStrategies.objects.get(id=strategy_id)
+                    order.strategy = strategy
+                except:
+                    pass
                 order.save()
                 return True
         return False
@@ -136,7 +142,7 @@ class EntryOrder(BaseOrderTask):
         report.target_price = get_stock_target_price(price, report.entry_type)
         report.save()
         
-    def send_order_place_request(self, signal_detail:dict=None):
+    def send_order_place_request(self, signal_detail:dict=None, **kwargs):
         # This function will work as generic function where all functions will come under this function
         # So, whenever a signal found or any function which finds signal will send required parameter to this function and 
         # it will create a report based on that signal
@@ -160,10 +166,10 @@ class EntryOrder(BaseOrderTask):
             obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
             self.add_expected_target_stoploss(obj.id)
             slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
-            self.send_order_request(order_schema)
+            self.send_order_request(order_schema, **kwargs)
 
-    def run(self, signal_detail:dict):
-        self.send_order_place_request(signal_detail)
+    def run(self, signal_detail:dict, **kwargs):
+        self.send_order_place_request(signal_detail, **kwargs)
         return "Order Place Request Sent"
 
 celery_app.tasks.register(EntryOrder)

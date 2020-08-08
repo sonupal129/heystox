@@ -156,6 +156,13 @@ backtest = {
     },
 }
 
+trading = {
+    "add_manual_sorted_stocks": {
+        "task": "market_analysis.tasks.trading.add_manual_sorted_stocks",
+        "schedule": crontab(day_of_week="1-5", hour=9, minute=20),
+    },
+}
+
 # CRON JOB SCHEDULES
 
 celery_app.conf.beat_schedule = {
@@ -164,5 +171,6 @@ celery_app.conf.beat_schedule = {
     **stock_data_import_tasks,
     **day_trading_tasks,
     **orders,
+    **trading,
     **backtest
 }

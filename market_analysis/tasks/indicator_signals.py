@@ -96,7 +96,7 @@ class BaseSignalTask(celery_app.Task):
         
         if (signal_function(self, timestamp) and entry_available) == True:
             order_data = self.prepare_orderdata(timestamp)
-            EntryOrder().delay(order_data)
+            EntryOrder().delay(order_data, strategy_id=timestamp.strategy.id)
 
 
 class GlobalSignalTask(BaseSignalTask):

@@ -54,3 +54,15 @@ def delete_backtesting_data_by_timeframe(sender, instance, **kwargs):
             if value not in new_value:
                 delete_backtesting_data.delay(strategy_name=instance.strategy_name, timeframe=value)
         return True
+
+@receiver(pre_save, sender=Symbol)
+def add_sorted_stocks_manually(sender, instance, **kwargs):
+    old_value = Symbol.objects.get(id=instance.id).trade_manually
+    today_date = get_local_time().date()
+
+    if old_value == False and instance.trade_manually == True:
+        SortedStocksList.objects.update_or_create(symbol=instance, entry_type="SELL", created_at__date=today_date, defaults={"added" : "ML" })
+        SortedStocksList.objects.update_or_create(symbol=instance, entry_type="BUY", created_at__date=today_date, defaults={"added" : "ML" })
+    elif old_value == True and instance.trade_manually == False:
+        SortedStocksList.objects.filter(symbol=instance, entry_type="SELL", created_at__date=today_date, added="ML").delete()
+        SortedStocksList.objects.filter(symbol=instance, entry_type="BUY", created_at__date=today_date, added="ML").delete()

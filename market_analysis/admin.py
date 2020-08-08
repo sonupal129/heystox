@@ -70,6 +70,7 @@ class OrderBookAdmin(admin.ModelAdmin):
     list_display = ["symbol", "date"]
     inlines = [OrderInline]
     readonly_fields = ["symbol", "strength", "date"]
+    date_hierarchy = 'date'
 
 
 class StrategyAdmin(admin.ModelAdmin):

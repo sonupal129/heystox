@@ -82,7 +82,7 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
                 not_good_movement = stock.created_at <= get_local_time().now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all()
             except:
                 continue
-            if not_good_movement:
+            if not_good_movement and stock.added == "AT":
                 deleted_stocks.append(stock.symbol.symbol)
                 # Stock Deleting Deactivated for Some Time
                 # if cached_value and stock in cached_value:
@@ -139,6 +139,6 @@ def add_manual_sorted_stocks():
     and stocks dosen't affect by movement strategy directly applied on these stocks"""
     symbols  = Symbol.objects.filter(trade_manually=True)
     today_date = get_local_time().date()
-    for symbol in symbol:
-        SortedStocksList.objects.get_or_create(symbol=symbol, entry_type="SELL", created_at__date=today_date)
-        SortedStocksList.objects.get_or_create(symbol=symbol, entry_type="BUY", created_at__date=today_date)
+    for symbol in symbols:
+        SortedStocksList.objects.update_or_create(symbol=symbol, entry_type="SELL", created_at__date=today_date, defaults={"added" : "ML" })
+        SortedStocksList.objects.update_or_create(symbol=symbol, entry_type="BUY", created_at__date=today_date, defaults={"added" : "ML" })
