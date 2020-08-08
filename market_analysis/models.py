@@ -30,11 +30,10 @@ class Symbol(BaseModel):
     vtt = models.IntegerField("Total Traded Volume", blank=True, null=True)
     total_buy_quantity = models.IntegerField("Total Buy Quantity", blank=True, null=True)
     total_sell_quantity = models.IntegerField("Total Sell Quantity", blank=True, null=True)
-    trade_manually = models.BooleanField(default=False)
+    trade_manually = MultiSelectField(choices={("BUY", "BUY"), ("SELL", "SELL")}, blank=True, null=True)
 
     class Meta:
         unique_together = ("symbol", "exchange")
-
 
     def __str__(self):
         return self.symbol

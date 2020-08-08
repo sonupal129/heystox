@@ -137,8 +137,9 @@ def add_stock_on_market_sideways():
 def add_manual_sorted_stocks():
     """Fucntion add stocks automatically as manual stocks which get stocks get seleted by manually
     and stocks dosen't affect by movement strategy directly applied on these stocks"""
-    symbols  = Symbol.objects.filter(trade_manually=True)
+    symbols  = Symbol.objects.filter(Q(trade_manually__contains="BUY") | Q(trade_manually__contains="SELL"))
     today_date = get_local_time().date()
     for symbol in symbols:
-        SortedStocksList.objects.update_or_create(symbol=symbol, entry_type="SELL", created_at__date=today_date, defaults={"added" : "ML" })
-        SortedStocksList.objects.update_or_create(symbol=symbol, entry_type="BUY", created_at__date=today_date, defaults={"added" : "ML" })
+        for entry_type in symbol.trade_manually:
+            SortedStocksList.objects.update_or_create(symbol=symbol, entry_type=entry_type, created_at__date=today_date, defaults={"added" : "ML" })
+    return True

@@ -53,7 +53,7 @@ from rest_framework import status
 from rest_framework.authtoken.views import ObtainAuthToken
 # Defaul Djnago Models
 from django.contrib.auth.models import User, Group, Permission
-from django.db.models import Max, Min, Sum
+from django.db.models import Max, Min, Sum, Q
 from django.db.models.query import QuerySet
 
 # Default Djnago Views
