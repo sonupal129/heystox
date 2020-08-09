@@ -85,30 +85,30 @@ WSGI_APPLICATION = 'heystox_trade.wsgi.application'
 # Use ssh -i heystox_makki -L 9211:localhost:5432 heystox@139.59.90.114 for tunneling with remote data
 # heystox_makki = ssh key, 9211 is local machine port, 5432 is server machine psql port, then user then ip address
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-#         'NAME': 'heystox',                      # Or path to database file if using sqlite3.
-#         'USER': 'heystox',                      # Not used with sqlite3.
-#         'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
-#         'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
-#         'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': 'heystox',                      # Or path to database file if using sqlite3.
+        'USER': 'heystox',                      # Not used with sqlite3.
+        'PASSWORD': 's1rshopalot',                  # Not used with sqlite3.
+        'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '9211',                 # Set to empty string for default. Not used with sqlite3.
+    }
+}
 
 # Local Data Base
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'testdb',
-        'USER': 'testdb',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '5432',
-        'CONN_MAX_AGE': 600,
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'testdb',
+#         'USER': 'testdb',
+#         'PASSWORD': '123456',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#         'CONN_MAX_AGE': 600,
+#     }
+# }
 
 CONN_MAX_AGE = 2
 
@@ -199,9 +199,7 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_EXPIRES = 10800
 CELERY_IMPORTS = ('market_analysis.tasks')
 CELERY_DEFAULT_QUEUE = "low_priority"
-CELERYD_MAX_TASKS_PER_CHILD = 100
-
-
+CELERYD_MAX_TASKS_PER_CHILD = 2000
 CELERY_WORKER_POOL_RESTARTS = True
 
 CELERY_QUEUES = (
@@ -248,7 +246,7 @@ MARKET_BULLISH_MOVEMENT = 1.2
 MARKET_BEARISH_MOVEMENT = -1.2
 DEFAULT_STOPLOSS = 1  # Stoploss is in percentage
 DEFAULT_TARGET = 2 # Target is in percentage
-MAX_ORDER_QUANTITY = 100
+MAX_ORDER_QUANTITY = 190
 MAX_DAILY_TRADE = 5
 
 # SITE URL

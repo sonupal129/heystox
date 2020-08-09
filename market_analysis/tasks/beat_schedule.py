@@ -159,7 +159,7 @@ backtest = {
 trading = {
     "add_manual_sorted_stocks": {
         "task": "market_analysis.tasks.trading.add_manual_sorted_stocks",
-        "schedule": crontab(day_of_week="1-5", hour=9, minute=20),
+        "schedule": crontab(day_of_week="1-5", hour="9-14", minute="*/9"),
     },
 }
 

@@ -64,7 +64,6 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
         for stock in get_stocks_for_trading():
             try:
                 SortedStocksList.objects.get_or_create(symbol=stock, entry_type=nifty_50, created_at__date=today_date)
-                # sorted_stocks_name.append(obj.symbol.symbol)
             except:
                 continue
         # slack_message_sender(text=", ".join(sorted_stocks_name) + " Stocks Sorted For Trading in Market Trend")
@@ -138,8 +137,18 @@ def add_manual_sorted_stocks():
     """Fucntion add stocks automatically as manual stocks which get stocks get seleted by manually
     and stocks dosen't affect by movement strategy directly applied on these stocks"""
     symbols  = Symbol.objects.filter(Q(trade_manually__contains="BUY") | Q(trade_manually__contains="SELL"))
+    nifty_50_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     today_date = get_local_time().date()
-    for symbol in symbols:
-        for entry_type in symbol.trade_manually:
-            SortedStocksList.objects.update_or_create(symbol=symbol, entry_type=entry_type, created_at__date=today_date, defaults={"added" : "ML" })
-    return True
+    current_time = get_local_time().time()
+    if current_time > time(9,20):
+        for symbol in symbols:
+            for entry_type in symbol.trade_manually:
+                if entry_type == nifty_50_movement:
+                    SortedStocksList.objects.update_or_create(symbol=symbol, entry_type=entry_type, created_at__date=today_date, defaults={"added" : "ML" })
+                elif nifty_50_movement == "SIDEWAYS":
+                    try:
+                        SortedStocksList.objects.get(symbol=symbol, entry_type=entry_type, created_at__date=today_date, added="ML").delete()
+                    except:
+                        pass
+        return True
+    return False
