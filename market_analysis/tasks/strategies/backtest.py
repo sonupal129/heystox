@@ -248,7 +248,7 @@ def create_backtesting_data_async(to_days=None, max_price=300):
     longer time"""
     strategies = Strategy.objects.filter(backtesting_ready=True)
     liquid_stocks = get_liquid_stocks(max_price=max_price)
-    current_time = get_local_time().now()
+    today_date = get_local_time().date()
     task_counter = 0
     start_time = time(16,30)
     end_time = time(7,30)
@@ -258,7 +258,6 @@ def create_backtesting_data_async(to_days=None, max_price=300):
 
         def get_day_count(entry_time:datetime, candle_type):
             entry_date = entry_time.date()
-            today_date = get_local_time().date()
             day_count = (today_date - entry_date).days
             if candle_type in ["1H", "M30"]:
                 return day_count + 10
@@ -286,7 +285,7 @@ def create_backtesting_data_async(to_days=None, max_price=300):
                     if not buy_reports.exists():
                         SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                         task_counter += 1
-                    elif last_backtest_log == None or (last_backtest_log and last_backtest_log.backtest_date < (current_time.date() - timedelta(10))):
+                    elif last_backtest_log == None or (last_backtest_log and last_backtest_log.backtest_date < (today_date.date() - timedelta(10))):
                         data["to_days"] = get_day_count(buy_reports.last().entry_time, data["candle_type"])
                         SendBackTestingRequest().apply_async(kwargs=data, countdown=run_task_after)
                         task_counter += 1
