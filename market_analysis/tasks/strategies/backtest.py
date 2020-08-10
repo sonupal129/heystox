@@ -254,7 +254,7 @@ def create_backtesting_data_async(to_days=None, max_price=300):
     end_time = time(7,30)
     current_time = get_local_time().time()
 
-    if current_time > start_time and current_time < end_time:
+    if current_time > start_time or current_time < end_time:
 
         def get_day_count(entry_time:datetime, candle_type):
             entry_date = entry_time.date()

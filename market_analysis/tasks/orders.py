@@ -149,8 +149,8 @@ class EntryOrder(BaseOrderTask):
         # Please Use this function for any order placing requests or report creation
         # Dictionary Format {name: xxxxx, entry_time: xxxxx, entry_type: xxxxx, entry_price: xxxxxxx}
         """Generic function to send order request and create order report"""
-        order_place_start_time = time(9,25)
-        order_place_end_time = time(14,30)
+        order_place_start_time = settings.ORDER_PLACE_START_TIME
+        order_place_end_time = settings.ORDER_PLACE_END_TIME
         entry_price = signal_detail.get("entry_price")
         entry_type = signal_detail.get("entry_type")
         name = signal_detail.get("name")
@@ -167,6 +167,8 @@ class EntryOrder(BaseOrderTask):
             self.add_expected_target_stoploss(obj.id)
             slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
             self.send_order_request(order_schema, **kwargs)
+        else:
+            slack_message_sender.delay(text=f"Order can be place between {settings.ORDER_PLACE_START_TIME} and {settings.ORDER_PLACE_END_TIME}")
 
     def run(self, signal_detail:dict, **kwargs):
         self.send_order_place_request(signal_detail, **kwargs)

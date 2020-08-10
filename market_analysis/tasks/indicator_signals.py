@@ -30,9 +30,9 @@ class SignalRouter:
         return st_func()
 
     def route_signal(self):
-        order_place_time = time(14,30)
+        max_order_place_time = settings.ORDER_PLACE_END_TIME
         current_time = get_local_time().time()
-        if current_time < order_place_time:
+        if current_time < max_order_place_time:
             signal = self.find_router_for_strategy()
             return signal.delay(self.timestamp.id)
         slack_message_sender.delay(text=f"Order place time ended, order can't place after {order_place_time}")
@@ -97,6 +97,9 @@ class BaseSignalTask(celery_app.Task):
         if (signal_function(self, timestamp) and entry_available) == True:
             order_data = self.prepare_orderdata(timestamp)
             EntryOrder().delay(order_data, strategy_id=timestamp.strategy.id)
+            return {"success": True}
+        return {"success": False, "errors": "Entry Condition Not Fulfilled"}
+        
 
 
 class GlobalSignalTask(BaseSignalTask):
