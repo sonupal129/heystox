@@ -714,11 +714,11 @@ class Strategy(BaseModel):
     def clean(self, *args, **kwargs):
         if self.strategy_type == "EX" and self.exit_strategy:
             raise ValidationError("Exit strategy can't assign, when strategy type is already exit strategy")
-        backtest_start_time = time(23,55)
+        backtest_start_time = time(16,30)
         backtest_end_time = time(7,30)
         current_day = get_local_time()
         if current_day.weekday() not in [5,6] and self.backtesting_ready != self._backtesting_ready:
-            if (current_day.time() < backtest_start_time and current_day.time() > backtest_end_time):
+            if (current_day.time() < backtest_start_time or current_day.time() > backtest_end_time):
                 raise ValidationError("Backtesting is only allowed after market hours, Please try after 4:30 PM")
         super(Strategy, self).clean(*args, **kwargs)
 
