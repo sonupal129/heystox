@@ -147,6 +147,10 @@ orders = {
         "task": "market_analysis.tasks.orders.update_orders_status",
         "schedule": crontab(day_of_week="1-5", hour="10-14", minute="*/6"),
     },
+    "auto_square_off_all_positions": {
+        "task": "market_analysis.tasks.orders.auto_square_off_all_positions",
+        "schedule": crontab(day_of_week="1-5", hour=14, minute=50),
+    },
 }
 
 backtest = {

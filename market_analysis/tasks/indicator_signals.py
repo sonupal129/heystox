@@ -45,7 +45,7 @@ class BaseSignalTask(celery_app.Task):
     name = "base_signal_task"
     queue = "high_priority"
 
-    def prepare_orderdata(self, timestamp):
+    def prepare_orderdata(self, timestamp): 
         sorted_stock = timestamp.stock
         order_detail = {}
         order_detail["name"] = sorted_stock.symbol.symbol

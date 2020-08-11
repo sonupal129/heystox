@@ -80,8 +80,9 @@ class CacheTickerData:
     def cache_symbol_ticker_data(self):
         cache_key = "_".join([self.data["symbol"].lower(), "cached_ticker_data"])
         cached_value = redis_cache.get(cache_key)
+        # print(cached_value)
         price_type = "high" if cached_value.get("transaction_type") == "BUY" else "low"
-        new_price = data[price_type]
+        new_price = self.data[price_type]
         if not cached_value.get(price_type):
             cached_value[price_type] = new_price
         old_price = cached_value.get(price_type)
