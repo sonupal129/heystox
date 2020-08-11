@@ -8,7 +8,6 @@ class SymbolAdmin(ExportMixin, admin.ModelAdmin):
     list_display = ["symbol", "exchange"]
     list_filter = ["exchange"]
     search_fields = ["symbol", "name"]
-    date_hierarchy = 'created_at'
 
 
 class CandleAdmin(admin.ModelAdmin):
@@ -95,7 +94,7 @@ class StrategyAdmin(admin.ModelAdmin):
 
 class DeployedStrategiesAdmin(admin.ModelAdmin):
     list_display = ["symbol", "strategy", "timeframe", "entry_type", "active"]
-    search_fields = ["symbol"]
+    search_fields = ["symbol__symbol"]
     list_filter = ["strategy", "timeframe", "entry_type"]
     readonly_fields = ["symbol", "strategy", "timeframe", "entry_type"]
 

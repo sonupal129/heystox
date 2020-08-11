@@ -11,6 +11,7 @@ class BaseOrderTask(celery_app.Task):
     """Base order task which will place order and update everything related to order details"""
     name = "place_order"
     queue = "high_priority"
+    autoretry_for = (HTTPError,)
 
     def find_last_order(self, order1, order2):
         if order1.entry_time > order2.entry_time:
@@ -379,3 +380,11 @@ def update_orders_status():
     if new_orders:
         for order in new_orders:
             UpdateOrder().delay(order)
+
+
+@celery_app.task(queue="high_priority", autoretry_for=(HTTPError,))
+def auto_square_off_all_positions():
+    """Suare off all open positions at designated time"""
+    # user = get_upstox_user()
+    print("RAJU")
+    
