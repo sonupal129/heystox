@@ -718,7 +718,7 @@ class Strategy(BaseModel):
         backtest_end_time = time(7,30)
         current_day = get_local_time()
         if current_day.weekday() not in [5,6] and self.backtesting_ready != self._backtesting_ready:
-            if (current_day.time() < backtest_start_time or current_day.time() > backtest_end_time):
+            if not (current_day.time() < backtest_start_time or current_day.time() > backtest_end_time):
                 raise ValidationError("Backtesting is only allowed after market hours, Please try after 4:30 PM")
         super(Strategy, self).clean(*args, **kwargs)
 
