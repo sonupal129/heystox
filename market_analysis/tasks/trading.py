@@ -84,10 +84,10 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
             if not_good_movement and stock.added == "AT":
                 deleted_stocks.append(stock.symbol.symbol)
                 # Stock Deleting Deactivated for Some Time
-                if cached_value and stock in cached_value:
-                    cached_value = cached_value.remove(stock)
-                    redis_cache.set(cache_key, cached_value)
-                stock.delete()
+                # if cached_value and stock in cached_value:
+                #     cached_value = cached_value.remove(stock)
+                #     redis_cache.set(cache_key, cached_value)
+                # stock.delete()
             else:
                 if cached_value == None:
                     cached_value = [stock]
@@ -152,3 +152,13 @@ def add_manual_sorted_stocks():
                         pass
         return True
     return False
+
+@celery_app.task(queue="low_priority", ignore_result=True)
+def update_remove_manually_traded_stocks(stock_add:bool=True):
+    if stock_add:
+        Symbol.objects.filter(id__in=get_cached_liquid_stocks(cached=False)).update(trade_manually=["BUY","SELL"])
+    else:
+        Symbol.objects.all().update(trade_manually=None)
+    return True
+
+
