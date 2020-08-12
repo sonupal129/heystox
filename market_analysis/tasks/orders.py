@@ -155,6 +155,7 @@ class EntryOrder(BaseOrderTask):
         entry_price = signal_detail.get("entry_price")
         entry_type = signal_detail.get("entry_type")
         name = signal_detail.get("name")
+        current_time = get_local_time().time()
         entry_time = get_local_time().strptime(signal_detail.get("entry_time"), "%Y-%m-%dT%H:%M:%S")
         order_schema["transaction_type"] = entry_type
         order_schema["symbol"] = name
@@ -163,7 +164,7 @@ class EntryOrder(BaseOrderTask):
         order_schema["duarion_type"] = "DAY"
         order_schema["order_type"] = "MARKET" #Changed order type from limit order to market order to check if this is feasible or not
         order_schema["product_type"] = "INTRADAY"
-        if entry_time.time() > order_place_start_time and entry_time.time() < order_place_end_time:
+        if current_time > order_place_start_time and current_time < order_place_end_time:
             obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
             self.add_expected_target_stoploss(obj.id)
             slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
