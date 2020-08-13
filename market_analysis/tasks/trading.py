@@ -160,5 +160,3 @@ def update_remove_manually_traded_stocks(stock_add:bool=True):
     else:
         Symbol.objects.all().update(trade_manually=None)
     return True
-
-
