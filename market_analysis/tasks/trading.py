@@ -81,13 +81,13 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
                 not_good_movement = stock.created_at <= get_local_time().now() - timedelta(minutes=30) and not stock.symbol.is_stock_moved_good_for_trading(movement_percent=movement_on_entry.get(stock.entry_type)) and not stock.timestamps.all()
             except:
                 continue
-            if not_good_movement and stock.added == "AT":
+            if not_good_movement:
                 deleted_stocks.append(stock.symbol.symbol)
-                # Stock Deleting Deactivated for Some Time
-                # if cached_value and stock in cached_value:
-                #     cached_value = cached_value.remove(stock)
-                #     redis_cache.set(cache_key, cached_value)
-                # stock.delete()
+                
+                if cached_value and stock in cached_value:
+                    cached_value = cached_value.remove(stock)
+                    redis_cache.set(cache_key, cached_value)
+                stock.delete()
             else:
                 if cached_value == None:
                     cached_value = [stock]
@@ -95,8 +95,6 @@ def add_today_movement_stocks(movement_percent:float=settings.MARKET_BULLISH_MOV
                 elif stock not in cached_value:
                     cached_value.append(stock)
                     redis_cache.set(cache_key, cached_value, 60*30)
-        # if deleted_stocks:
-        #     slack_message_sender.delay(text=", ".join(deleted_stocks) + " Stocks Deleted from Trending Market")
 
 
 # Market Sideways Functions - Need To Work More on below functions
@@ -134,7 +132,7 @@ def add_stock_on_market_sideways():
 
 @celery_app.task(queue="low_priority", ignore_result=True)
 def add_manual_sorted_stocks():
-    """Fucntion add stocks automatically as manual stocks which get stocks get seleted by manually
+    """Function add stocks automatically as manual stocks which get stocks get seleted by manually
     and stocks dosen't affect by movement strategy directly applied on these stocks"""
     symbols  = Symbol.objects.filter(Q(trade_manually__contains="BUY") | Q(trade_manually__contains="SELL"))
     nifty_50_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
@@ -147,7 +145,9 @@ def add_manual_sorted_stocks():
                     SortedStocksList.objects.update_or_create(symbol=symbol, entry_type=entry_type, created_at__date=today_date, defaults={"added" : "ML" })
                 elif nifty_50_movement == "SIDEWAYS":
                     try:
-                        SortedStocksList.objects.get(symbol=symbol, entry_type=entry_type, created_at__date=today_date, added="ML").delete()
+                        stock = SortedStocksList.objects.get(symbol=symbol, entry_type=entry_type, created_at__date=today_date, added="ML")
+                        if not stock.timestamps.all():
+                            stock.delete()
                     except:
                         pass
         return True

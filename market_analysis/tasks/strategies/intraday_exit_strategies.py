@@ -8,6 +8,7 @@ class GlobalExitStrategy(BaseExitStrategy):
     """This is global strategy function which work on simple method where risk to reward ratio is
     1:2 mean on 1 rupee risk we are looking at 2 rupee target"""
     name = "exit_on_stoploss_target_hit"
+    queue = "tickers"
    
     def exit_on_stoploss_target_hit(self, symbol_name:str):
         cache_key = "_".join([symbol_name.lower(), "cached_ticker_data"])
