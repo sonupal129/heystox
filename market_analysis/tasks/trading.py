@@ -138,7 +138,7 @@ def add_manual_sorted_stocks():
     nifty_50_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
     today_date = get_local_time().date()
     current_time = get_local_time().time()
-    if current_time > time(9,20):
+    if current_time > settings.TRADING_START_TIME:
         for symbol in symbols:
             for entry_type in symbol.trade_manually:
                 if entry_type == nifty_50_movement:
