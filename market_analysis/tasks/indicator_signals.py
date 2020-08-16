@@ -63,12 +63,11 @@ class BaseSignalTask(celery_app.Task):
         entry_available = False
         
         if is_time_between_range(timestamp.timestamp, 20):
-            if sorted_stock.entry_type == "BUY":
-                if timestamp.entry_price == None or timestamp.entry_price > timestamp.stock.symbol.get_stock_live_price(price_type="ltp"):
-                    entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="ltp")
-            elif sorted_stock.entry_type == "SELL":
-                if timestamp.entry_price == None or timestamp.entry_price < timestamp.stock.symbol.get_stock_live_price(price_type="ltp"):
-                    entry_price = timestamp.stock.symbol.get_stock_live_price(price_type="ltp")
+            last_traded_price = sorted_stock.symbol.get_stock_live_price(price_type="ltp")
+            if sorted_stock.entry_type == "BUY" and timestamp.entry_price > last_traded_price:
+                entry_price = last_traded_price
+            elif sorted_stock.entry_type == "SELL" and timestamp.entry_price < last_traded_price:
+                entry_price = last_traded_price
             try:
                 existing_order = OrderBook.objects.get(symbol=sorted_stock.symbol, date=get_local_time().date())
                 last_order = existing_order.get_last_order_by_status()
@@ -77,7 +76,8 @@ class BaseSignalTask(celery_app.Task):
             except:
                 entry_available = True
             if entry_available:
-                sorted_stock.entry_price = entry_price if entry_price else timestamp.entry_price
+                if entry_price:
+                    sorted_stock.entry_price = entry_price
                 sorted_stock.save()
         else:
             slack_message_sender.delay(text=f"Stock Entry Time is Out of Limit Could Not Place Order for {sorted_stock}", channel="#random")

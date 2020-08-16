@@ -2,6 +2,7 @@ from market_analysis.imports import *
 from .base_strategy import BaseExitStrategy
 from market_analysis.models import Symbol
 from market_analysis.tasks.orders import ExitOrder
+from market_analysis.tasks.notification_tasks import slack_message_sender
 # CODE BELOW
 
 class GlobalExitStrategy(BaseExitStrategy):

@@ -14,9 +14,9 @@ class BaseOrderTask(celery_app.Task):
     autoretry_for = (HTTPError,)
 
     def find_last_order(self, order1, order2):
-        if order1.entry_time > order2.entry_time:
-            return order1
-        return order2
+        if order1 and order2:
+            return max((order1, order2), key=lambda o : o.entry_time)
+        return order1 or order2
 
     def calculate_order_quantity(self, share_price, entry_type):
         user = get_upstox_user()
@@ -71,7 +71,7 @@ class BaseOrderTask(celery_app.Task):
         trailing_ticks = order_details.get("trailing_ticks", None)
         user.get_master_contract(symbol.exchange.name)
         last_completed_order = order_book.get_last_order_by_status("CO")
-        last_open_order = order_book.get_last_order_by_status("OP")
+        last_open_order = order_book.get_last_order_by_status("OP") 
         
         if last_completed_order and last_open_order:
             last_order = self.find_last_order(last_open_order, last_completed_order)
@@ -160,9 +160,9 @@ class EntryOrder(BaseOrderTask):
         order_schema["transaction_type"] = entry_type
         order_schema["symbol"] = name
         order_schema["quantity"] = self.calculate_order_quantity(entry_price, entry_type)
-        order_schema["price"] = 0 #entry_price
+        order_schema["price"] = entry_price
         order_schema["duarion_type"] = "DAY"
-        order_schema["order_type"] = "MARKET" #Changed order type from limit order to market order to check if this is feasible or not
+        order_schema["order_type"] = "LIMIT" #Changed order type from limit order to market order to check if this is feasible or not
         order_schema["product_type"] = "INTRADAY"
         if current_time > order_place_start_time and current_time < order_place_end_time:
             obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)

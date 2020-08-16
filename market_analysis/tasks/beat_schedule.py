@@ -165,12 +165,12 @@ trading = {
         "task": "market_analysis.tasks.trading.add_manual_sorted_stocks",
         "schedule": crontab(day_of_week="1-5", hour="9-14", minute="*/9"),
     },
-    "add_manually_traded_stocks": {
+    "add_manually_traded_sorted_stocks": {
         "task": "market_analysis.tasks.trading.update_remove_manually_traded_stocks",
         "schedule": crontab(day_of_week="1-5", hour=9, minute=18),
         "kwargs": {"stock_add": True},
     },
-    "remove_manually_traded_stocks": {
+    "remove_manually_traded_sorted_stocks": {
         "task": "market_analysis.tasks.trading.update_remove_manually_traded_stocks",
         "schedule": crontab(day_of_week="1-5", hour=16, minute=2),
         "kwargs": {"stock_add": False},
@@ -178,6 +178,7 @@ trading = {
 }
 
 # CRON JOB SCHEDULES
+
 
 celery_app.conf.beat_schedule = {
     **misc_tasks, 
