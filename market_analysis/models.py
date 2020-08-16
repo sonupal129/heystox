@@ -647,7 +647,7 @@ class Order(BaseModel):
 
     order_book = models.ForeignKey(OrderBook, on_delete=models.CASCADE, related_name="orders", null=True, blank=True)
     strategy = models.ForeignKey("DeployedStrategies", on_delete=models.SET_NULL, blank=True, null=True, related_name="orders")
-    order_id = models.CharField(unique=True, max_length=30)
+    order_id = models.CharField(unique=True, max_length=30, null=True, blank=True)
     entry_time = models.DateTimeField(blank=True, null=True)
     entry_price = models.FloatField(blank=True, null=True)
     target_price = models.FloatField(blank=True, null=True)
