@@ -72,7 +72,7 @@ class Symbol(BaseModel):
         reports = BacktestReport.objects.filter(entry_time__range=[obj_dict["start_date"], obj_dict["end_date"]],
                                                 strategy_name=obj_dict["strategy_name"], symbol_name=obj_dict["symbol"],
                                                 candle_type=obj_dict["candle_type"], entry_type=obj_dict["entry_type"])
-        if reports.exists()
+        if reports.exists():
             redis_cache.set(cache_key, reports, 15*20*12*2*3)
         return pd.DataFrame(list(reports.values()))
         
