@@ -10,6 +10,7 @@ urlpatterns = [
     path('heystox/login/complete/', views.UpstoxLoginComplete.as_view(), name='login-upstox-done'),
     path('report/', views.SortedStocksDashBoardReportView.as_view(), name="sorted-dashboard-report"),
     path('backtest-stocks/', views.BacktestSortedStocksView.as_view(), name="backtest-sorted-stocks"),
+    path('backtest-stocks/<force>/', views.BacktestSortedStocksView.as_view(), name="backtest-sorted-stocks"),
     path('login/', views.UserLoginRegisterView.as_view(), name="login-register"),
 ]
 

@@ -137,10 +137,13 @@ class BacktestSortedStocksView(BasePermissionMixin, SuperUserRequiredMixins, Vie
         cache_key = "_".join([*args])
         return cache_key
     
-    def get_backtested_cached_value(self, symbol, cache_key):
-        # cached_value = symbol.get_backtested_data(cache_key)
-        # if not cached_value.empty:
-        #     return cached_value
+    def get_backtested_cached_value(self, symbol, cache_key, **kwargs):
+        force_backtesting = kwargs.get("force")
+        if force_backtesting:
+            return None
+        cached_value = symbol.get_backtested_data(cache_key)
+        if not cached_value.empty:
+            return cached_value
 
         all_redis_cache_keys = redis_cache.keys("*")
         split_cache = cache_key.split("_")
@@ -174,6 +177,8 @@ class BacktestSortedStocksView(BasePermissionMixin, SuperUserRequiredMixins, Vie
 
     def post(self, request, *args, **kwargs):
         context = {}
+        print(args)
+        print(kwargs)
         
         if "backtest_form" in request.POST:
             backtest_form = BacktestForm(request.POST)
@@ -187,7 +192,7 @@ class BacktestSortedStocksView(BasePermissionMixin, SuperUserRequiredMixins, Vie
                 to_days = (current_date - from_date).days
                 
                 cache_key = self.get_cache_key(str(current_date - timedelta(to_days)), str(current_date), symbol.symbol, str(strategy.strategy_name), str(candle_type), entry_type, "backteststrategy")
-                cached_value = self.get_backtested_cached_value(symbol, cache_key)
+                cached_value = self.get_backtested_cached_value(symbol, cache_key, **kwargs)
                 
                 data = {
                     "stock_id": symbol.id,
