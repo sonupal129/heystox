@@ -47,13 +47,16 @@ def delete_backtesting_data_by_timeframe(sender, instance, **kwargs):
     """Signal will call celery task which will delete backtested report data when backtesting_ready
     will be false also this function invalidate all cache key of that strategy, it deletes by timeframe"""
     if not instance.backtesting_ready:
-        new_value = instance.timeframe
-        old_value = Strategy.objects.get(id=instance.id).timeframe
+        try:
+            new_value = instance.timeframe
+            old_value = Strategy.objects.get(id=instance.id).timeframe
 
-        for value in old_value:
-            if value not in new_value:
-                delete_backtesting_data.delay(strategy_name=instance.strategy_name, timeframe=value)
-        return True
+            for value in old_value:
+                if value not in new_value:
+                    delete_backtesting_data.delay(strategy_name=instance.strategy_name, timeframe=value)
+            return True
+        except:
+            pass
 
 @receiver(post_save, sender=Order)
 def update_orders_quantity(sender, instance, **kwargs):
