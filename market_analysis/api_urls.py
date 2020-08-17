@@ -15,7 +15,7 @@ urlpatterns = [
 # API LOGIN URLS
 
 urlpatterns += [
-    path("login/", CustomTokenAuthentication.as_view(), name="customer-authentication"),
+    path("login/", CustomTokenAuthentication.as_view(), name="custome-authentication"),
 ]
 
 
