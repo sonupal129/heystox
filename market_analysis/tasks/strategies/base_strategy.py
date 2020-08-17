@@ -73,15 +73,17 @@ class BaseStrategyTask(celery_app.Task):
             strategy = Strategy.objects.get(strategy_name=self.__class__.__name__, strategy_location=self.__class__.__module__, strategy_type="ET" if self.strategy_type == "Entry" else "EX")
             deployed_strategy = DeployedStrategies.objects.get(symbol=stock, strategy=strategy, entry_type=entry_type, timeframe=kwargs.get("candle_type", "M5"))
             sorted_stock = stock.get_sorted_stock(entry_type)
-            stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, strategy=deployed_strategy, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
-            if not stamp.exists():
-                if entry_time.date() == today_date:
-                    stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, strategy=deployed_strategy, timestamp=entry_time)
-                    stamp.entry_price = entry_price
-                    stamp.save()
-            elif stamp.count() > 1:
-                stamp.exclude(id=stamp.first().id).delete()
-            return "Signal Found"
+            if sorted_stock:
+                stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, strategy=deployed_strategy, timestamp__range=[entry_time - timedelta(minutes=time_range), entry_time + timedelta(minutes=time_range)]).order_by("timestamp")
+                if not stamp.exists():
+                    if entry_time.date() == today_date:
+                        stamp, is_created = StrategyTimestamp.objects.get_or_create(stock=sorted_stock, strategy=deployed_strategy, timestamp=entry_time)
+                        stamp.entry_price = entry_price
+                        stamp.save()
+                elif stamp.count() > 1:
+                    stamp.exclude(id=stamp.first().id).delete()
+                return "Signal Found"
+            return f"Sorted stock deleted, Unable to create timestamp object for stock {stock.symbol}"
 
     def base_strategy(self, stock_id, entry_type, backtest, backtesting_candles_cache_key=None):
         pass

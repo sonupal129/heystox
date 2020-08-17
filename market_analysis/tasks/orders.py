@@ -36,22 +36,15 @@ class BaseOrderTask(celery_app.Task):
             return abs(qty)
         raise AttributeError("Unable to fetch user balance")
 
-    def get_or_update_order_quantity(self, update=False):
+    def get_placed_order_quantity(self):
         cache_key = str(get_local_time().date()) + "_total_order_quantity"
         cached_value = redis_cache.get(cache_key)
-        if cached_value == None:
-            redis_cache.set(cache_key, 0)
-            return 0
-        if update and (cached_value == 0 or cached_value):
-            cached_value += 1
-            redis_cache.set(cache_key, cached_value)
-            return cached_value
         return cached_value
 
     def send_order_request(self, order_details:dict, ignore_max_trade_quantity:bool=False, **kwargs): # Don't Change This Function Format, Because This is As per Upstox Format, 
         user = get_upstox_user()
         today_date = get_local_time().date()
-        orders_qty = self.get_or_update_order_quantity()
+        orders_qty = self.get_placed_order_quantity()
         if not ignore_max_trade_quantity:
             if orders_qty >= settings.MAX_DAILY_TRADE:
                 slack_message_sender.delay(text="Daily Order Limit Exceed No More Order Can Be Place Using Bot, Please Place Orders Manually")
@@ -247,7 +240,6 @@ class UpdateOrder(BaseOrderTask):
             # Create Logic About when to Subscribe for instrument
             cache_key = "_".join([order_data["symbol"].lower(), "cached_ticker_data"])
             if order.entry_type == "ET":
-                self.get_or_update_order_quantity(True)
                 data = {
                     "symbol": order_data.get("symbol"),
                     "target_price" : order.target_price,

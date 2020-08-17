@@ -4,7 +4,7 @@ from market_analysis.filters import SymbolFilters, SortedStocksFilter
 from market_analysis.tasks.trading import get_cached_liquid_stocks, get_liquid_stocks
 from market_analysis.view_mixins import BasePermissionMixin
 from .forms import UserLoginRegisterForm, BacktestForm, StrategyDeployForm
-from .mixins import GroupRequiredMixins
+from .mixins import *
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.users_tasks import login_upstox_user
 from market_analysis.tasks.strategies.backtest import SendBackTestingRequest
@@ -113,7 +113,7 @@ class UserLoginRegisterView(LoginView):
         return super(UserLoginRegisterView, self).get(request, *args, **kwargs)
 
 
-class BacktestSortedStocksView(BasePermissionMixin, GroupRequiredMixins, View):
+class BacktestSortedStocksView(BasePermissionMixin, SuperUserRequiredMixins, View):
     template_name = "sorted_stocks_backtest.html"
     group_required = ["trader"]
     http_method_names = ["get", "post"]
@@ -138,9 +138,9 @@ class BacktestSortedStocksView(BasePermissionMixin, GroupRequiredMixins, View):
         return cache_key
     
     def get_backtested_cached_value(self, symbol, cache_key):
-        cached_value = symbol.get_backtested_data(cache_key)
-        if not cached_value.empty:
-            return cached_value
+        # cached_value = symbol.get_backtested_data(cache_key)
+        # if not cached_value.empty:
+        #     return cached_value
 
         all_redis_cache_keys = redis_cache.keys("*")
         split_cache = cache_key.split("_")

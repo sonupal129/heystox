@@ -26,7 +26,7 @@ class SignalRouter:
             st_func = getattr(func_module, router_name)
         except:
             st_func = getattr(func_module, "GlobalSignalTask")
-            slack_message_sender.delay(text=f"No Custom signal found for strategy {strategy_name} & symbol {self.timestamp.stock}, Calling Base Signal")
+            slack_message_sender.delay(text=f"No custom signal found for strategy {strategy_name} & symbol {self.timestamp.stock} with {self.timestamp.stock.entry_type} entry, Calling {st_func.__name__}")
         return st_func()
 
     def route_signal(self):
@@ -118,9 +118,7 @@ class GlobalSignalTask(BaseSignalTask):
         percentage_calculator = lambda higher_number, lower_number : (higher_number - lower_number) / lower_number * 100
         buy_qty = data["total_buy_qty"]
         sell_qty = data["total_sell_qty"]
-        if sorted_stock.entry_type == "BUY" and (percentage_calculator(sell_qty, buy_qty) < 30 or percentage_calculator(buy_qty, sell_qty) > 20):
-            return True
-        elif sorted_stock.entry_type == "SELL" and (percentage_calculator(buy_qty, sell_qty) < 30 or percentage_calculator(sell_qty, buy_qty) > 20):
+        if (sorted_stock.entry_type == "BUY" and percentage_calculator(buy_qty, sell_qty)) or (sorted_stock.entry_type == "SELL" and percentage_calculator(sell_qty, buy_qty)) >= -25:
             return True
         else:
             return False

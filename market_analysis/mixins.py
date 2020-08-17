@@ -23,4 +23,10 @@ class GroupRequiredMixins(object):
                 return super(GroupRequiredMixins, self).dispatch(request, *args, **kwargs)
         return HttpResponseForbidden("Not Allowed to View Stocks Data Please Contact Administrator")
 
+class SuperUserRequiredMixins(GroupRequiredMixins):
 
+    def dispatch(self, request, *args, **kwargs):
+        response = super(SuperUserRequiredMixins, self).dispatch(request, *args, **kwargs)
+        if not request.user.is_superuser:
+            return HttpResponseForbidden("User should be superuser to view this page")
+        return response

@@ -9,7 +9,7 @@ from .strategies.intraday_entry_strategies import *
 from .upstox_events_handlers import start_upstox_websocket
 # CODE STARTS BELOW
 
-@celery_app.task(queue="low_priority")
+@celery_app.task(queue="low_priority", ignore_result=True)
 def subscribe_today_trading_stocks():
     """Fetch todays liquid stocks from cache then register those stock for live feed"""
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks(cached=False)).values_list("symbol", flat=True)
@@ -18,14 +18,14 @@ def subscribe_today_trading_stocks():
     return message
 
 
-@celery_app.task(queue="low_priority")
+@celery_app.task(queue="low_priority", ignore_result=True)
 def unsubscribe_today_trading_stocks():
     liquid_stocks = Symbol.objects.filter(id__in=get_cached_liquid_stocks()).values_list("symbol", flat=True)
     message = "Stocks Unsubscribed for Today:\n" + "| ".join(stock.upper() for stock in liquid_stocks)
     slack_message_sender.delay(text=message)
     return message
 
-@celery_app.task(queue="high_priority") 
+@celery_app.task(queue="high_priority", ignore_result=True) 
 def todays_movement_stocks_add():
     current_time = get_local_time().time()
     start_time = settings.TRADING_START_TIME
