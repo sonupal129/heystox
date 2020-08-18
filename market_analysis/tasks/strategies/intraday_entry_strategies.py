@@ -264,7 +264,7 @@ class StochasticMacdSameTimeCrossover(BaseEntryStrategy):
         df = df.dropna()
         matched_crossover = df[((df["macd_crossover"] == "SELL_CROSSOVER") & (df["stochastic_crossover"] == "SELL_CROSSOVER") | (df["macd_crossover"] == "BUY_CROSSOVER") & (df["stochastic_crossover"] == "BUY_CROSSOVER"))]
         entry_confirmed = False
-        
+        confirmed_matched_crossover = matched_crossover[((matched_crossover["macd_crossover"] == "SELL_CROSSOVER") & (matched_crossover["close_price"] < matched_crossover["medium_band"])) | ((matched_crossover["macd_crossover"] == "BUY_CROSSOVER") & (matched_crossover["close_price"] > matched_crossover["medium_band"]))]
         if not confirmed_matched_crossover.empty:
             last_candle = confirmed_matched_crossover.iloc[-1]
             if entry_type == "BUY":
