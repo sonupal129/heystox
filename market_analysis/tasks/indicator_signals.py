@@ -79,8 +79,8 @@ class BaseSignalTask(celery_app.Task):
                 if entry_price:
                     sorted_stock.entry_price = entry_price
                     timestamp.entry_price = entry_price
-                    timestamp.save()
-                    sorted_stock.save()
+                timestamp.save()
+                sorted_stock.save()
         else:
             slack_message_sender.delay(text=f"Stock Entry Time is Out of Limit Could Not Place Order for {sorted_stock}", channel="#random")
         return entry_available
@@ -90,7 +90,7 @@ class BaseSignalTask(celery_app.Task):
         entry_available = self.check_entry(timestamp)
 
         signal_function = None
-
+        sleep(0.3)
         try:
             signal_function = getattr(self.__class__, self.name)
         except:

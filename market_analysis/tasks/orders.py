@@ -15,7 +15,7 @@ class BaseOrderTask(celery_app.Task):
 
     def find_last_order(self, order1, order2):
         if order1 and order2:
-            return max((order1, order2), key=lambda o : o.entry_time)
+            return max((order1, order2), key=lambda o : o.created_at)
         return order1 or order2
 
     def calculate_order_quantity(self, share_price, entry_type):
