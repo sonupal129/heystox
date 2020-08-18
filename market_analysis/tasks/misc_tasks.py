@@ -13,8 +13,6 @@ def clear_all_cache():
     """Clear Default Cache"""
     cache.clear()
     redis_cache.clear()
-    r = redis.Redis()
-    r.flushall()
 
 @celery_app.task(queue="low_priority")
 def create_stocks_report():

@@ -268,47 +268,6 @@ class StochasticMacdSameTimeCrossover(BaseEntryStrategy):
         if not confirmed_matched_crossover.empty:
             last_candle = confirmed_matched_crossover.iloc[-1]
             if entry_type == "BUY":
-                entry_confirmed = True if (last_candle.macd_crossover and last_candle.stochastic_crossover) == "BUY_CROSSOVER" and last_candle.close_price > last_candle.medium_band else False
-            elif entry_type == "SELL":
-                entry_confirmed = True if (last_candle.macd_crossover and last_candle.stochastic_crossover) == "SELL_CROSSOVER" and last_candle.close_price < last_candle.medium_band else False
-                    
-            if entry_confirmed:
-                response = self.make_response(stock, entry_type, float(last_candle.close_price), last_candle.date, backtest, 20, **kwargs)
-                return response
-            return "No Entry Found"
-        return "No Crossover Found"
-
-celery_app.tasks.register(StochasticMacdSameTimeCrossover)
-
-class StochasticMacdSameTimeCrossover2(StochasticMacdSameTimeCrossover):
-    """Replica of strategy just for checking purpose except remove bollinger band"""
-    name = "find_stochastic_macd_same_time_crossover2"
-
-
-    def find_stochastic_macd_same_time_crossover2(self, stock_id, entry_type, backtest=False, backtesting_candles_cache_key=None, **kwargs):
-        stock = Symbol.objects.get(id=stock_id)
-        today_date = get_local_time().date()
-        df = self.create_dataframe(backtesting_candles_cache_key, backtest, **{"symbol": stock, "with_live_candle": False, "candle_type": kwargs.get("candle_type", "1H"), "head_count": kwargs.get("head_count")})
-        df["macd"] = macd(df.close_price)
-        df["macd_signal"] = macd_signal(df.close_price)
-        df["macd_crossover"] = np.where(df.macd < df.macd_signal, "SELL", "BUY")
-        df["medium_band"] = bollinger_mavg(df.close_price)
-        df.loc[(df["macd_crossover"] != df["macd_crossover"].shift()) & (df["macd_crossover"] == "BUY"), "macd_crossover"] = "BUY_CROSSOVER"
-        df.loc[(df["macd_crossover"] != df["macd_crossover"].shift()) & (df["macd_crossover"] == "SELL"), "macd_crossover"] = "SELL_CROSSOVER"
-        df["stoch"] = stoch(high=df.high_price, close=df.close_price, low=df.low_price)
-        df["stoch_signal"] = stoch_signal(high=df.high_price, close=df.close_price, low=df.low_price)
-        df["stochastic_crossover"] = np.where(df.stoch < df.stoch_signal, "SELL", "BUY")
-        df.loc[(df["stochastic_crossover"].shift() == "BUY") & (df["stochastic_crossover"] == "SELL") & (df["stochastic_crossover"].shift(-1) == "BUY"), "stochastic_crossover"] = "BUY"
-        df.loc[(df["stochastic_crossover"].shift() == "SELL") & (df["stochastic_crossover"] == "BUY") & (df["stochastic_crossover"].shift(-1) == "SELL"), "stochastic_crossover"] = "SELL"
-        df.loc[(df["stochastic_crossover"] != df["stochastic_crossover"].shift()) & (df["stochastic_crossover"] == "BUY"), "stochastic_crossover"] = "BUY_CROSSOVER"
-        df.loc[(df["stochastic_crossover"] != df["stochastic_crossover"].shift()) & (df["stochastic_crossover"] == "SELL"), "stochastic_crossover"] = "SELL_CROSSOVER"
-        df = df.dropna()
-        matched_crossover = df[((df["macd_crossover"] == "SELL_CROSSOVER") & (df["stochastic_crossover"] == "SELL_CROSSOVER") | (df["macd_crossover"] == "BUY_CROSSOVER") & (df["stochastic_crossover"] == "BUY_CROSSOVER"))]
-        entry_confirmed = False
-        confirmed_matched_crossover = matched_crossover[((matched_crossover["macd_crossover"] == "SELL_CROSSOVER") & (matched_crossover["close_price"] < matched_crossover["medium_band"])) | ((matched_crossover["macd_crossover"] == "BUY_CROSSOVER") & (matched_crossover["close_price"] > matched_crossover["medium_band"]))]
-        if not confirmed_matched_crossover.empty:
-            last_candle = confirmed_matched_crossover.iloc[-1]
-            if entry_type == "BUY":
                 entry_confirmed = True if (last_candle.macd_crossover and last_candle.stochastic_crossover) == "BUY_CROSSOVER" else False
             elif entry_type == "SELL":
                 entry_confirmed = True if (last_candle.macd_crossover and last_candle.stochastic_crossover) == "SELL_CROSSOVER" else False
@@ -319,7 +278,7 @@ class StochasticMacdSameTimeCrossover2(StochasticMacdSameTimeCrossover):
             return "No Entry Found"
         return "No Crossover Found"
 
-celery_app.tasks.register(StochasticMacdSameTimeCrossover2)
+celery_app.tasks.register(StochasticMacdSameTimeCrossover)
 
 # class OHLCrossover(BaseStrategyTask):
 #     queue = "low_priority"

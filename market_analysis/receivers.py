@@ -62,8 +62,5 @@ def delete_backtesting_data_by_timeframe(sender, instance, **kwargs):
 def update_orders_quantity(sender, instance, **kwargs):
     today_date = get_local_time().date()
     cache_key = str(today_date) + "_total_order_quantity"
-    orders = Order.objects.filter(entry_time__date=today_date, status="CO")
-    if not orders.exists():
-        redis_cache.set(cache_key, 0, 12*60*60)
-    else:
-        redis_cache.set(cache_key, orders.count(), 12*60*60)
+    orders = Order.objects.filter(entry_time__date=today_date, status="CO").count()
+    redis_cache.set(cache_key, orders, 12*60*60)

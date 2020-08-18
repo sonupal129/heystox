@@ -32,6 +32,6 @@ strategy_list = [
     register_strategy(AdxBollingerCrossover),
     register_strategy(StochasticMacdCrossover),
     register_strategy(StochasticMacdSameTimeCrossover),
-    register_strategy(StochasticMacdSameTimeCrossover2),
+    
 ]
 

@@ -39,6 +39,8 @@ class BaseOrderTask(celery_app.Task):
     def get_placed_order_quantity(self):
         cache_key = str(get_local_time().date()) + "_total_order_quantity"
         cached_value = redis_cache.get(cache_key)
+        if cached_value == None:
+            return 0
         return cached_value
 
     def send_order_request(self, order_details:dict, ignore_max_trade_quantity:bool=False, **kwargs): # Don't Change This Function Format, Because This is As per Upstox Format, 

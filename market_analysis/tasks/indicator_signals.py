@@ -118,7 +118,7 @@ class GlobalSignalTask(BaseSignalTask):
         percentage_calculator = lambda higher_number, lower_number : (higher_number - lower_number) / lower_number * 100
         buy_qty = data["total_buy_qty"]
         sell_qty = data["total_sell_qty"]
-        if (sorted_stock.entry_type == "BUY" and percentage_calculator(buy_qty, sell_qty)) or (sorted_stock.entry_type == "SELL" and percentage_calculator(sell_qty, buy_qty)) >= -25:
+        if (sorted_stock.entry_type == "BUY" and percentage_calculator(buy_qty, sell_qty)) or (sorted_stock.entry_type == "SELL" and percentage_calculator(sell_qty, buy_qty)) >= -30:
             return True
         else:
             return False
