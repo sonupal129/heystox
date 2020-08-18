@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Strategy, Symbol, BacktestReport)
+from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Strategy, Symbol, BacktestReport, DeployedStrategies)
 from market_analysis.tasks.strategies.backtest import delete_backtesting_data
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.indicator_signals import SignalRouter
@@ -41,6 +41,11 @@ def send_slack_on_order_rejection(sender, instance, **kwargs):
 def delete_backtesting_data_on_strategy_delete(sender, instance, **kwargs):
     """Signal will delete all backtested report data that strategy when strategy get deleted"""
     BacktestReport.objects.filter(strategy_name=instance.strategy_name).delete()
+
+@receiver(pre_delete, sender=Strategy)
+def delete_deployed_strategies(sender, instance, **kwargs):
+    """Delete deployed strategies on delete strategies"""
+    DeployedStrategies.objects.filter(strategy__strategy_name=instance.strategy_name).delete()
 
 @receiver(pre_save, sender=Strategy)
 def delete_backtesting_data_by_timeframe(sender, instance, **kwargs):
