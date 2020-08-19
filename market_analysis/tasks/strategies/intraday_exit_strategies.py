@@ -42,7 +42,7 @@ class GlobalExitStrategy(BaseExitStrategy):
                     target_stoploss_hit = True
                     order_hit = "TARGET"
                 elif ltp <= stoploss:
-                    context["price"] = stoploss
+                    context["price"] = 0 #stoploss
                     context["order_type"] = "MARKET"
                     target_stoploss_hit = True
             elif transaction_type == "SELL": # SELL
@@ -53,7 +53,7 @@ class GlobalExitStrategy(BaseExitStrategy):
                     order_hit = "TARGET"
                     target_stoploss_hit = True
                 elif ltp >= stoploss:
-                    context["price"] = stoploss
+                    context["price"] = 0 #stoploss
                     target_stoploss_hit = True
                     context["order_type"] = "MARKET"
                     # print("Sell SL")

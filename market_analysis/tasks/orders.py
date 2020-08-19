@@ -249,10 +249,10 @@ class UpdateOrder(BaseOrderTask):
                     "auto_exit_price" : get_auto_exit_price(order.entry_price, order.transaction_type),
                     "transaction_type" : order.transaction_type,
                     "order_id" : order.order_id,
-                    "stock_data" : None,
                     "entry_price" : order.entry_price,
                     "entry_time" : order.entry_time,
-                    "quantity" : order.quantity
+                    "quantity" : order.quantity,
+                    "stock_data" : None
                 }
                 redis_cache.set(cache_key, data)
                 user.subscribe(user.get_instrument_by_symbol(order_data.get("exchange"), order_data.get("symbol")), LiveFeedType.Full)
