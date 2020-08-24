@@ -14,10 +14,9 @@ class RangeReversalStrategy(BaseEntryStrategy):
     def higher_range_reversal_strategy(self, stock_id, entry_type, *args, **kwargs):
         
         data = kwargs["data"]
-        print(kwargs)
+        # print(kwargs)
         # print(args)
-        symbol_name = "RAJU"
-        # symbol_name = data["symbol"].lower()
+        symbol_name = data["symbol"].lower()
         today_date = get_local_time()
         cache_key = "_".join([symbol_name, "range_reversal_strategy", "cached_high_low_data", str(today_date.date())])
         cached_value = redis_cache.get(cache_key)
@@ -68,8 +67,6 @@ class RangeReversalStrategy(BaseEntryStrategy):
         return "No Entry"
 
     def make_response(self, stock_id, entry_type, ltp, entry_time, **kwargs):
-        if not isinstance(stock, Symbol):
-            raise AttributeError("variable stock is not Symbol class object")
         if not (entry_type == "BUY" or entry_type == "SELL"):
             raise AttributeError("entry_type should be BUY or Sell")
         data = {
@@ -83,8 +80,8 @@ class RangeReversalStrategy(BaseEntryStrategy):
 
     def create_indicator_timestamp(self, stock_id, entry_type, entry_price:float, entry_time:object, **kwargs):
         symbol = Symbol.objects.get(id=stock_id)
-        message = f"Entry Found for {symbol.symbol} {entry_type}, {entry_price} {entry_time}"
-        slack_message_sender.delay(text=message)
+        message = f"Entry Found RANGEREVERSAL for {symbol.symbol} {entry_type}, {entry_price} {entry_time}"
+        slack_message_sender.delay(text=message, channel="#random")
         return True
 
 
@@ -92,32 +89,32 @@ class RangeReversalStrategy(BaseEntryStrategy):
 celery_app.tasks.register(RangeReversalStrategy)
 
 @celery_app.task(queue="low_priority", ignore_result=True)
-def prepare_data_for_range_reversal_strategy(sender, **kwargs):
-    user = get_upstox_user()
+def prepare_data_for_range_reversal_strategy():
     days = 5
 
     def trigger_price(price, price_type):
-        trigger_amount = price * 0.20 / 100
+        trigger_amount = price * 0.10 / 100
         if price_type == "HIGH":
             price = price - trigger_amount
         elif price_type == "LOW":
             price = price + trigger_amount
         return roundup(price)
 
-    if user.get_subscriptions():
-        subscribed_stocks = list(map(lambda obj: obj["symbol"].lower(), user.get_subscriptions()["FULL"]))
-        symbols  = Symbol.objects.filter(symbol__in=subscribed_stocks)
-        today_date = get_local_time().date()
-        previous_date = today_date - timedelta(days=1)
-        for symbol in symbols:
-            cache_key = "_".join([symbol.symbol, "range_reversal_strategy", "cached_high_low_data", str(today_date)])
-            data = {
-                "high_price": symbol.get_stock_high_low_price(previous_date, "HIGH", days=days),
-                "high_trigger_price": trigger_price(symbol.get_stock_high_low_price(previous_date, "HIGH", days=days)),
-                "low_price": symbol.get_stock_high_low_price(previous_date, "LOW", side="lowest", days=days),
-                "low_trigger_price": trigger_price(symbol.get_stock_high_low_price(previous_date, "LOW", side="lowest", days=days))
-            }
-            redis_cache.set(cache_key, data, 9*60*60)
+    symbols  = Symbol.objects.filter(Q(trade_realtime__contains="BUY") | Q(trade_realtime__contains="SELL")).distinct()
+    today_date = get_local_time().date()
+    previous_date = today_date - timedelta(days=1)
+    for symbol in symbols:
+        cache_key = "_".join([symbol.symbol, "range_reversal_strategy", "cached_high_low_data", str(today_date)])
+        high_price = symbol.get_stock_high_low_price(previous_date, "HIGH", days=days)
+        low_price = symbol.get_stock_high_low_price(previous_date, "LOW", side="lowest", days=days)
+        data = {
+            "high_price": high_price,
+            "high_trigger_price": trigger_price(high_price, "HIGH"),
+            "low_price": low_price,
+            "low_trigger_price": trigger_price(low_price, "LOW")
+        }
+        redis_cache.set(cache_key, data, 9*60*60)
+    return True
 
 
 # def func(message):

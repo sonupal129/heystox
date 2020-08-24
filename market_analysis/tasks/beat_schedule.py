@@ -73,15 +73,6 @@ stock_data_import_tasks = {
         "task": "market_analysis.tasks.stock_data_import_tasks.import_international_market_index_data",
         "schedule": crontab(day_of_week="2-6", hour=4, minute=10),
     },
-    "subscribe_stocks_for_realtime_trading": {
-        "task": "market_analysis.tasks.stock_data_import_tasks.subscribe_stocks_for_realtime_trading",
-        "schedule": crontab(day_of_week="1-5", hour=9, minute=15),
-    },
-    "unsubscribe_stocks_for_realtime_trading": {
-        "task": "market_analysis.tasks.stock_data_import_tasks.subscribe_stocks_for_realtime_trading",
-        "schedule": crontab(day_of_week="1-5", hour=15, minute=40),
-        "kwargs": {"subscribe": False},
-    },
 }
 
 
@@ -132,14 +123,23 @@ day_trading_tasks = {
         "task": "market_analysis.tasks.day_trading_tasks.todays_movement_stocks_add_on_sideways",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
     },
-    # "calculate_profit_loss_on_entry_stocks": {
-    #     "task": "market_analysis.tasks.day_trading_tasks.calculate_profit_loss_on_entry_stocks",
-    #     "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
-    # },
     "start_websocket": {
         "task": "market_analysis.tasks.day_trading_tasks.start_websocket",
         "schedule": crontab(day_of_week="1-5", hour=9, minute=17),
     },
+    "subscribe_stocks_for_realtime_trading": {
+        "task": "market_analysis.tasks.day_trading_tasks.subscribe_stocks_for_realtime_trading",
+        "schedule": crontab(day_of_week="1-5", hour=9, minute=18),
+    },
+    "unsubscribe_stocks_for_realtime_trading": {
+        "task": "market_analysis.tasks.day_trading_tasks.subscribe_stocks_for_realtime_trading",
+        "schedule": crontab(day_of_week="1-5", hour=15, minute=33),
+        "kwargs": {"subscribe": False},
+    },
+    # "calculate_profit_loss_on_entry_stocks": {
+    #     "task": "market_analysis.tasks.day_trading_tasks.calculate_profit_loss_on_entry_stocks",
+    #     "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
+    # },
 }
 
 orders = {
@@ -186,6 +186,14 @@ trading = {
     },
 }
 
+realtime_trade_strategy = {
+    "prepare_data_for_range_reversal_strategy": {
+        "task": "market_analysis.tasks.trading.strategies.realtime_trade_strategy.prepare_data_for_range_reversal_strategy",
+        "schedule": crontab(hour=9, minute=14),
+    },
+
+}
+
 # CRON JOB SCHEDULES
 
 
@@ -196,5 +204,6 @@ celery_app.conf.beat_schedule = {
     **day_trading_tasks,
     **orders,
     **trading,
-    **backtest
+    **backtest,
+    **realtime_trade_strategy
 }
