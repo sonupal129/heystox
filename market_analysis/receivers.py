@@ -3,6 +3,8 @@ from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStoc
 from market_analysis.tasks.strategies.backtest import delete_backtesting_data
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.indicator_signals import SignalRouter
+from market_analysis.signals import *
+from market_analysis.tasks.strategies.realtime_trade_strategy import RangeReversalStrategy
 # from market_analysis.tasks.intraday_indicator import is_stock_pdhl, has_entry_for_long_short
 # Code Below
 
@@ -69,3 +71,13 @@ def update_orders_quantity(sender, instance, **kwargs):
     cache_key = str(today_date) + "_total_order_quantity"
     orders = Order.objects.filter(entry_time__date=today_date, status="CO").count()
     redis_cache.set(cache_key, orders, 12*60*60)
+
+@receiver(call_strategy)
+def call_realtime_strategies(sender, **kwargs):
+    symbol = kwargs["symbol"]
+    stock_id = kwargs["symbol_id"]
+    data = kwargs["data"]
+    realtime_strategies = symbol.get_realtime_strategies()
+    for entry_type in symbol.trade_realtime:
+        for strategy in realtime_strategies:
+            strategy.call_entry_strategy(stock_id=stock_id, entry_type=entry_type, data=data)

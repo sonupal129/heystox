@@ -2,7 +2,7 @@ from market_analysis.imports import *
 from market_analysis.models import Strategy
 from .intraday_entry_strategies import *
 from .intraday_exit_strategies import GlobalExitStrategy
-
+from .realtime_trade_strategy import RangeReversalStrategy
 # Start Code Below
 
 def register_strategy(cls):
@@ -32,6 +32,7 @@ strategy_list = [
     register_strategy(AdxBollingerCrossover),
     register_strategy(StochasticMacdCrossover),
     register_strategy(StochasticMacdSameTimeCrossover),
+    register_strategy(RangeReversalStrategy),
     
 ]
 

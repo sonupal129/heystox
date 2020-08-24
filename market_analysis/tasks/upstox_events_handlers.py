@@ -1,6 +1,6 @@
 from upstox_api.api import *
 from .orders import UpdateOrder
-from .strategies.intraday_exit_strategies import CacheTickerData
+from .strategies.intraday_exit_strategies import TickerDataCaller
 from .trading import get_upstox_user
 from .notification_tasks import slack_message_sender
 from market_analysis.imports import *
@@ -8,7 +8,7 @@ from market_analysis.imports import *
 ### Quote Update, Order Update, Trade Update
 
 def event_handler_on_quote_update(message):
-    CacheTickerData(message).cache_symbol_ticker_data()
+    TickerDataCaller(message).run()
     return message
 
 def event_handler_on_order_update(message):

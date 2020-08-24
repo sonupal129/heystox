@@ -88,13 +88,13 @@ class BaseStrategyTask(celery_app.Task):
     def base_strategy(self, stock_id, entry_type, backtest, backtesting_candles_cache_key=None):
         pass
 
-    def run(self, stock_id, entry_type, backtest=False, backtesting_candles_cache_key=None, **kwargs):
+    def run(self, stock_id, entry_type, backtest=False, backtesting_candles_cache_key=None, *args, **kwargs):
         strategy_function = None
         try:
             strategy_function = getattr(self.__class__, self.name)
         except:
             return f"Strategy function name and task name should be same"
-        output = strategy_function(self, stock_id, entry_type, backtest, backtesting_candles_cache_key, **kwargs)
+        output = strategy_function(self, stock_id, entry_type, backtest, backtesting_candles_cache_key, *args, **kwargs)
         if not isinstance(output, str):
             return self.create_indicator_timestamp(**output)
 

@@ -73,6 +73,15 @@ stock_data_import_tasks = {
         "task": "market_analysis.tasks.stock_data_import_tasks.import_international_market_index_data",
         "schedule": crontab(day_of_week="2-6", hour=4, minute=10),
     },
+    "subscribe_stocks_for_realtime_trading": {
+        "task": "market_analysis.tasks.stock_data_import_tasks.subscribe_stocks_for_realtime_trading",
+        "schedule": crontab(day_of_week="1-5", hour=9, minute=15),
+    },
+    "unsubscribe_stocks_for_realtime_trading": {
+        "task": "market_analysis.tasks.stock_data_import_tasks.subscribe_stocks_for_realtime_trading",
+        "schedule": crontab(day_of_week="1-5", hour=15, minute=40),
+        "kwargs": {"subscribe": False},
+    },
 }
 
 
@@ -129,7 +138,7 @@ day_trading_tasks = {
     # },
     "start_websocket": {
         "task": "market_analysis.tasks.day_trading_tasks.start_websocket",
-        "schedule": crontab(day_of_week="1-5", hour=9, minute=20),
+        "schedule": crontab(day_of_week="1-5", hour=9, minute=17),
     },
 }
 

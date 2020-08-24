@@ -102,8 +102,8 @@ def find_sideways_direction():
     nifty_50 = Symbol.objects.get(symbol="nifty_50")
     nifty_50_movement = nifty_50.get_nifty_movement()
     if nifty_50_movement == "SIDEWAYS":
-        nifty_high = nifty_50.get_days_high_low_price(price_type="HIGH")
-        nifty_low = nifty_50.get_days_high_low_price(price_type="LOW")
+        nifty_high = nifty_50.get_stock_high_low_price(price_type="HIGH")
+        nifty_low = nifty_50.get_stock_high_low_price(price_type="LOW", side="lowest")
         try:
             nifty_current = nifty_50.get_stock_live_data().iloc[-1].close_price
         except:

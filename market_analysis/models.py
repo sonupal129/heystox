@@ -31,12 +31,23 @@ class Symbol(BaseModel):
     total_buy_quantity = models.IntegerField("Total Buy Quantity", blank=True, null=True)
     total_sell_quantity = models.IntegerField("Total Sell Quantity", blank=True, null=True)
     trade_manually = MultiSelectField(choices={("BUY", "BUY"), ("SELL", "SELL")}, blank=True, null=True)
+    trade_realtime = MultiSelectField(choices={("BUY", "BUY"), ("SELL", "SELL")}, blank=True, null=True, help_text="Enabling this will call realtime strategies for trading")
 
     class Meta:
         unique_together = ("symbol", "exchange")
 
     def __str__(self):
         return self.symbol
+
+    def get_realtime_strategies(self, cached=True):
+        cache_key = "_".join([self.symbol, str(get_local_time().date()), "realtime_strategies"])
+        cached_value = redis_cache.get(cache_key)
+        if cached_value != None and cached:
+            return cached_value
+        strategies = Strategy.objects.filter(is_realtime=True, strategy_type="ET")
+        redis_cache.set(cache_key, strategies, 9*60*60)
+        return strategies
+
 
     def get_strategies(self, strategy_type="Entry", entry_type="BUY", cached=True):
         """Return Deployed Strategy Objects"""
@@ -237,25 +248,45 @@ class Symbol(BaseModel):
     def get_last_day_opening_price(self):
         return self.last_day_opening_price or None
     
-    def get_days_high_low_price(self, date_obj=None, price_type="HIGH", candle_type="M5"):
+    def get_stock_high_low_price(self, date_obj=None, price_type="HIGH", days=0, **kwargs):
+        price_type_fields = {
+            "HIGH": "high_price",
+            "CLOSE": "close_price",
+            "OPEN": "open_price",
+            "LOW": "low_price"
+        }
+        side = "__max" if kwargs.get("side", "highest") == "highest" else "__min"
         if date_obj == None:
             date_obj = get_local_time().date()
-        days = 0
-        if date_obj != get_local_time().date():
-            days = (get_local_time().date() - date_obj).days
+        
+        if not isinstance(days, int):
+            raise TypeError("days should be number greater >= 0")
+
+        if price_type not in price_type_fields.keys():
+            raise TypeError(f"{price_type} should be one of these values {price_type_fields.keys()}")
+        cache_key = "_".join([str(date_obj), self.symbol, price_type, str(days), side])
+        cached_value = redis_cache.get(cache_key)
+        if cached_value != None:
+            return cached_value
         candles = self.get_stock_data(days=days, end_date=date_obj)
-        if price_type == "HIGH":
-            return candles.aggregate(Max("high_price")).get("high_price__max")
-        elif price_type == "LOW":
-            return candles.aggregate(Min("low_price")).get("low_price__min")
+        if days == 0:
+            candles = candles.filter(date__date=date_obj)
+        if side == "__max":
+            output = candles.aggregate(Max(price_type_fields[price_type])).get(price_type_fields[price_type]+side)
+        else:
+            output = candles.aggregate(Min(price_type_fields[price_type])).get(price_type_fields[price_type]+side)
+        redis_cache.set(cache_key, output, 300)
+        return output
+        
+        
 
     def is_stock_ohl(self, date_obj=None, candle_type="M5"):
         """Find Stock falls in open high low strategy"""
         if date_obj == None:
             date_obj = get_local_time().date()
         stock_open_price = self.get_day_opening_price(date_obj=date_obj)
-        stock_high_price = self.get_days_high_low_price(price_type="HIGH", date_obj=date_obj)
-        stock_low_price = self.get_days_high_low_price(price_type="LOW", date_obj=date_obj)
+        stock_high_price = self.get_stock_high_low_price(price_type="HIGH", date_obj=date_obj)
+        stock_low_price = self.get_stock_high_low_price(price_type="LOW", date_obj=date_obj, side="lowest")
         if stock_open_price == stock_high_price:
             return "SELL"
         elif stock_open_price == stock_low_price:
@@ -329,12 +360,12 @@ class Symbol(BaseModel):
         if date_obj == None:
             date_obj = get_local_time().date()
         if self.is_stock_ohl(date_obj=date_obj, candle_type=candle_type) == "BUY":
-            if self.get_days_high_low_price(date_obj=date_obj - timedelta(1), price_type="HIGH", candle_type=candle_type)\
-                < self.get_days_high_low_price(date_obj=date_obj, price_type="HIGH", candle_type=candle_type):
+            if self.get_stock_high_low_price(date_obj=date_obj - timedelta(1), price_type="HIGH", candle_type=candle_type)\
+                < self.get_stock_high_low_price(date_obj=date_obj, price_type="HIGH", candle_type=candle_type):
                 return "BUY"
         elif self.is_stock_ohl(date_obj=date_obj, candle_type=candle_type) == "SELL":
-            if self.get_days_high_low_price(date_obj=date_obj - timedelta(1), price_type="LOW", candle_type=candle_type)\
-                < self.get_days_high_low_price(date_obj=date_obj, price_type="LOW", candle_type=candle_type):
+            if self.get_stock_high_low_price(date_obj=date_obj - timedelta(1), price_type="LOW", candle_type=candle_type, side="lowest")\
+                < self.get_stock_high_low_price(date_obj=date_obj, price_type="LOW", candle_type=candle_type, side="lowest"):
                 return "SELL"
 
     def get_sorted_stock(self, entry_type:str, date_obj=None):
@@ -701,6 +732,7 @@ class Strategy(BaseModel):
     strategy_for = models.CharField(max_length=10, choices={(k,v) for k,v in strategies_for.items()}, default="EI")
     exit_strategy = models.ForeignKey("self", related_name="strategy", blank=True, null=True, limit_choices_to={"strategy_type": "EX"}, on_delete=models.CASCADE)
     backtesting_ready = models.BooleanField(default=False, help_text="Check if you think that strategy is ready for backtesting, Please use this function carefully as this put burden on server")
+    is_realtime = models.BooleanField(default=False, help_text="Enabling this will consider strategy as realtime strategy where strategy will call on ticker data not on candle data")
     description = models.TextField(max_length=1000, blank=True, null=True)
 
     def __str__(self):
@@ -745,6 +777,18 @@ class Strategy(BaseModel):
         if callable(st_func):
             return st_func()
         raise TypeError("Strategy class is not callable")
+
+    def call_entry_strategy(self, **kwargs):
+        cache_key = "".join([str(get_local_time().date()), self.strategy_name, self.strategy_location, str(self.is_realtime)])
+        cached_value = redis_cache.get(cache_key)
+        if cached_value:
+            cached_value.delay(**kwargs)
+            return "Strategy Called"
+        strategy = self.get_strategy()
+        redis_cache.set(cache_key, strategy, 9*60*60)
+        strategy.delay(**kwargs)
+        return "Strategy Called"
+
 
 
 class DeployedStrategies(BaseModel):

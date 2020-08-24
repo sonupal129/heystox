@@ -96,7 +96,8 @@ def fetch_candles_data(symbol:str, interval="5 Minute", days=6, end_date=None, u
 def import_stocks_candle_data(days=6, end_date=None):
     """Update all stocks candles data after trading day"""
     for q in Symbol.objects.filter(exchange__name__in=["NSE_EQ", "NSE_INDEX"]):
-        fetch_candles_data.delay(symbol=q.symbol, days=days, end_date=end_date)
+        random_number = random.randint(0,10)
+        fetch_candles_data.apply_async(kwargs={"symbol":q.symbol, "days":days, "end_date":end_date}, countdown=random_number)
     return "All Stocks Candle Data Imported Successfully"
 
 

@@ -3,6 +3,7 @@ from .base_strategy import BaseExitStrategy
 from market_analysis.models import Symbol
 from market_analysis.tasks.orders import ExitOrder
 from market_analysis.tasks.notification_tasks import slack_message_sender
+from market_analysis.signals import call_strategy
 # CODE BELOW
 
 class GlobalExitStrategy(BaseExitStrategy):
@@ -73,50 +74,55 @@ celery_app.tasks.register(GlobalExitStrategy)
 
 
 #Caching Function to Cache Ticker Data in memory, This function should be last in file
-class CacheTickerData:
+class TickerDataCaller:
     """Cache symbols ticker data"""
     
     def __init__(self, data:dict):
         self.data = data
 
     def cache_symbol_ticker_data(self):
-        cache_key = "_".join([self.data["symbol"].lower(), "cached_ticker_data"])
-        cached_value = redis_cache.get(cache_key)
+        """This function is bounded for orders only, mean it will call only if order is placed"""
+        
+        order_cache_key = "_".join([self.data.get("symbol", "No Symbol").lower(), "cached_ticker_data"])
+        cached_value = redis_cache.get(order_cache_key)
         # print(cached_value)
-        price_type = "high" if cached_value.get("transaction_type") == "BUY" else "low"
-        new_price = self.data[price_type]
-        if not cached_value.get(price_type):
-            cached_value[price_type] = new_price
-        old_price = cached_value.get(price_type)
-        if price_type == "high" and new_price > old_price:
-            cached_value[price_type] = new_price
-        elif price_type == "low" and new_price < old_price:
-            cached_value[price_type] = new_price
-        context = {
-                "high": self.data["high"],
-                "low": self.data["low"],
-                "open": self.data["open"],
-                "close": self.data["close"],
-                "ltp": self.data["ltp"],
-                "timestamp": self.data["timestamp"][:10],
-                "total_buy_qty": self.data["total_buy_qty"],
-                "total_sell_qty": self.data["total_sell_qty"]
-            }
-        if not cached_value.get("stock_data"):
-            cached_value["stock_data"] = [context]
-        if self.data["ltp"] != cached_value["stock_data"][-1]["ltp"]:
-            cached_value["stock_data"].append(context)
-        redis_cache.set(cache_key, cached_value)
-        GlobalExitStrategy().delay(self.data["symbol"].lower()) # Need to work on exit strategy and create a strategy router
+        if cached_value:
+            price_type = "high" if cached_value.get("transaction_type") == "BUY" else "low"
+            new_price = self.data[price_type]
+            if not cached_value.get(price_type):
+                cached_value[price_type] = new_price
+            old_price = cached_value.get(price_type)
+            if price_type == "high" and new_price > old_price:
+                cached_value[price_type] = new_price
+            elif price_type == "low" and new_price < old_price:
+                cached_value[price_type] = new_price
+            context = {
+                    "high": self.data["high"],
+                    "low": self.data["low"],
+                    "open": self.data["open"],
+                    "close": self.data["close"],
+                    "ltp": self.data["ltp"],
+                    "timestamp": self.data["timestamp"][:10],
+                    "total_buy_qty": self.data["total_buy_qty"],
+                    "total_sell_qty": self.data["total_sell_qty"]
+                }
+            if not cached_value.get("stock_data"):
+                cached_value["stock_data"] = [context]
+            if self.data["ltp"] != cached_value["stock_data"][-1]["ltp"]:
+                cached_value["stock_data"].append(context)
+            redis_cache.set(cache_key, cached_value)
+            GlobalExitStrategy().delay(self.data["symbol"].lower()) # Need to work on exit strategy and create a strategy router
         # exit_on_auto_hit_price.delay(data["symbol"].lower())
         return True
 
-    # def run(self):
-    #     self.cache_symbol_ticker_data()
-    #     cache_key = "_".join([self.data["symbol"].lower(), "cached_ticker_data"])
-    #     cached_value = redis_cache.get(cache_key)
-    #     symbol_name = self.data["symbol"].lower()
-    #     transaction_type = cached_value.get("transaction_type")
-    #     symbol = Symbol.objects.get(symbol=symbol_name)
-    #     sorted_stock = symbol.get_sorted_stock(transaction_type)
+    def run(self):
+        self.cache_symbol_ticker_data()
+        realtime_subscribed_stocks_cache_key = "_".join([str(get_local_time().date()), "realtime_subscribed_stocks"])
+        cached_value = redis_cache.get(realtime_subscribed_stocks_cache_key)
+        # if cached_value and self.data["symbol"] in cached_value.keys():
+            # call_strategy.send(sender=self.__class__, symbol_id=cached_value[self.data["symbol"]][0], symbol=cached_value[self.data["symbol"]][1], data=self.data)
+        call_strategy.send(sender="self.__class__", symbol_id=104, symbol=Symbol.objects.get(symbol="ashokley"), data=self.data)
+        return True
+
+
 

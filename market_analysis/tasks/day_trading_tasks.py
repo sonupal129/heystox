@@ -205,3 +205,21 @@ def start_websocket(run_in_background=True):
     start_upstox_websocket(run_in_background)
     return "Socket Started"
 
+@celery_app.task(queue="low_priority", ignore_result=True)
+def subscribe_stocks_for_realtime_trading(subscribe=True):
+    symbols  = Symbol.objects.filter(Q(trade_realtime__contains="BUY") | Q(trade_realtime__contains="SELL")).distinct()
+    user = get_upstox_user()
+    exchange_name = ""
+    if symbols.exists() and subscribe:
+        data = {symbol.symbol: [symbol.id, symbol] for symbol in symbols}
+        cache_key = "_".join([str(get_local_time().date()), "realtime_subscribed_stocks"])
+        redis_cache.set(cache_key, data, 9*60*60)
+
+    for symbol in symbols:
+        if exchange_name != symbol.exchange.name:
+            exchange_name = symbol.exchange.name
+            user.get_master_contract(exchange_name)
+        if subscribe:
+            user.subscribe(user.get_instrument_by_symbol(symbol.exchange.name, symbol.symbol), LiveFeedType.Full)
+        else:
+            user.unsubscribe(user.get_instrument_by_symbol(symbol.exchange.name, symbol.symbol), LiveFeedType.Full)
