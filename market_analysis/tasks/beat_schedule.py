@@ -89,10 +89,6 @@ day_trading_tasks = {
         "task": "market_analysis.tasks.day_trading_tasks.todays_movement_stocks_add",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
     },
-    # "find_ohl_stocks": {
-    #     "task": "market_analysis.tasks.intraday_entry_indicator.find_ohl_stocks",
-    #     "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/6"),
-    # },
     "create_market_hour_candles_every_five_minute": {
         "task": "market_analysis.tasks.day_trading_tasks.create_market_hour_candles",
         "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/5"),
@@ -136,9 +132,13 @@ day_trading_tasks = {
         "schedule": crontab(day_of_week="1-5", hour=15, minute=33),
         "kwargs": {"subscribe": False},
     },
-    # "calculate_profit_loss_on_entry_stocks": {
-    #     "task": "market_analysis.tasks.day_trading_tasks.calculate_profit_loss_on_entry_stocks",
-    #     "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/3"),
+    # "restart_websocket": {
+    #     "task": "market_analysis.tasks.day_trading_tasks.restart_websocket",
+    #     "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/15"),
+    # },
+    # "find_ohl_stocks": {
+    #     "task": "market_analysis.tasks.intraday_entry_indicator.find_ohl_stocks",
+    #     "schedule": crontab(day_of_week="1-5", hour="9-15", minute="*/6"),
     # },
 }
 
