@@ -48,17 +48,17 @@ class RangeReversalStrategy(BaseEntryStrategy):
                         ticker_ltp_price = data["ltp"]
                         entry_found = False
                         if trigger_side == "HIGH":
-                            if ticker_ltp_price > high_trigger_price:
+                            if ticker_ltp_price > high_price:
                                 entry_found = True
                                 entry_type = "BUY"
-                            elif ticker_ltp_price < high_trigger_price:
+                            elif ticker_ltp_price < high_price:
                                 entry_found = True
                                 entry_type = "SELL"
                         elif trigger_side == "LOW":
-                            if ticker_ltp_price > low_trigger_price:
+                            if ticker_ltp_price > low_price:
                                 entry_found = True
                                 entry_type = "BUY"
-                            elif ticker_ltp_price < low_trigger_price:
+                            elif ticker_ltp_price < low_price:
                                 entry_found = True
                                 entry_type = "SELL"
                         if entry_found:
@@ -119,5 +119,9 @@ def prepare_data_for_range_reversal_strategy():
     return True
 
 
-# def func(message):
-#     print(message)
+
+def func(message):
+    print(message)
+
+def func2(message):
+    print(message)

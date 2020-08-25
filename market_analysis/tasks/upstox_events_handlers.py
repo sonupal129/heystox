@@ -38,7 +38,7 @@ def start_upstox_websocket(run_in_background=True):
     global restart_counter
     if restart_counter < 5 or restart_counter > 30:
         sleep(5)
-        user = get_upstox_user()
+        user = get_upstox_user() 
         user.set_on_quote_update(event_handler_on_quote_update)
         user.set_on_trade_update(event_handler_on_trade_update)
         user.set_on_order_update(event_handler_on_order_update)
