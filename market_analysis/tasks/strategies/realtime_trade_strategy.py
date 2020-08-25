@@ -22,7 +22,7 @@ class RangeReversalStrategy(BaseEntryStrategy):
         cached_value = redis_cache.get(cache_key)
         
         if cached_value:
-            if not data.get("entry_found"):
+            if not cached_value.get("entry_found"):
                 high_trigger_price = cached_value["high_trigger_price"]
                 low_trigger_price = cached_value["low_trigger_price"]
                 high_price =  cached_value["high_price"]
@@ -34,10 +34,12 @@ class RangeReversalStrategy(BaseEntryStrategy):
                     if ticker_high_price >= high_trigger_price:
                         cached_value["trigger_time"] = today_date.now()
                         cached_value["trigger_side"] = "HIGH"
+                        cached_value["trigger_price"]  = ticker_high_price
                         redis_cache.set(cache_key, cached_value, 9*60*60)
                     elif ticker_low_price <= low_trigger_price:
                         cached_value["trigger_time"] = today_date.now()
                         cached_value["trigger_side"] = "LOW"
+                        cached_value["trigger_price"] = ticker_low_price
                         redis_cache.set(cache_key, cached_value, 9*60*60)
                 else:
                     after_trigger_time = trigger_time + timedelta(minutes=13)
