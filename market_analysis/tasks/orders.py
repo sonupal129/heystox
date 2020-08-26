@@ -281,7 +281,7 @@ def cancel_not_executed_orders(from_last_minutes=20):
             user.cancel_order(order.order_id)
 
 
-@celery_app.task(queue="tickers")
+@celery_app.task(queue="torrent_shower")
 def exit_on_auto_hit_price(symbol_name:str):
     """This function will take exit if price after reaching a certain price coming down or vice versa"""
     cache_key = "_".join([symbol_name.lower(), "cached_ticker_data"])

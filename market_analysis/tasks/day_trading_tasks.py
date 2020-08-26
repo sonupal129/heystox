@@ -200,7 +200,7 @@ def calculate_profit_loss_on_entry_stocks():
                 report.save()
 
 
-@celery_app.task(queue="tickers")
+@celery_app.task(queue="shower")
 def start_websocket(run_in_background=True):
     start_upstox_websocket(run_in_background)
     return "Socket Started"

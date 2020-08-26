@@ -10,7 +10,7 @@ class GlobalExitStrategy(BaseExitStrategy):
     """This is global strategy function which work on simple method where risk to reward ratio is
     1:2 mean on 1 rupee risk we are looking at 2 rupee target"""
     name = "exit_on_stoploss_target_hit"
-    queue = "tickers"
+    queue = "torrent_shower"
    
     def exit_on_stoploss_target_hit(self, symbol_name:str):
         cache_key = "_".join([symbol_name.lower(), "cached_ticker_data"])
@@ -125,5 +125,8 @@ class TickerDataCaller:
         # call_strategy.send(sender="self.__class__", symbol_id=104, symbol=Symbol.objects.get(symbol="ashokley"), data=self.data)
         return True
 
-
-
+@celery_app.task(queue="torrent_shower", ignore_result=True)
+def socket_data_shower(message):
+    TickerDataCaller(message).run()
+    return True
+    

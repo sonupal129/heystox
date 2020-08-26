@@ -1,6 +1,6 @@
 from upstox_api.api import *
 from .orders import UpdateOrder
-from .strategies.intraday_exit_strategies import TickerDataCaller
+from .strategies.intraday_exit_strategies import socket_data_shower
 from .notification_tasks import slack_message_sender
 from market_analysis.imports import *
 from market_analysis.models import UserProfile
@@ -8,8 +8,8 @@ from market_analysis.models import UserProfile
 ### Quote Update, Order Update, Trade Update
 
 def event_handler_on_quote_update(message):
-    TickerDataCaller(message).run()
-    return message
+    socket_data_shower.delay(message)
+    return True
 
 def event_handler_on_order_update(message):
     order_statuses = ["cancelled", "open", "complete", "rejected"]

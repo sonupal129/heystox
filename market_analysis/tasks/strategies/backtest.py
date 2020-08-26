@@ -108,7 +108,7 @@ class CalculateBackTestEquityIntrdayData(BaseBackTestStrategy):
     data for intraday purpose, it gets data from SendBacktest request class function"""
 
     name = "calculate_intraday_strategies_data"
-    queue = "tickers"
+    queue = "torrent_shower"
     
     def calculate_backtest_data(self, task_cache_key, entry_type, **kwargs):
         cached_value = cache.get(task_cache_key)

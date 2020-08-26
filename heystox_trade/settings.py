@@ -207,8 +207,9 @@ CELERY_QUEUES = (
     Queue("low_priority"),
     Queue("medium_priority"),
     Queue("high_priority"),
-    Queue("tickers"),
-    Queue("strategy") # Please do not add any other task on this queue except ticker data anylysing tasks
+    Queue("shower"), # Please Note this queue is reserved for websocket only please don't use this queue for other tasks it can lead celery dead lock or freezing issues
+    Queue("strategy"),
+    Queue("torrent_shower") # Please do not add any other task on this queue except ticker data anylysing tasks
 )
 
 CELERY_CACHE_BACKEND = "default"

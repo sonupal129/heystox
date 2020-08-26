@@ -9,7 +9,7 @@ from market_analysis.tasks.trading import get_upstox_user
 class RangeReversalStrategy(BaseEntryStrategy):
     """DOC"""
     name = "higher_range_reversal_strategy"
-    queue = "tickers"
+    queue = "torrent_shower"
 
     def higher_range_reversal_strategy(self, stock_id, entry_type, *args, **kwargs):
         
