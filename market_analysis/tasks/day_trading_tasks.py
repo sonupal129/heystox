@@ -205,12 +205,6 @@ def start_websocket(run_in_background=True):
     start_upstox_websocket(run_in_background)
     return "Socket Started"
 
-@celery_app.task(queue="tickers")
-def restart_websocket():
-    user = get_upstox_user()
-    user.start_websocket()
-    return "Socket Restarted"
-
 @celery_app.task(queue="low_priority", ignore_result=True)
 def subscribe_stocks_for_realtime_trading(subscribe=True):
     symbols  = Symbol.objects.filter(Q(trade_realtime__contains="BUY") | Q(trade_realtime__contains="SELL")).distinct()

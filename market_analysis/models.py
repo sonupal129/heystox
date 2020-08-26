@@ -430,7 +430,7 @@ class UserProfile(BaseModel):
     def get_upstox_user(self):
         """Returns upstox logged in user object"""
         user_email = self.get_user_email()
-        if self.user.is_active and self.subscribed_historical_api or self.subscribed_live_api:
+        if self.user.is_active and (self.subscribed_historical_api or self.subscribed_live_api):
             cached_upstox_user = cache.get(user_email + "_upstox_login_user")
             return cached_upstox_user
 

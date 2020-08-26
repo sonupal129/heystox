@@ -29,6 +29,7 @@ class RangeReversalStrategy(BaseEntryStrategy):
                 low_price =  cached_value["low_price"]
                 ticker_high_price = data["high"]
                 ticker_low_price = data["low"]
+                ticker_ltp_price = data["ltp"]
                 trigger_time = cached_value.get("trigger_time", None)
                 if not trigger_time:
                     if ticker_high_price >= high_trigger_price:
@@ -44,8 +45,7 @@ class RangeReversalStrategy(BaseEntryStrategy):
                 else:
                     after_trigger_time = trigger_time + timedelta(minutes=13)
                     trigger_side = cached_value["trigger_side"]
-                    if today_date.now() >= after_trigger_time:
-                        ticker_ltp_price = data["ltp"]
+                    if today_date.now() >= after_trigger_time:     
                         entry_found = False
                         if trigger_side == "HIGH":
                             if ticker_ltp_price > high_price:

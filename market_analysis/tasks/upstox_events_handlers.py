@@ -1,9 +1,9 @@
 from upstox_api.api import *
 from .orders import UpdateOrder
 from .strategies.intraday_exit_strategies import TickerDataCaller
-from .trading import get_upstox_user
 from .notification_tasks import slack_message_sender
 from market_analysis.imports import *
+from market_analysis.models import UserProfile
 ## Upstox Event Handler
 ### Quote Update, Order Update, Trade Update
 
@@ -38,7 +38,7 @@ def start_upstox_websocket(run_in_background=True):
     global restart_counter
     if restart_counter < 5 or restart_counter > 30:
         sleep(3)
-        user = get_upstox_user() 
+        user = UserProfile.objects.get(user__email="sonupal129@gmail.com").get_upstox_user() 
         user.set_on_quote_update(event_handler_on_quote_update)
         user.set_on_trade_update(event_handler_on_trade_update)
         user.set_on_order_update(event_handler_on_order_update)
