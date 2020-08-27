@@ -110,7 +110,7 @@ class TickerDataCaller:
                 cached_value["stock_data"] = [context]
             if self.data["ltp"] != cached_value["stock_data"][-1]["ltp"]:
                 cached_value["stock_data"].append(context)
-            redis_cache.set(cache_key, cached_value)
+            redis_cache.set(order_cache_key, cached_value)
             GlobalExitStrategy().delay(self.data["symbol"].lower()) # Need to work on exit strategy and create a strategy router
         # exit_on_auto_hit_price.delay(data["symbol"].lower())
         return True
