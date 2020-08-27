@@ -6,7 +6,7 @@ from market_analysis.csv_import_export import *
 class SymbolAdmin(ExportMixin, admin.ModelAdmin):
     resource_class = SymbolResource
     list_display = ["symbol", "exchange"]
-    list_filter = ["exchange"]
+    list_filter = ["exchange", "trade_manually", "trade_realtime"]
     search_fields = ["symbol", "name"]
 
 
