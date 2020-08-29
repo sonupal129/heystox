@@ -121,11 +121,11 @@ day_trading_tasks = {
     },
     "start_websocket": {
         "task": "market_analysis.tasks.day_trading_tasks.start_websocket",
-        "schedule": crontab(day_of_week="1-5", hour=9, minute=17),
+        "schedule": crontab(day_of_week="1-5", hour=9, minute=16),
     },
     "subscribe_stocks_for_realtime_trading": {
         "task": "market_analysis.tasks.day_trading_tasks.subscribe_stocks_for_realtime_trading",
-        "schedule": crontab(day_of_week="1-5", hour=9, minute=18),
+        "schedule": crontab(day_of_week="1-5", hour=9, minute=17),
     },
     "unsubscribe_stocks_for_realtime_trading": {
         "task": "market_analysis.tasks.day_trading_tasks.subscribe_stocks_for_realtime_trading",
