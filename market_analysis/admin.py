@@ -1,12 +1,41 @@
 from django.contrib import admin
 from market_analysis.models import *
 from market_analysis.csv_import_export import *
+from admin_numeric_filter.admin import RangeNumericFilter
 # Register your models here.
+
+class TradeRealtime(admin.SimpleListFilter):
+    title='Trade Realtime'
+    parameter_name = 'trade_realtime'
+
+    def lookups(self, request, model_admin):
+        return [("BUY", "BUY"), ("SELL","SELL")]
+
+    def queryset(self, request, queryset):
+        if self.value() in ["BUY","Sell"]:
+            symbols  = queryset.filter(Q(trade_realtime__contains="BUY") | Q(trade_realtime__contains="SELL")).distinct()
+            return symbols
+        return queryset
+
+# class CustomNumericSlider(SliderNumericFilter):
+
+
+class ManualTrade(TradeRealtime):
+    title = "Manual Trade"
+    parameter_name = "trade_manually"
+
+    def queryset(self, request, queryset):
+        if self.value() in ["BUY","Sell"]:
+            symbols  = queryset.filter(Q(trade_manually__contains="BUY") | Q(trade_manually__contains="SELL")).distinct()
+            return symbols
+        return queryset   
+
+ 
 
 class SymbolAdmin(ExportMixin, admin.ModelAdmin):
     resource_class = SymbolResource
     list_display = ["symbol", "exchange"]
-    list_filter = ["exchange", "trade_manually", "trade_realtime"]
+    list_filter = ["exchange", TradeRealtime, ManualTrade, ("last_day_closing_price", RangeNumericFilter), ("last_day_vtt", RangeNumericFilter)]
     search_fields = ["symbol", "name"]
 
 
