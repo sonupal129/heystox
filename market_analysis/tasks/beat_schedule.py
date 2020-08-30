@@ -189,7 +189,7 @@ trading = {
 realtime_trade_strategy = {
     "prepare_data_for_range_reversal_strategy": {
         "task": "market_analysis.tasks.strategies.realtime_trade_strategy.prepare_data_for_range_reversal_strategy",
-        "schedule": crontab(hour=9, minute=14),
+        "schedule": crontab(day_of_week="1-5", hour=9, minute=14),
     },
 
 }

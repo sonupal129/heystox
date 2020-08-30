@@ -12,7 +12,7 @@ class TradeRealtime(admin.SimpleListFilter):
         return [("BUY", "BUY"), ("SELL","SELL")]
 
     def queryset(self, request, queryset):
-        if self.value() in ["BUY","Sell"]:
+        if self.value() in ["BUY","SELL"]:
             symbols  = queryset.filter(Q(trade_realtime__contains="BUY") | Q(trade_realtime__contains="SELL")).distinct()
             return symbols
         return queryset
@@ -25,7 +25,7 @@ class ManualTrade(TradeRealtime):
     parameter_name = "trade_manually"
 
     def queryset(self, request, queryset):
-        if self.value() in ["BUY","Sell"]:
+        if self.value() in ["BUY","SELL"]:
             symbols  = queryset.filter(Q(trade_manually__contains="BUY") | Q(trade_manually__contains="SELL")).distinct()
             return symbols
         return queryset   

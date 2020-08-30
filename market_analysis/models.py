@@ -796,7 +796,7 @@ class DeployedStrategies(BaseModel):
 
     symbol = models.ForeignKey(Symbol, on_delete=models.CASCADE, related_name="deployed_strategies")
     strategy = models.ForeignKey(Strategy, on_delete=models.CASCADE, limit_choices_to={"strategy_type": "ET"})
-    timeframe = models.CharField(choices=candle_type_choice, max_length=5, default="M5")
+    timeframe = models.CharField(choices=candle_type_choice, max_length=5, blank=True, null=True)
     entry_type = models.CharField(default="BUY", max_length=10, choices={
         ("BUY", "BUY"), ("SELL", "SELL") })
     active = models.BooleanField(default=True)

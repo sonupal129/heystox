@@ -69,7 +69,7 @@ class RangeReversalStrategy(BaseEntryStrategy):
         return "No Entry"
 
     def make_response(self, stock_id, entry_type, ltp, entry_time, **kwargs):
-        if not (entry_type == "BUY" or entry_type == "SELL"):
+        if not entry_type in ["BUY", "SELL"]:
             raise AttributeError("entry_type should be BUY or Sell")
         data = {
             "stock_id": stock_id,
