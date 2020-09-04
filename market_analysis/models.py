@@ -44,7 +44,7 @@ class Symbol(BaseModel):
         cached_value = redis_cache.get(cache_key)
         if cached_value != None and cached:
             return cached_value
-        strategies = Strategy.objects.filter(is_realtime=True, strategy_type="ET")
+        strategies = self.deployed_strategies.filter(strategy__is_realtime=True, active=True).prefetch_related("strategy")
         redis_cache.set(cache_key, strategies, 9*60*60)
         return strategies
 
@@ -778,18 +778,6 @@ class Strategy(BaseModel):
             return st_func()
         raise TypeError("Strategy class is not callable")
 
-    def call_entry_strategy(self, **kwargs):
-        cache_key = "".join([str(get_local_time().date()), self.strategy_name, self.strategy_location, str(self.is_realtime)])
-        cached_value = redis_cache.get(cache_key)
-        if cached_value:
-            cached_value.delay(**kwargs)
-            return "Strategy Called"
-        strategy = self.get_strategy()
-        redis_cache.set(cache_key, strategy, 9*60*60)
-        strategy.delay(**kwargs)
-        return "Strategy Called"
-
-
 
 class DeployedStrategies(BaseModel):
     candle_type_choice = {(k,v) for k,v in candles_types.items()}
@@ -804,14 +792,21 @@ class DeployedStrategies(BaseModel):
     class Meta:
         verbose_name_plural = "Deployed Strategies"
         unique_together = ("symbol", "strategy", "timeframe", "entry_type")
+        
 
     def __str__(self):
         return " | ".join([self.symbol.symbol, str(self.strategy), str(self.timeframe), str(self.entry_type)])
     
     def call_entry_strategy(self, **kwargs):
-        strategy = self.strategy.get_strategy()
+        cache_key = "".join([str(get_local_time().date()), self.strategy.strategy_name, self.strategy.strategy_location, str(self.strategy.is_realtime), self.entry_type, str(self.active), self.symbol.symbol])
         kwargs["candle_type"] = self.timeframe
         kwargs["entry_type"] = self.entry_type
+        cached_value = redis_cache.get(cache_key)
+        if cached_value:
+            cached_value.delay(**kwargs)
+            return "Strategy Called"
+        strategy = self.strategy.get_strategy()
+        redis_cache.set(cache_key, strategy, 9*60*60)
         strategy.delay(**kwargs)
         return True
 

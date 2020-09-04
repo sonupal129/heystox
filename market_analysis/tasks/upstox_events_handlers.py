@@ -21,7 +21,7 @@ def event_handler_on_trade_update(message):
     # slack_message_sender(text="Trade Update" + str(message))
     return "Trade Updated"
     
-def event_handler_on_error(message):
+def event_handler_on_error(message, error):
     slack_message_sender.delay(text="Error Received Please Check: " + str(message), channel="#random")
     return "Error Received"
 

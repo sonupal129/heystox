@@ -119,7 +119,7 @@ class TickerDataCaller:
         self.cache_symbol_ticker_data()
         symbol_name = self.data.get("symbol", "No Symbol").lower()
         realtime_subscribed_stocks_cache_key = "_".join([str(get_local_time().date()), "realtime_subscribed_stocks"])
-        cached_value = redis_cache.get(realtime_subscribed_stocks_cache_key)
+        cached_value = redis_cache.get(realtime_subscribed_stocks_cache_key) 
         if cached_value and symbol_name in cached_value.keys():
             call_strategy.send(sender=self.__class__, symbol_id=cached_value[symbol_name][0], symbol=cached_value[symbol_name][1], data=self.data)
         # call_strategy.send(sender="self.__class__", symbol_id=104, symbol=Symbol.objects.get(symbol="ashokley"), data=self.data)

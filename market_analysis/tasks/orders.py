@@ -36,12 +36,28 @@ class BaseOrderTask(celery_app.Task):
             return abs(qty)
         raise AttributeError("Unable to fetch user balance")
 
+    def stock_stoploss_price(self, price, entry_type):
+        sl_price = get_stock_stoploss_price(price, entry_type)
+        return sl_price
+
+    def stock_target_price(self, price, entry_type):
+        tg_price = get_stock_target_price(price, entry_type)
+        return tg_price
+
     def get_placed_order_quantity(self):
         cache_key = str(get_local_time().date()) + "_total_order_quantity"
         cached_value = redis_cache.get(cache_key)
         if cached_value == None:
             return 0
         return cached_value
+
+    def ready_order_data(self, data:list, **kwargs):
+        required_fields = ["transaction_type", "symbol", "quantity", "price","duration_type", "order_type","product_type"]
+        if len(required_fields) != len(data):
+                raise AttributeError(f"complete data not available for preparing order data")
+        context = dict(zip(required_fields, data))
+        return context
+
 
     def send_order_request(self, order_details:dict, ignore_max_trade_quantity:bool=False, **kwargs): # Don't Change This Function Format, Because This is As per Upstox Format, 
         user = get_upstox_user()
@@ -57,7 +73,7 @@ class BaseOrderTask(celery_app.Task):
         quantity = order_details.get("quantity", None)
         order_type = order_details.get("order_type", None)
         price = order_details.get("price", None)
-        duration_type = order_details.get("duarion_type", None)
+        duration_type = order_details.get("duration_type", None)
         product_type = order_details.get("product_type", None)
         trigger_price = order_details.get("trigger_price", None)
         disclosed_quantity = order_details.get("disclosed_quantity", None)
@@ -66,14 +82,14 @@ class BaseOrderTask(celery_app.Task):
         trailing_ticks = order_details.get("trailing_ticks", None)
         user.get_master_contract(symbol.exchange.name)
         last_completed_order = order_book.get_last_order_by_status("CO")
-        last_open_order = order_book.get_last_order_by_status("OP") 
+        last_open_order = order_book.get_last_order_by_status("OP")
         
         if last_completed_order and last_open_order:
             last_order = self.find_last_order(last_open_order, last_completed_order)
         else:
             last_order = last_completed_order or last_open_order
         
-        # order = None
+        order = None
         if is_created:
             order = Order.objects.create(order_book=order_book, transaction_type=transaction_type)
         elif last_order:
@@ -104,8 +120,8 @@ class BaseOrderTask(celery_app.Task):
                     order.entry_type = "EX"
                 else:
                     order.entry_type = "ET"
-                    order.stoploss = get_stock_stoploss_price(price, transaction_type)
-                    order.target_price = get_stock_target_price(price, transaction_type)
+                    order.stoploss = self.stock_stoploss_price(price, transaction_type)
+                    order.target_price = self.stock_target_price(price, transaction_type)
                 order.quantity = quantity
                 order.entry_price = price
                 try:
@@ -134,10 +150,11 @@ class EntryOrder(BaseOrderTask):
     def add_expected_target_stoploss(self, stock_report_id):
         report = SortedStockDashboardReport.objects.get(id=stock_report_id)
         price = report.entry_price
-        report.stoploss_price = get_stock_stoploss_price(price, report.entry_type)
-        report.target_price = get_stock_target_price(price, report.entry_type)
+        report.stoploss_price = self.stock_stoploss_price(price, report.entry_type)
+        report.target_price = self.stock_target_price(price, report.entry_type)
         report.save()
-        
+
+
     def send_order_place_request(self, signal_detail:dict=None, **kwargs):
         # This function will work as generic function where all functions will come under this function
         # So, whenever a signal found or any function which finds signal will send required parameter to this function and 
@@ -145,27 +162,17 @@ class EntryOrder(BaseOrderTask):
         # Please Use this function for any order placing requests or report creation
         # Dictionary Format {name: xxxxx, entry_time: xxxxx, entry_type: xxxxx, entry_price: xxxxxxx}
         """Generic function to send order request and create order report"""
-        order_place_start_time = settings.ORDER_PLACE_START_TIME
-        order_place_end_time = settings.ORDER_PLACE_END_TIME
         entry_price = signal_detail.get("entry_price")
         entry_type = signal_detail.get("entry_type")
         name = signal_detail.get("name")
         current_time = get_local_time().time()
         entry_time = get_local_time().strptime(signal_detail.get("entry_time"), "%Y-%m-%dT%H:%M:%S")
-        order_schema["transaction_type"] = entry_type
-        order_schema["symbol"] = name
-        order_schema["quantity"] = self.calculate_order_quantity(entry_price, entry_type)
-        order_schema["price"] = entry_price
-        order_schema["duarion_type"] = "DAY"
-        order_schema["order_type"] = "LIMIT" #Changed order type from limit order to market order to check if this is feasible or not
-        order_schema["product_type"] = "INTRADAY"
-        if current_time > order_place_start_time and current_time < order_place_end_time:
-            obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
-            self.add_expected_target_stoploss(obj.id)
-            slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
-            self.send_order_request(order_schema, **kwargs)
-        else:
-            slack_message_sender.delay(text=f"Order can be place between {settings.ORDER_PLACE_START_TIME} and {settings.ORDER_PLACE_END_TIME}")
+        data = [entry_type, name, self.calculate_order_quantity(entry_price, entry_type), entry_price, "DAY", "LIMIT", "INTRADAY"]
+        order_schema = self.ready_order_data(data)
+        obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
+        self.add_expected_target_stoploss(obj.id)
+        slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
+        self.send_order_request(order_schema, **kwargs)
 
     def run(self, signal_detail:dict, **kwargs):
         self.send_order_place_request(signal_detail, **kwargs)
@@ -207,7 +214,7 @@ class UpdateOrder(BaseOrderTask):
         order, is_created = Order.objects.get_or_create(order_id=order_id)
         
         if is_created:
-            order_book = OrderBook.objects.get(symbol__symbol__iexact=order_data.get("symbol"), date=get_local_time().date())
+            order_book = OrderBook.objects.get_or_create(symbol=Symbol.objects.get(symbol__iexact=order_data.get("symbol")), date=get_local_time().date())
             order.transaction_type = order_data.get("transaction_type")
             order.order_book = order_book
             order.save()
@@ -233,8 +240,8 @@ class UpdateOrder(BaseOrderTask):
                 order.entry_type = "ET"
 
         if order.entry_type == "ET":
-            order.stoploss = get_stock_stoploss_price(order.entry_price, order.transaction_type)
-            order.target_price = get_stock_target_price(order.entry_price, order.transaction_type)
+            order.stoploss = self.stock_stoploss_price(order.entry_price, order.transaction_type)
+            order.target_price = self.stock_target_price(order.entry_price, order.transaction_type)
         
         order.save()
 

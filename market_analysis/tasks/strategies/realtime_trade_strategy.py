@@ -2,7 +2,7 @@ from market_analysis.imports import *
 from .base_strategy import BaseEntryStrategy
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.signals import *
-from market_analysis.models import Symbol
+from market_analysis.models import Symbol, SortedStocksList, DeployedStrategies, StrategyTimestamp
 from market_analysis.tasks.trading import get_upstox_user
 # CODE BELOW
 
@@ -81,7 +81,21 @@ class RangeReversalStrategy(BaseEntryStrategy):
         return data
 
     def create_indicator_timestamp(self, stock_id, entry_type, entry_price:float, entry_time:object, **kwargs):
+        if kwargs.get("backtest"):
+            raise TypeError("Backtesting is not allowed")
+        current_time = get_local_time()
+        entry_time = entry_time.replace(microsecond=0)
         symbol = Symbol.objects.get(id=stock_id)
+        sorted_stock, is_created = SortedStocksList.objects.update_or_create(symbol=symbol, created_at__date=current_time.date(), entry_type=entry_type, defaults={"added" : "ML" })
+        deployed_strategy = symbol.deployed_strategies.get(strategy__strategy_name=self.__class__.__name__, entry_type=entry_type, timeframe=None, active=True)
+        stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, strategy=deployed_strategy, timestamp__range=[entry_time - timedelta(minutes=20), entry_time + timedelta(minutes=20)]).order_by("timestamp")
+        if not stamp.exists():
+            if entry_time.date() == current_time.date():
+                stamp = StrategyTimestamp.objects.create(stock=sorted_stock, strategy=deployed_strategy, timestamp=entry_time)
+                stamp.entry_price = entry_price
+                stamp.save()
+        elif stamp.count() > 1:
+            stamp.exclude(id=stamp.first().id).delete()
         message = f"Entry Found RANGEREVERSAL for {symbol.symbol} {entry_type}, {entry_price} {entry_time}"
         slack_message_sender.delay(text=message, channel="#random")
         return True

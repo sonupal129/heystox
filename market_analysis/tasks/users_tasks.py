@@ -43,10 +43,10 @@ def login_upstox_user(email):
     try:
         upstox_user = Upstox(user_profile.credential.api_key, user_profile.credential.access_token)
         cache.set(email + "_upstox_login_user", upstox_user, 30*60*48)
+        return "Successfully Loged-In in Upstox"
     except HTTPError as e:
         slack_message_sender.delay(text="Unable to log in upstox trying again: " + str(e))
         raise HTTPError("Unable to authenticate")
-    return "Successfully Loged-In in Upstox"
 
 # @celery_app.task(queue="low_priority", ignore_result=True)
 # def func(a,b):

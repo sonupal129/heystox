@@ -30,12 +30,12 @@ class SignalRouter:
         return st_func()
 
     def route_signal(self):
-        max_order_place_time = settings.ORDER_PLACE_END_TIME
+        max_order_place_time = settings.ORDER_PLACE_END_TIME 
         current_time = get_local_time().time()
         if current_time < max_order_place_time:
             signal = self.find_router_for_strategy()
             return signal.delay(self.timestamp.id)
-        slack_message_sender.delay(text=f"Order place time ended, order can't place after {order_place_time}")
+        slack_message_sender.delay(text=f"Order place time ended, order can't place after {max_order_place_time}")
         return False
 
 
@@ -44,6 +44,9 @@ class BaseSignalTask(celery_app.Task):
     ignore_result = False
     name = "base_signal_task"
     queue = "high_priority"
+    order_place_start_time = settings.ORDER_PLACE_START_TIME
+    order_place_end_time = settings.ORDER_PLACE_END_TIME
+
 
     def prepare_orderdata(self, timestamp): 
         sorted_stock = timestamp.stock
@@ -55,7 +58,7 @@ class BaseSignalTask(celery_app.Task):
         return order_detail
 
     def base_signal_task(self, timestamp):
-        pass
+        return True
 
     def check_entry(self, timestamp):
         sorted_stock = timestamp.stock
@@ -88,6 +91,7 @@ class BaseSignalTask(celery_app.Task):
     def run(self, timestamp_id):
         timestamp = StrategyTimestamp.objects.get(id=timestamp_id)
         entry_available = self.check_entry(timestamp)
+        current_time = get_local_time().time()
 
         signal_function = None
         sleep(0.3)
@@ -96,10 +100,12 @@ class BaseSignalTask(celery_app.Task):
         except:
             raise AttributeError("Function name should be same as name attribute")
         
-        if (signal_function(self, timestamp) and entry_available) == True:
-            order_data = self.prepare_orderdata(timestamp)
-            EntryOrder().delay(order_data, strategy_id=timestamp.strategy.id)
-            return {"success": True}
+        if current_time > self.order_place_start_time and current_time < self.order_place_end_time:
+            if (signal_function(self, timestamp) and entry_available) == True:
+                order_data = self.prepare_orderdata(timestamp)
+                EntryOrder().delay(order_data, strategy_id=timestamp.strategy.id)
+                return {"success": True}
+        slack_message_sender.delay(text=f"Order can be place between {self.order_place_start_time} and {self.order_place_end_time}")
         return {"success": False, "errors": "Entry Condition Not Fulfilled"}
         
 
@@ -124,6 +130,16 @@ class GlobalSignalTask(BaseSignalTask):
             return False
 
 celery_app.tasks.register(GlobalSignalTask)
+
+class RangeReversalStrategySignalTask(GlobalSignalTask):
+    name = "range_reversal_signal_task"
+    order_place_start_time = time(9,21)
+    order_place_end_time = time(12,59)
+
+    def range_reversal_signal_task(self, timestamp):
+        return True
+
+celery_app.tasks.register(RangeReversalStrategySignalTask)
 
 
 
