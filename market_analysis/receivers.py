@@ -78,6 +78,5 @@ def call_realtime_strategies(sender, **kwargs):
     stock_id = kwargs["symbol_id"]
     data = kwargs["data"]
     realtime_strategies = symbol.get_realtime_strategies()
-    for entry_type in symbol.trade_realtime:
-        for strategy in realtime_strategies:
-            strategy.call_entry_strategy(stock_id=stock_id, entry_type=entry_type, data=data)
+    for strategy in realtime_strategies: 
+        strategy.call_entry_strategy(stock_id=stock_id, data=data)
