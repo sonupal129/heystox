@@ -39,13 +39,18 @@ class Symbol(BaseModel):
     def __str__(self):
         return self.symbol
 
-    def get_realtime_strategies(self, cached=True):
-        cache_key = "_".join([self.symbol, str(get_local_time().date()), "realtime_strategies"])
+    def get_realtime_strategies(self, strategy_type="Entry", entry_type="BUY", cached=True):
+        strategy_choice = {
+            "Entry" : "ET",
+            "Exit" : "EX"
+        }
+        cache_key = "_".join([self.symbol, str(get_local_time().date()), entry_type, strategy_type, "realtime_strategies"])
         cached_value = redis_cache.get(cache_key)
         if cached_value != None and cached:
             return cached_value
-        strategies = self.deployed_strategies.filter(strategy__is_realtime=True, active=True).prefetch_related("strategy")
-        redis_cache.set(cache_key, strategies, 9*60*60)
+        strategies = self.deployed_strategies.filter(strategy__strategy_type=strategy_choice.get(strategy_type), entry_type=entry_type, strategy__is_realtime=True, active=True).prefetch_related("strategy")
+        if strategies.exists():
+            redis_cache.set(cache_key, strategies, 9*60*60)
         return strategies
 
 
@@ -55,11 +60,11 @@ class Symbol(BaseModel):
             "Entry" : "ET",
             "Exit" : "EX"
         }
-        cache_key = "_".join([self.symbol, strategy_type, "strategies"])
+        cache_key = "_".join([self.symbol, str(get_local_time().date()), entry_type, strategy_type, "normal_strategies"])
         cached_value = redis_cache.get(cache_key)
         if cached_value != None and cached:
             return cached_value
-        strategies = self.deployed_strategies.filter(strategy__strategy_type=strategy_choice.get(strategy_type), active=True, entry_type=entry_type).prefetch_related("strategy")
+        strategies = self.deployed_strategies.filter(strategy__strategy_type=strategy_choice.get(strategy_type), active=True, entry_type=entry_type, strategy__is_realtime=False).prefetch_related("strategy")
         if strategies.exists():
             redis_cache.set(cache_key, strategies, 60*60*24)
         return strategies

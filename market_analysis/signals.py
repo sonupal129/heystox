@@ -3,4 +3,4 @@ from market_analysis.imports import *
 
 # CODE BELOW
 
-call_strategy = Signal(providing_args=["symbol_id", "symbol", "data"])
+call_strategy = Signal(providing_args=["symbol_id", "symbol", "data"]) #This signal receive data from websocket and can call any function to use that data in calling strategies

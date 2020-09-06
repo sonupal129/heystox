@@ -72,11 +72,14 @@ def update_orders_quantity(sender, instance, **kwargs):
     orders = Order.objects.filter(entry_time__date=today_date, status="CO", entry_type="ET").count()
     redis_cache.set(cache_key, orders, 12*60*60)
 
+
+# Strategy Caller
+
 @receiver(call_strategy)
-def call_realtime_strategies(sender, **kwargs):
+def call_realtime_entry_strategies(sender, **kwargs):
     symbol = kwargs["symbol"]
     stock_id = kwargs["symbol_id"]
     data = kwargs["data"]
     realtime_strategies = symbol.get_realtime_strategies()
-    for strategy in realtime_strategies: 
+    for strategy in realtime_strategies:
         strategy.call_entry_strategy(stock_id=stock_id, data=data)
