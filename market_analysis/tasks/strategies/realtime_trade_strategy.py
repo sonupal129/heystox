@@ -106,7 +106,7 @@ celery_app.tasks.register(RangeReversalStrategy)
 
 @celery_app.task(queue="low_priority", ignore_result=True)
 def prepare_data_for_range_reversal_strategy():
-    days = 5
+    days = 5 
 
     def trigger_price(price, price_type):
         trigger_amount = price * 0.10 / 100
@@ -121,8 +121,8 @@ def prepare_data_for_range_reversal_strategy():
     previous_date = today_date - timedelta(days=1)
     for symbol in symbols:
         cache_key = "_".join([symbol.symbol, "range_reversal_strategy", "cached_high_low_data", str(today_date)])
-        high_price = symbol.get_stock_high_low_price(previous_date, "HIGH", days=days)
-        low_price = symbol.get_stock_high_low_price(previous_date, "LOW", side="lowest", days=days)
+        high_price = symbol.get_stock_high_low_price(previous_date, "HIGH", days=days-1) # This will inclue +1 days so 5 days will give 6 days data so removing 1 day to get last 5 days data
+        low_price = symbol.get_stock_high_low_price(previous_date, "LOW", side="lowest", days=days-1) # This will inclue +1 days so 5 days will give 6 days data so removing 1 day to get last 5 days data
         data = {
             "high_price": high_price,
             "high_trigger_price": trigger_price(high_price, "HIGH"),

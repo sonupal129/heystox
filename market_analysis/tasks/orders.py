@@ -216,7 +216,7 @@ class UpdateOrder(BaseOrderTask):
         if is_created:
             order_book = OrderBook.objects.get_or_create(symbol=Symbol.objects.get(symbol__iexact=order_data.get("symbol")), date=get_local_time().date())
             order.transaction_type = order_data.get("transaction_type")
-            order.order_book = order_book
+            order.order_book = order_book[0]
             order.save()
         
         if order.entry_type != "" and order.status not in ["CO", "OP"]:

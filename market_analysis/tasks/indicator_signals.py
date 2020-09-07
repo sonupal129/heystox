@@ -54,7 +54,7 @@ class BaseSignalTask(celery_app.Task):
         order_detail["name"] = sorted_stock.symbol.symbol
         order_detail["entry_time"] = timestamp.timestamp
         order_detail["entry_type"] = sorted_stock.entry_type
-        order_detail["entry_price"] = int(timestamp.entry_price)
+        order_detail["entry_price"] = float(timestamp.entry_price)
         return order_detail
 
     def base_signal_task(self, timestamp):

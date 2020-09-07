@@ -37,7 +37,7 @@ def send_strategy_signal_to_router(sender, instance, **kwargs):
 def send_slack_on_order_rejection(sender, instance, **kwargs):
     """Send slack message if any error in order like order rejeceted or cancelled by broker"""
     if instance.status in ["CA", "RE"]:
-        slack_message_sender.delay(f"Order {instance.order_id}, {instance.get_status_display()}, Please Check!")
+        slack_message_sender.delay(text=f"Order {instance.order_id}, {instance.get_status_display()}, Please Check!") 
 
 @receiver(pre_delete, sender=Strategy)
 def delete_backtesting_data_on_strategy_delete(sender, instance, **kwargs):
