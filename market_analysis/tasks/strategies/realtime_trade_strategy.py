@@ -25,8 +25,8 @@ class RangeReversalStrategy(BaseEntryStrategy):
             if not cached_value.get("entry_found"):
                 high_trigger_price = cached_value["high_trigger_price"]
                 low_trigger_price = cached_value["low_trigger_price"]
-                high_price =  cached_value["high_price"]
-                low_price =  cached_value["low_price"]
+                # high_price =  cached_value["high_price"]
+                # low_price =  cached_value["low_price"]
                 ticker_high_price = data["high"]
                 ticker_low_price = data["low"]
                 ticker_ltp_price = data["ltp"]
@@ -48,17 +48,21 @@ class RangeReversalStrategy(BaseEntryStrategy):
                     if today_date.now() >= after_trigger_time:     
                         entry_found = False
                         if trigger_side == "HIGH":
-                            if ticker_ltp_price > high_price:
+                            levelup_high_price =  cached_value["levelup_high_price"]
+                            leveldown_high_price =  cached_value["leveldown_high_price"]
+                            if ticker_ltp_price > levelup_high_price:
                                 entry_found = True
                                 entry_type = "BUY"
-                            elif ticker_ltp_price < high_price:
+                            elif ticker_ltp_price < leveldown_high_price:
                                 entry_found = True
                                 entry_type = "SELL"
                         elif trigger_side == "LOW":
-                            if ticker_ltp_price > low_price:
+                            levelup_low_price =  cached_value["levelup_low_price"]
+                            leveldown_low_price =  cached_value["leveldown_low_price"]
+                            if ticker_ltp_price > levelup_low_price:
                                 entry_found = True
                                 entry_type = "BUY"
-                            elif ticker_ltp_price < low_price:
+                            elif ticker_ltp_price < leveldown_low_price:
                                 entry_found = True
                                 entry_type = "SELL"
                         if entry_found:
@@ -108,12 +112,12 @@ celery_app.tasks.register(RangeReversalStrategy)
 def prepare_data_for_range_reversal_strategy():
     days = 5 
 
-    def trigger_price(price, price_type):
-        trigger_amount = price * 0.10 / 100
+    def trigger_price(price, price_type, percentage=0.10):
+        trigger_amount = price * percentage / 100
         if price_type == "HIGH":
-            price = price - trigger_amount
-        elif price_type == "LOW":
             price = price + trigger_amount
+        elif price_type == "LOW":
+            price = price - trigger_amount
         return roundup(price)
 
     symbols  = Symbol.objects.filter(Q(trade_realtime__contains="BUY") | Q(trade_realtime__contains="SELL")).distinct()
@@ -125,9 +129,13 @@ def prepare_data_for_range_reversal_strategy():
         low_price = symbol.get_stock_high_low_price(previous_date, "LOW", side="lowest", days=days-1) # This will inclue +1 days so 5 days will give 6 days data so removing 1 day to get last 5 days data
         data = {
             "high_price": high_price,
-            "high_trigger_price": trigger_price(high_price, "HIGH"),
+            "high_trigger_price": trigger_price(high_price, "LOW"),
+            "levelup_high_price": trigger_price(high_price, "HIGH", 0.20),
+            "leveldown_high_price": trigger_price(high_price, "LOW", 0.20),
             "low_price": low_price,
-            "low_trigger_price": trigger_price(low_price, "LOW")
+            "low_trigger_price": trigger_price(low_price, "HIGH"),
+            "levelup_low_price": trigger_price(low_price, "HIGH", 0.20),
+            "leveldown_low_price": trigger_price(low_price, "LOW", 0.20)
         }
         redis_cache.set(cache_key, data, 9*60*60)
     return True

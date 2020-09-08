@@ -46,6 +46,7 @@ class BaseSignalTask(celery_app.Task):
     queue = "high_priority"
     order_place_start_time = settings.ORDER_PLACE_START_TIME
     order_place_end_time = settings.ORDER_PLACE_END_TIME
+    autoretry_for = (TypeError,)
 
 
     def prepare_orderdata(self, timestamp): 
