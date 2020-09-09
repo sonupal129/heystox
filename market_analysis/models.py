@@ -176,11 +176,9 @@ class Symbol(BaseModel):
             user.get_master_contract(self.exchange.name.upper())
             data = user.get_live_feed(user.get_instrument_by_symbol(self.exchange.name.upper(), self.symbol.upper()), LiveFeedType.Full)
         except:
-            pass
-        if data:
-            return data.get("ltp", None)
-        current_ticker = redis_cache.get(self.symbol)[-1]
-        return current_ticker.get(price_type, None)
+            current_ticker = redis_cache.get(self.symbol)[-1]
+            return current_ticker.get(price_type, None)
+        return data.get("ltp", None)
 
     def get_stock_dataframe(self, candle_queryset, candle_type="M5"):
         candles_type = {
