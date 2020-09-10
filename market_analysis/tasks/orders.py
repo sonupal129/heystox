@@ -19,8 +19,12 @@ class BaseOrderTask(celery_app.Task):
         return order1 or order2
 
     def calculate_order_quantity(self, share_price, entry_type):
-        user = get_upstox_user()
-        balance = user.get_balance()
+        cache_key = "available_balance_detail"
+        balance = redis_cache.get(cache_key)
+        if balance == None:
+            user = get_upstox_user()
+            balance = user.get_balance()
+            redis_cache.set(cache_key, balance, 60*60*9)
         if balance:
             available_margin = balance["equity"].get("available_margin")
             if available_margin <= 1000:
