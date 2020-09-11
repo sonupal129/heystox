@@ -1,5 +1,5 @@
 from market_analysis.imports import *
-from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Strategy, Symbol, BacktestReport, DeployedStrategies)
+from market_analysis.models import (UserProfile, BankDetail, Earning, SortedStocksList, StrategyTimestamp, Order, Strategy, Symbol, BacktestReport, DeployedStrategies, SortedStockDashboardReport)
 from market_analysis.tasks.strategies.backtest import delete_backtesting_data
 from market_analysis.tasks.notification_tasks import slack_message_sender
 from market_analysis.tasks.indicator_signals import SignalRouter
@@ -83,3 +83,18 @@ def call_realtime_entry_strategies(sender, **kwargs):
     realtime_strategies = symbol.get_realtime_strategies()
     for strategy in realtime_strategies:
         strategy.call_entry_strategy(stock_id=stock_id, data=data)
+
+@receiver(update_profit_loss)
+def update_sorted_stocks_dashboard_pl(sender, **kwargs):
+    today_date = get_local_time().date()
+    try:
+        dashboard = SortedStockDashboardReport.objects.get(name=kwargs["symbol"], created_at=today_date, entry_type=kwargs["entry_type"], target_price=kwargs["target_price"], stoploss_price=kwargs["stoploss"])
+        dashboard.exit_price = kwargs["exit_price"]
+        dashboard.exit_time = get_local_time().now()
+        if dashboard.entry_type == 'BUY':
+            dashboard.pl = dashboard.exit_price - dashboard.entry_price
+        elif dashboard.entry_type == "SELL":
+            dashboard.pl = dashboard.entry_price - dashboard.exit_price
+        dashboard.save()
+    except:
+        pass

@@ -139,6 +139,7 @@ class RangeReversalStrategySignalTask(GlobalSignalTask):
     name = "range_reversal_signal_task"
     order_place_start_time = time(9,21)
     order_place_end_time = time(12,59)
+    autoretry_for = (TypeError,)
 
     def range_reversal_signal_task(self, timestamp):
         return True

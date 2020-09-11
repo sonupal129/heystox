@@ -3,7 +3,7 @@ from .base_strategy import BaseExitStrategy
 from market_analysis.models import Symbol
 from market_analysis.tasks.orders import ExitOrder
 from market_analysis.tasks.notification_tasks import slack_message_sender
-from market_analysis.signals import call_strategy
+from market_analysis.signals import call_strategy, update_profit_loss
 # CODE BELOW
 
 class GlobalExitStrategy(BaseExitStrategy):
@@ -64,6 +64,8 @@ class GlobalExitStrategy(BaseExitStrategy):
                     ExitOrder().delay(context, True)
                     slack_message_sender.delay(text="{0} Hit Order Sent for trade {1}".format(order_hit, symbol_name), channel="#random")
                     redis_cache.set(stoploss_target_cache_key, True)
+                    update_profit_loss.send(sender=self.__class__, symbol=symbol_name.lower(), entry_type=transaction_type, exit_price=ltp, target_price=target_price, stoploss_price=stoploss)
+                    return True
     
     def run(self, stock_name, backtest=False, backtesting_candles_data=None):
         if backtest or backtesting_candles_data:

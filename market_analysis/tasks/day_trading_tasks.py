@@ -151,55 +151,6 @@ def todays_movement_stocks_add_on_sideways():
         return "Function Called"
     return "Function Not Called"
 
-@celery_app.task(queue="high_priority") # Need to work more on this function giving wrong data
-def calculate_profit_loss_on_entry_stocks():
-    todays_date = get_local_time().date()
-    reports = SortedStockDashboardReport.objects.filter(entry_time__date=todays_date)
-    if reports:
-        for report in reports:
-            stock = Symbol.objects.get(symbol=report.name.lower())
-            live_data = stock.get_stock_live_data()
-            live_data = live_data.loc[live_data["date"] > str(report.entry_time)]
-    
-            if report.entry_type == "BUY":
-                try:
-                    target_price_row = live_data.loc[live_data["high_price"] >= report.target_price ].iloc[0]
-                    stoploss_price_row = live_data.loc[live_data["low_price"] <= report.stoploss_price ].iloc[0]
-                except:
-                    target_price_row = pd.Series()
-                    stoploss_price_row = pd.Series()
-                if not target_price_row.empty and not stoploss_price_row.empty:
-                    final_price = target_price_row if target_price_row.date < stoploss_price_row.date else stoploss_price_row
-                else:
-                    final_price = target_price_row if target_price.any().low_price else stoploss_price
-                final_price = final_price.head(0)
-                if not final_price.empty:
-                    if final_price.high_price >= report.target_price:
-                        status = "TARGET_HIT"
-                    elif final_price.low_price <= report.stoploss_price:
-                        status = "STOPLOSS_HIT"
-            elif report.entry_type == "SELL":
-                target_price = live_data.loc[live_data["low_price"] <= report.target_price ].head(1)
-                stoploss_price = live_data.loc[live_data["high_price"] >= report.stoploss_price].head(1)
-                if target_price.any().low_price and stoploss_price.any().high_price:
-                    final_price = target_price if target_price.date < stoploss_price.date else stoploss_price
-                else:
-                    final_price = target_price if target_price.any().low_price else stoploss_price
-                final_price = final_price.head(0)
-                if not final_price.empty:
-                    if final_price.low_price <= report.target_price:
-                        status = "TARGET_HIT"
-                    elif final_price.high_price >= report.stoploss_price:
-                        status = "STOPLOSS_HIT"
-                    
-            if status:
-                if status == "STOPLOSS_HIT":
-                    report.pl = round(abs(report.entry_price - report.stoploss_price), 2)
-                elif status == "STATUS":
-                    report.pl = round(abs(report.target_price - report.entry_price), 2)
-                report.save()
-
-
 @celery_app.task(queue="shower")
 def start_websocket(run_in_background=True):
     start_upstox_websocket(run_in_background)
