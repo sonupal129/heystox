@@ -47,24 +47,20 @@ class RangeReversalStrategy(BaseEntryStrategy):
                     trigger_side = cached_value["trigger_side"]
                     if today_date.now() >= after_trigger_time:     
                         entry_found = False
-                        if trigger_side == "HIGH":
+                        if entry_type == "BUY":
                             levelup_high_price =  cached_value["levelup_high_price"]
                             leveldown_high_price =  cached_value["leveldown_high_price"]
-                            if ticker_ltp_price > levelup_high_price:
+                            if trigger_side == "HIGH" and ticker_ltp_price > levelup_high_price:
                                 entry_found = True
-                                entry_type = "BUY"
-                            elif ticker_ltp_price < leveldown_high_price:
+                            elif trigger_side == "LOW" and ticker_ltp_price > leveldown_high_price:
                                 entry_found = True
-                                entry_type = "SELL"
-                        elif trigger_side == "LOW":
-                            levelup_low_price =  cached_value["levelup_low_price"]
+                        elif entry_type == "SELL":
                             leveldown_low_price =  cached_value["leveldown_low_price"]
-                            if ticker_ltp_price > levelup_low_price:
+                            levelup_low_price =  cached_value["levelup_low_price"]
+                            if trigger_side == "HIGH" and ticker_ltp_price < levelup_low_price:
                                 entry_found = True
-                                entry_type = "BUY"
-                            elif ticker_ltp_price < leveldown_low_price:
+                            elif trigger_side == "LOW" and ticker_ltp_price < leveldown_low_price:
                                 entry_found = True
-                                entry_type = "SELL"
                         if entry_found:
                             cached_value["entry_found"] = True
                             cached_value["entry_time"] = today_date.now()
