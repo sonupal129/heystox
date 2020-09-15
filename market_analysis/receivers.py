@@ -77,7 +77,7 @@ def update_orders_quantity(sender, instance, **kwargs):
 
 @receiver(call_strategy)
 def call_realtime_entry_strategies(sender, **kwargs):
-    symbol = kwargs["symbol"]
+    symbol = kwargs["symbol"] 
     stock_id = kwargs["symbol_id"]
     data = kwargs["data"]
     realtime_strategies = symbol.get_realtime_strategies()

@@ -14,8 +14,6 @@ class RangeReversalStrategy(BaseEntryStrategy):
     def higher_range_reversal_strategy(self, stock_id, entry_type, *args, **kwargs):
         
         data = kwargs["data"]
-        # print(kwargs)
-        # print(args)
         symbol_name = data["symbol"].lower()
         today_date = get_local_time()
         cache_key = "_".join([symbol_name, "range_reversal_strategy", "cached_high_low_data", str(today_date.date())])
@@ -48,16 +46,16 @@ class RangeReversalStrategy(BaseEntryStrategy):
                     if today_date.now() >= after_trigger_time:     
                         entry_found = False
                         levelup_high_price =  cached_value["levelup_high_price"]
+                        levelup_low_price =  cached_value["levelup_low_price"]
                         leveldown_high_price =  cached_value["leveldown_high_price"]
                         leveldown_low_price =  cached_value["leveldown_low_price"]
-                        levelup_low_price =  cached_value["levelup_low_price"]
                         if entry_type == "BUY":                            
                             if trigger_side == "HIGH" and ticker_ltp_price > levelup_high_price:
                                 entry_found = True
-                            elif trigger_side == "LOW" and ticker_ltp_price > levelup_low_price:
+                            elif trigger_side == "LOW" and ticker_ltp_price > leveldown_high_price:
                                 entry_found = True
                         elif entry_type == "SELL":
-                            if trigger_side == "HIGH" and ticker_ltp_price < leveldown_high_price:
+                            if trigger_side == "HIGH" and ticker_ltp_price < levelup_low_price:
                                 entry_found = True
                             elif trigger_side == "LOW" and ticker_ltp_price < leveldown_low_price:
                                 entry_found = True
@@ -123,16 +121,19 @@ def prepare_data_for_range_reversal_strategy():
         cache_key = "_".join([symbol.symbol, "range_reversal_strategy", "cached_high_low_data", str(today_date)])
         high_price = symbol.get_stock_high_low_price(previous_date, "HIGH", days=days-1) # This will inclue +1 days so 5 days will give 6 days data so removing 1 day to get last 5 days data
         low_price = symbol.get_stock_high_low_price(previous_date, "LOW", side="lowest", days=days-1) # This will inclue +1 days so 5 days will give 6 days data so removing 1 day to get last 5 days data
+        context = {}
+        
         data = {
             "high_price": high_price,
             "high_trigger_price": trigger_price(high_price, "LOW"),
             "levelup_high_price": trigger_price(high_price, "HIGH", 0.20),
-            "leveldown_high_price": trigger_price(high_price, "LOW", 0.20),
+            "levelup_low_price": trigger_price(high_price, "LOW", 0.20),
             "low_price": low_price,
             "low_trigger_price": trigger_price(low_price, "HIGH"),
-            "levelup_low_price": trigger_price(low_price, "HIGH", 0.20),
+            "leveldown_high_price": trigger_price(low_price, "HIGH", 0.20),
             "leveldown_low_price": trigger_price(low_price, "LOW", 0.20)
         }
+        # context[""]
         redis_cache.set(cache_key, data, 9*60*60)
     return True
 

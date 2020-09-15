@@ -48,6 +48,10 @@ class BaseOrderTask(celery_app.Task):
         tg_price = get_stock_target_price(price, entry_type)
         return tg_price
 
+    def stoploss_saver_price(self, price, entry_type):
+        saver_price = get_stoploss_saver_price(price, entry_type)
+        return saver_price
+
     def get_placed_order_quantity(self):
         cache_key = str(get_local_time().date()) + "_total_order_quantity"
         cached_value = redis_cache.get(cache_key)
@@ -257,7 +261,7 @@ class UpdateOrder(BaseOrderTask):
                     "symbol": order_data.get("symbol"),
                     "target_price" : order.target_price,
                     "stoploss": order.stoploss,
-                    "auto_exit_price" : get_auto_exit_price(order.entry_price, order.transaction_type),
+                    "stoploss_saver_price" : self.stoploss_saver_price(order.entry_price, order.transaction_type),
                     "transaction_type" : order.transaction_type,
                     "order_id" : order.order_id,
                     "entry_price" : order.entry_price,
@@ -290,79 +294,6 @@ def cancel_not_executed_orders(from_last_minutes=20):
     if orders.exists():
         for order in orders:
             user.cancel_order(order.order_id)
-
-
-@celery_app.task(queue="torrent_shower")
-def exit_on_auto_hit_price(symbol_name:str):
-    """This function will take exit if price after reaching a certain price coming down or vice versa"""
-    cache_key = "_".join([symbol_name.lower(), "cached_ticker_data"])
-    cached_value = redis_cache.get(cache_key)
-    df = pd.DataFrame(cached_value["stock_data"])
-    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
-    df.timestamp = df.timestamp.dt.tz_localize('UTC').dt.tz_convert(get_local_time().tzinfo).dt.tz_localize(None)
-    price_type = "high" if cached_value["transaction_type"]  == "BUY" else "low"
-    limit_price = cached_value[price_type]
-    price_hit = False
-    hit_price = cached_value["auto_exit_price"]
-
-    price_hit_row = pd.Series()
-    
-    try:
-        if price_type == "high" and limit_price > hit_price:
-            price_hit = True
-            price_hit_row = df.loc[df["ltp"] >= hit_price].iloc[0]
-        elif price_type == "low" and limit_price < hit_price:
-            price_hit = True
-            price_hit_row = df.loc[df["ltp"] <= hit_price].iloc[0]
-    except:
-        pass
-        
-    if not price_hit_row.empty:
-        df = df.loc[df["timestamp"] > price_hit_row.timestamp + timedelta(minutes=15)] # Time Increament should happen automatically, Implement Later
-        auto_exit_cache_key = "_".join([symbol_name.lower(), "auto_exit_price"])
-        if not df.empty:
-            last_ticker = df.iloc[-1]
-            last_ticker_ltp = last_ticker.ltp
-            
-            context = {'transaction_type': cached_value["transaction_type"],
-                'symbol': cached_value["symbol"],
-                'order_type': 'LIMIT',
-                'quantity': cached_value["quantity"],
-                'price': 0.0,
-                'duarion_type': 'DAY',
-                'product_type': 'INTRADAY'
-            }
-
-            auto_exit_hit = False
-
-            if cached_value["transaction_type"]  == "BUY" and price_hit:
-                context["transaction_type"] = "SELL"
-                if last_ticker_ltp in np.arange(hit_price, hit_price+0.05, 0.05):
-                    context["price"] = hit_price   
-                    # print("BUY Auto Exit Limit")
-                    auto_exit_hit = True
-                elif last_ticker_ltp in np.arange(hit_price-0.05, hit_price-0.15, 0.05):
-                    context["price"] = 0.0
-                    context["order_type"] = "MARKET"
-                    auto_exit_hit = True
-                    # print("BUY Auto Exit Market")
-            elif cached_value["transaction_type"]  == "SELL" and price_hit:
-                context["transaction_type"] = "BUY"
-                if last_ticker_ltp in np.arange(hit_price, hit_price+0.15, 0.05):
-                    context["price"] = 0.0
-                    context["order_type"] = "MARKET"
-                    auto_exit_hit = True
-                    # print("Sell Auto Exit Limit")
-                elif last_ticker_ltp in np.arange(hit_price, hit_price+0.05, 0.05):
-                    context["price"] = 0.0
-                    auto_exit_hit = True
-                    # print("Sell Auto Exit Market")
-
-            if auto_exit_hit:
-                if not redis_cache.get(auto_exit_cache_key):
-                    send_order_request.delay(context, True) # send order request with market order
-                    slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(symbol_name), channel="#random")
-                    redis_cache.set(auto_exit_cache_key)
 
 
 @celery_app.task(queue="high_priority", autoretry_for=(HTTPError,))

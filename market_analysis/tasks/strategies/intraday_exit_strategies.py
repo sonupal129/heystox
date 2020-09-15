@@ -3,7 +3,7 @@ from .base_strategy import BaseExitStrategy
 from market_analysis.models import Symbol
 from market_analysis.tasks.orders import ExitOrder
 from market_analysis.tasks.notification_tasks import slack_message_sender
-from market_analysis.signals import call_strategy, update_profit_loss
+from market_analysis.signals import *
 # CODE BELOW
 
 class GlobalExitStrategy(BaseExitStrategy):
@@ -114,7 +114,7 @@ class TickerDataCaller:
                 cached_value["stock_data"].append(context)
             redis_cache.set(order_cache_key, cached_value)
             GlobalExitStrategy().delay(self.data["symbol"].lower()) # Need to work on exit strategy and create a strategy router
-        # exit_on_auto_hit_price.delay(data["symbol"].lower())
+            stoploss_saver.delay(data["symbol"].lower())
         return True
  
     def run(self):
@@ -132,3 +132,43 @@ def socket_data_shower(message):
     TickerDataCaller(message).run()
     return True
     
+
+@celery_app.task(queue="torrent_shower")
+def stoploss_saver(symbol_name:str):
+    """This function will take exit if price after reaching a certain price coming down or vice versa"""
+    cache_key = "_".join([symbol_name.lower(), "cached_ticker_data"])
+    cached_value = redis_cache.get(cache_key)
+    stoploss_saver_price = cached_value["stoploss_saver_price"]
+    transaction_type = cached_value["transaction_type"]
+    stoploss_saver_hit = False
+    ltp = cached_value["ltp"]
+    price_fall = False
+    if not cached_value.get("stoploss_saver_hit"):
+        if transaction_type == "BUY" and ltp >= stoploss_saver_price:
+            stoploss_saver_hit = True
+        elif transaction_type == "SELL" and ltp <= stoploss_saver_price:
+            stoploss_saver_hit = True
+        
+        if stoploss_saver_hit:
+            cached_value["stoploss_saver_hit"] = True
+            redis_cache.set(cache_key, cached_value, redis_cache.ttl(cache_key))
+    else:
+        if transaction_type == "SELL" and ltp >= cached_value["entry_price"]:
+            price_fall = True
+        elif transaction_type == "BUY" and ltp <= cached_value["entry_price"]:
+            price_fall = True
+        
+    if price_fall:
+        auto_exit_cache_key = "_".join([symbol_name.lower(), "auto_exit_price"])
+        context = {'transaction_type': "SELL" if transaction_type == "BUY" else "BUY",
+            'symbol': cached_value["symbol"],
+            'order_type': 'LIMIT',
+            'quantity': cached_value["quantity"],
+            'price': ltp,
+            'duarion_type': 'DAY',
+            'product_type': 'INTRADAY'
+        }
+        if not redis_cache.get(auto_exit_cache_key):
+            ExitOrder().delay(context, True) # send order request with market order
+            slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(symbol_name), channel="#random")
+            redis_cache.set(auto_exit_cache_key)

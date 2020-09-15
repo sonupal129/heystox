@@ -162,33 +162,45 @@ def is_time_between_range(obj_time, last_minutes):
 
 def get_stock_stoploss_price(price, entry_type):
     if price < 100:
-        sl = settings.DEFAULT_STOPLOSS + 0.10
+        sl = 0.10
     elif price < 200:
-        sl = settings.DEFAULT_STOPLOSS + 0.20
+        sl =  0.20
     elif price < 300:
-        sl = settings.DEFAULT_STOPLOSS + 0.40
+        sl = 0.40
     else:
-        sl = settings.DEFAULT_STOPLOSS + 0.70
-    if entry_type == "SELL":
-        stoploss = price + (price * sl /100)
-    elif entry_type == "BUY":
-        stoploss = price - (price * sl /100)
-    return roundup(stoploss)
+        sl = 0.70
+    sl += settings.DEFAULT_STOPLOSS
+    stoploss = price * sl /100
+    return roundup(price + stoploss if entry_type == "SELL" else price - stoploss)
+
 
 def get_stock_target_price(price, entry_type):
     if price < 100:
-        tg = settings.DEFAULT_TARGET + 0.5
+        tg = 0.5
     elif price < 200:
-        tg = settings.DEFAULT_TARGET + 0.20
+        tg = 0.40
     elif price < 300:
-        tg = settings.DEFAULT_TARGET + 0.40
+        tg = 0.80
     else:
-        tg = settings.DEFAULT_TARGET + 0.70
-    if entry_type == "SELL":
-        target = price - (price * tg /100)
-    elif entry_type == "BUY":
-        target = price + (price * tg /100)
-    return roundup(target)
+        tg = abs(price - get_stock_stoploss_price(price, entry_type)) * 2
+        return roundup(price - tg if entry_type == "SELL" else price + tg)
+    tg += settings.DEFAULT_TARGET
+    tgt = price * tg/ 100
+    return roundup(price - tgt if entry_type == "SELL" else price + tgt)
+
+
+def get_stoploss_saver_price(price, entry_type):
+    hit_price = get_stock_stoploss_price(price, "BUY" if entry_type == "SELL" else "SELL")
+    if price < 100:
+        pp = 0.5
+    elif price < 200:
+        pp = 0.40
+    elif price < 300:
+        pp = 0.80
+    else:
+        pp = 0.80
+    return roundup(hit_price + pp if entry_type == "BUY" else hit_price - pp)
+
 
 def get_auto_exit_price(price, entry_type):
     fixed_auto_exit_percentage = settings.DEFAULT_STOPLOSS / 2
