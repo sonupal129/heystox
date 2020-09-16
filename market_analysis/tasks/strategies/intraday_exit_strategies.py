@@ -141,7 +141,7 @@ def stoploss_saver(symbol_name:str):
     stoploss_saver_price = cached_value["stoploss_saver_price"]
     transaction_type = cached_value["transaction_type"]
     stoploss_saver_hit = False
-    ltp = cached_value["ltp"]
+    ltp = cached_value["stock_data"][-1]["ltp"]
     price_fall = False
     if not cached_value.get("stoploss_saver_hit"):
         if transaction_type == "BUY" and ltp >= stoploss_saver_price:
