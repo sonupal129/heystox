@@ -63,16 +63,18 @@
     {% if request.user.is_superuser and upstox_user %}
     <a href=""><button class="button" style="position:absolute;top:20%;right:2%;">Log Out Upstox</button></a>
     {% endif %}
-    <a href="ww.gltist.com" target="_blank"><button class="button" style="position:absolute;top:20%;right:20%;">Futures</button></a>
+    <a href="www.google.com" target="_blank"><button class="button" style="position:absolute;top:20%;right:20%;">Futures</button></a>
     <table>
         <tr>
             <th>Name</th>
-            <th>Date</th>
-            <th>Entry Type</th>
-            <th>Entry Price</th>
+            <th>Entry time</th>
+            <th>Exit time</th>
+            <th>Entry type</th>
+            <th>Entry price</th>
+            <th>Exit price</th>
             <th>Stoploss</th>
             <th>Target</th>
-            <th>Auto Exit</th>
+            <th>Quantity</th>
             <th>Profit/Loss</th>
         </tr>
         {% if symbols %}
@@ -80,16 +82,21 @@
             <tr>
                 <td>{{ symbol.name }}</td>
                 <td>{{ symbol.entry_time }}</td>
+                <td>{{ symbol.exit_time }}</td>
                 <td>{{ symbol.entry_type }}</td>
                 <td>{{ symbol.entry_price }}</td>
+                <td>{{ symbol.exit_price }}</td>
                 <td>{{ symbol.stoploss_price }}</td>
                 <td>{{ symbol.target_price }}</td>
-                <td>Working</td>
-                <td>{{ symbol.pl }}</td>
+                <td>{{ symbol.quantity }}</td>
+                <td>{% get_total_loss symbol %}</td>
             </tr>
             {% endfor %}
         {% endif %}
     </table>
 </body>
+<script>
+    
+</script>
 
 </html>

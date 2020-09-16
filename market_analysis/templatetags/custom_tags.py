@@ -17,3 +17,7 @@ def get_sorted_stock_closing_price(sorted_stock):
     if closing_price:
         return closing_price
     return None
+
+@register.simple_tag
+def get_total_loss(symbol):
+    return symbol.quantity * symbol.pl
