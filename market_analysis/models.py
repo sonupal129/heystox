@@ -641,7 +641,7 @@ class SortedStockDashboardReport(BaseModel):
     target_price = models.FloatField(blank=True, null=True)
     stoploss_price = models.FloatField(blank=True, null=True)
     exit_price = models.FloatField(blank=True, null=True)
-    current_price = models.FloatField(blank=True, null=True)
+    quantity = models.IntegerField(blank=True, null=True)
     pl = models.FloatField(blank=True, null=True)
     
     def __str__(self):

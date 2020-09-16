@@ -94,7 +94,7 @@ def update_sorted_stocks_dashboard_pl(sender, **kwargs):
         if dashboard.entry_type == 'BUY':
             dashboard.pl = dashboard.exit_price - dashboard.entry_price
         elif dashboard.entry_type == "SELL":
-            dashboard.pl = dashboard.entry_price - dashboard.exit_price
+            dashboard.pl = roundup(dashboard.entry_price - dashboard.exit_price)
         dashboard.save()
     except:
         pass

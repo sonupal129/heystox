@@ -169,7 +169,7 @@ def stoploss_saver(symbol_name:str):
             'product_type': 'INTRADAY'
         }
         if not redis_cache.get(auto_exit_cache_key):
+            update_profit_loss.send(sender=self.__class__, symbol=symbol_name.lower(), entry_type=transaction_type, exit_price=ltp, target_price=cached_value["target_price"], stoploss_price=cached_value["stoploss"])
             ExitOrder().delay(context, True) # send order request with market order
             slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(symbol_name), channel="#random")
-            update_profit_loss.send(sender=self.__class__, symbol=symbol_name.lower(), entry_type=transaction_type, exit_price=ltp, target_price=cached_value["target_price"], stoploss_price=cached_value["stoploss"])
             redis_cache.set(auto_exit_cache_key)

@@ -6,7 +6,6 @@ from market_analysis.tasks.notification_tasks import slack_message_sender
 
 class UsersListView(APIView):
     # permission_classes = [IsAuthenticated]
-    
     def get(self, request):
         users = UserProfile.objects.all()
         serializer = UserProfileSerializer(users, many=True)

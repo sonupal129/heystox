@@ -160,6 +160,7 @@ class EntryOrder(BaseOrderTask):
         price = report.entry_price
         report.stoploss_price = self.stock_stoploss_price(price, report.entry_type)
         report.target_price = self.stock_target_price(price, report.entry_type)
+        report.quantity = self.calculate_order_quantity(price, report.entry_type)
         report.save()
 
 
@@ -177,10 +178,10 @@ class EntryOrder(BaseOrderTask):
         entry_time = get_local_time().strptime(signal_detail.get("entry_time"), "%Y-%m-%dT%H:%M:%S")
         data = [entry_type, name, self.calculate_order_quantity(entry_price, entry_type), entry_price, "DAY", "LIMIT", "INTRADAY"]
         order_schema = self.ready_order_data(data)
-        obj, is_created = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
-        self.add_expected_target_stoploss(obj.id)
-        slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
         self.send_order_request(order_schema, **kwargs)
+        obj = SortedStockDashboardReport.objects.get_or_create(**signal_detail)
+        self.add_expected_target_stoploss(obj[0].id)
+        slack_message_sender.delay(text=f"{entry_price} Signal {entry_type} Stock Name {name} Time {entry_time}", channel="#random")
 
     def run(self, signal_detail:dict, **kwargs):
         self.send_order_place_request(signal_detail, **kwargs)
