@@ -114,7 +114,7 @@ class TickerDataCaller:
                 cached_value["stock_data"].append(context)
             redis_cache.set(order_cache_key, cached_value)
             GlobalExitStrategy().delay(self.data["symbol"].lower()) # Need to work on exit strategy and create a strategy router
-            stoploss_saver.delay(data["symbol"].lower())
+            stoploss_saver.delay(self.data["symbol"].lower())
         return True
  
     def run(self):
