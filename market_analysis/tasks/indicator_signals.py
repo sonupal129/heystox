@@ -147,6 +147,11 @@ class RangeReversalStrategySignalTask(GlobalSignalTask):
     def range_reversal_signal_task(self, timestamp):
         return True
 
+    def prepare_orderdata(self, timestamp):
+        data = super(RangeReversalStrategySignalTask, self).prepare_orderdata(timestamp)
+        data["entry_type"] = "SELL" if timestamp.stock.entry_type == "BUY" else "BUY"
+        return data
+
 celery_app.tasks.register(RangeReversalStrategySignalTask)
 
 

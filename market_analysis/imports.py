@@ -70,6 +70,7 @@ import django_filters
 from heystox_trade.celery import app as celery_app
 from celery.schedules import crontab
 from celery import group
+from celery.exceptions import WorkerLostError
 
 # Import Redis
 import redis

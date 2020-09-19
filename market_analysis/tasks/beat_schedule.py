@@ -143,10 +143,10 @@ day_trading_tasks = {
 }
 
 orders = {
-    "cancel_not_executed_orders": {
-        "task": "market_analysis.tasks.orders.cancel_not_executed_orders",
-        "schedule": crontab(day_of_week="1-5", hour="10-14", minute="*/12"),
-    },
+    # "cancel_not_executed_orders": {
+    #     "task": "market_analysis.tasks.orders.cancel_not_executed_orders",
+    #     "schedule": crontab(day_of_week="1-5", hour="10-14", minute="*/12"),
+    # },
     "cancel_not_executed_orders_all": {
         "task": "market_analysis.tasks.orders.cancel_not_executed_orders",
         "schedule": crontab(day_of_week="1-5", hour=14, minute=50),

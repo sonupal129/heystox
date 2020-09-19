@@ -23,8 +23,8 @@ class RangeReversalStrategy(BaseEntryStrategy):
             if not cached_value.get("entry_found"):
                 high_trigger_price = cached_value["high_trigger_price"]
                 low_trigger_price = cached_value["low_trigger_price"]
-                # high_price =  cached_value["high_price"]
-                # low_price =  cached_value["low_price"]
+                high_price =  cached_value["high_price"]
+                low_price =  cached_value["low_price"]
                 ticker_high_price = data["high"]
                 ticker_low_price = data["low"]
                 ticker_ltp_price = data["ltp"]
@@ -52,18 +52,22 @@ class RangeReversalStrategy(BaseEntryStrategy):
                         if entry_type == "BUY":                            
                             if trigger_side == "HIGH" and ticker_ltp_price > levelup_high_price:
                                 entry_found = True
+                                entry_price = high_price if ticker_ltp_price > high_price else ticker_ltp_price
                             elif trigger_side == "LOW" and ticker_ltp_price > leveldown_high_price:
                                 entry_found = True
+                                entry_price = low_price if ticker_ltp_price > low_price else ticker_ltp_price
                         elif entry_type == "SELL":
                             if trigger_side == "HIGH" and ticker_ltp_price < levelup_low_price:
                                 entry_found = True
+                                entry_price = high_price if ticker_ltp_price < high_price else ticker_ltp_price
                             elif trigger_side == "LOW" and ticker_ltp_price < leveldown_low_price:
                                 entry_found = True
+                                entry_price = low_price if ticker_ltp_price < low_price else ticker_ltp_price
                         if entry_found:
                             cached_value["entry_found"] = True
                             cached_value["entry_time"] = today_date.now()
                             redis_cache.set(cache_key, cached_value, 9*60*60)
-                            return self.make_response(stock_id, entry_type, ticker_ltp_price, today_date.now())
+                            return self.make_response(stock_id, entry_type, entry_price, today_date.now())
         return "No Entry"
 
     def make_response(self, stock_id, entry_type, ltp, entry_time, **kwargs):

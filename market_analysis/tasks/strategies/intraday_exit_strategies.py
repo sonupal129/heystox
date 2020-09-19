@@ -11,6 +11,7 @@ class GlobalExitStrategy(BaseExitStrategy):
     1:2 mean on 1 rupee risk we are looking at 2 rupee target"""
     name = "exit_on_stoploss_target_hit"
     queue = "torrent_shower"
+    autoretry_for = (WorkerLostError,)
    
     def exit_on_stoploss_target_hit(self, symbol_name:str):
         cache_key = "_".join([symbol_name.lower(), "cached_ticker_data"])
@@ -127,13 +128,13 @@ class TickerDataCaller:
         # call_strategy.send(sender="self.__class__", symbol_id=104, symbol=Symbol.objects.get(symbol="ashokley"), data=self.data)
         return True
 
-@celery_app.task(queue="torrent_shower", ignore_result=True)
+@celery_app.task(queue="torrent_shower", ignore_result=True, autoretry_for=(WorkerLostError,))
 def socket_data_shower(message):
     TickerDataCaller(message).run()
     return True
     
 
-@celery_app.task(queue="torrent_shower")
+@celery_app.task(queue="low_priority")
 def stoploss_saver(symbol_name:str):
     """This function will take exit if price after reaching a certain price coming down or vice versa"""
     cache_key = "_".join([symbol_name.lower(), "cached_ticker_data"])

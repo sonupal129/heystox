@@ -1,4 +1,5 @@
 from django import template
+from market_analysis.imports import *
 # Code Starts
 
 register = template.Library()
@@ -21,5 +22,5 @@ def get_sorted_stock_closing_price(sorted_stock):
 @register.simple_tag
 def get_total_loss(symbol):
     if symbol.quantity and symbol.pl:
-        return symbol.quantity * symbol.pl
+        return roundup(symbol.quantity * symbol.pl)
     
