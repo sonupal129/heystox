@@ -90,14 +90,12 @@ class RangeReversalStrategy(BaseEntryStrategy):
         symbol = Symbol.objects.get(id=stock_id)
         sorted_stock, is_created = SortedStocksList.objects.update_or_create(symbol=symbol, created_at__date=current_time.date(), entry_type=entry_type, defaults={"added" : "ML" })
         deployed_strategy = symbol.deployed_strategies.get(strategy__strategy_name=self.__class__.__name__, entry_type=entry_type, timeframe=None, active=True)
-        stamp = StrategyTimestamp.objects.filter(stock=sorted_stock, strategy=deployed_strategy, timestamp__range=[entry_time - timedelta(minutes=20), entry_time + timedelta(minutes=20)]).order_by("timestamp")
-        if not stamp.exists():
+        stamps = StrategyTimestamp.objects.filter(stock=sorted_stock, strategy=deployed_strategy, timestamp__range=[entry_time - timedelta(minutes=20), entry_time + timedelta(minutes=20)]).order_by("timestamp")
+        if not stamps.exists():
             if entry_time.date() == current_time.date():
-                stamp = StrategyTimestamp.objects.create(stock=sorted_stock, strategy=deployed_strategy, timestamp=entry_time)
-                stamp.entry_price = entry_price
-                stamp.save()
-        elif stamp.count() > 1:
-            stamp.exclude(id=stamp.first().id).delete()
+                StrategyTimestamp.objects.create(stock=sorted_stock, strategy=deployed_strategy, timestamp=entry_time, entry_price=entry_price)
+        elif stamps.count() > 1:
+            stamps.exclude(id=stamps.first().id).delete()
         message = f"Entry Found RANGEREVERSAL for {symbol.symbol} {entry_type}, {entry_price} {entry_time}"
         slack_message_sender.delay(text=message, channel="#random")
         return True
