@@ -58,15 +58,6 @@ class SortedStocksListView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# class LiveStockDataView(APIView):
-#     http_method_names = ["get"]
-
-#     def get(self, request, symbol_name):
-#         obj = get_object_or_404(Symbol, symbol=symbol_name)
-#         data = obj.get_stock_live_data().to_json()
-#         return HttpResponse(data, content_type = 'application/json')
-
-
 class CachedTickerDataView(APIView):
     http_method_names = ["get"]
 
