@@ -279,7 +279,8 @@ class UpdateOrder(BaseOrderTask):
                 redis_cache.delete(stoploss_target_cache_key)
                 redis_cache.delete(cache_key)
                 user.unsubscribe(user.get_instrument_by_symbol(order_data.get("exchange"), order_data.get("symbol")), LiveFeedType.Full)
-        slack_message_sender.delay(text=str(order.order_id) + " Order Status Changed to {0} Please Check".format(order_data["status"]), channel="#random")
+        message =  str(order.order_id) + " Order Status Changed to {0} for {1} Please Check!".format(order_data["status"], order_data.get("symbol"))
+        slack_message_sender.delay(text=message, channel="#random")
 
     def run(self, order_data:dict, *args, **kwargs):
         self.create_update_order_on_update(order_data)

@@ -1,7 +1,7 @@
 from market_analysis.imports import *
 from market_analysis.tasks.orders import EntryOrder
 from market_analysis.tasks.notification_tasks import slack_message_sender
-from market_analysis.models import StrategyTimestamp, OrderBook
+from market_analysis.models import StrategyTimestamp, OrderBook, Symbol
 from market_analysis.tasks.trading import get_upstox_user
 # CODE Below 
 # Signal Router for Routing Order Data Processing as per Strategy
@@ -145,6 +145,14 @@ class RangeReversalStrategySignalTask(GlobalSignalTask):
     autoretry_for = (TypeError,)
 
     def range_reversal_signal_task(self, timestamp):
+        # To be Activate after finding problem in Against entry problem
+        # nifty_50_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
+        # sorted_stock = timestamp.stock
+        # if sorted_stock.entry_type == "BUY" and nifty_50_movement in ["BUY", "SIDEWAYS"]:
+        #     return True
+        # elif sorted_stock.entry_type == "SELL" and nifty_50_movement in ["SELL", "SIDEWAYS"]:
+        #     return True
+        # return False
         return True
 
     def prepare_orderdata(self, timestamp):
