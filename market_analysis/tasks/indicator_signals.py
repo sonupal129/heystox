@@ -145,15 +145,16 @@ class RangeReversalStrategySignalTask(GlobalSignalTask):
     autoretry_for = (TypeError,)
 
     def range_reversal_signal_task(self, timestamp):
-        # To be Activate after finding problem in Against entry problem
-        # nifty_50_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
-        # sorted_stock = timestamp.stock
-        # if sorted_stock.entry_type == "BUY" and nifty_50_movement in ["BUY", "SIDEWAYS"]:
-        #     return True
-        # elif sorted_stock.entry_type == "SELL" and nifty_50_movement in ["SELL", "SIDEWAYS"]:
-        #     return True
-        # return False
-        return True
+        nifty_50_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
+        sorted_stock = timestamp.stock
+        if sorted_stock.entry_type == "BUY" and nifty_50_movement in ["BUY", "SIDEWAYS"]:
+            return True
+        elif sorted_stock.entry_type == "SELL" and nifty_50_movement in ["SELL", "SIDEWAYS"]:
+            return True
+        message = f"Stock Entry is {sorted_stock.entry_type} & market is moving in diffrent direction {nifty_50_movement}"
+        slack_message_sender.delay(text=message, channel="#random")
+        return False
+        
 
     def prepare_orderdata(self, timestamp):
         data = super(RangeReversalStrategySignalTask, self).prepare_orderdata(timestamp)
