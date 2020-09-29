@@ -145,7 +145,7 @@ class RangeReversalStrategySignalTask(GlobalSignalTask):
     autoretry_for = (TypeError,)
 
     def range_reversal_signal_task(self, timestamp):
-        nifty_50_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement()
+        nifty_50_movement = Symbol.objects.get(symbol="nifty_50").get_nifty_movement(bull_point=50)
         sorted_stock = timestamp.stock
         if sorted_stock.entry_type == "BUY" and nifty_50_movement in ["BUY", "SIDEWAYS"]:
             return True
