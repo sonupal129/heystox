@@ -175,4 +175,3 @@ def subscribe_stocks_for_realtime_trading(subscribe=True):
                 user.unsubscribe(user.get_instrument_by_symbol(symbol.exchange.name, symbol.symbol), LiveFeedType.Full)
             except:
                 pass
-

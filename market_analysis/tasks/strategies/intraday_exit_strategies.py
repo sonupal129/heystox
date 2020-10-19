@@ -40,7 +40,6 @@ class GlobalExitStrategy(BaseExitStrategy):
                 context["transaction_type"] = "SELL"
                 if ltp >= target_price: # BUY
                     context["price"] = target_price
-                    # print("BUY HIt")
                     target_stoploss_hit = True
                     order_hit = "TARGET"
                 elif ltp <= stoploss:
@@ -51,14 +50,12 @@ class GlobalExitStrategy(BaseExitStrategy):
                 context["transaction_type"] = "BUY"
                 if ltp <= target_price:
                     context["price"] = target_price
-                    # print("SELL HIT")
                     order_hit = "TARGET"
                     target_stoploss_hit = True
                 elif ltp >= stoploss:
                     context["price"] = 0 #stoploss
                     target_stoploss_hit = True
                     context["order_type"] = "MARKET"
-                    # print("Sell SL")
             
             if target_stoploss_hit:
                 if not redis_cache.get(stoploss_target_cache_key):

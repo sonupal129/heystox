@@ -209,12 +209,7 @@ class UpdateOrder(BaseOrderTask):
             "complete": "CO",
             "rejected": "RE"
         }
-        if order_data.get("transaction_type") == "B":
-            order_data["transaction_type"] = "BUY"
-        elif order_data.get("transaction_type") == "S":
-            order_data["transaction_type"] = "SELL"
-        else:
-            pass
+        order_data["transaction_type"] = "SELL" if order_data.get("transaction_type") == "S" else "BUY"
 
         order_id = order_data.get("order_id")
         user = get_upstox_user()
@@ -321,6 +316,22 @@ def update_orders_status():
 @celery_app.task(queue="high_priority", autoretry_for=(HTTPError,))
 def auto_square_off_all_positions():
     """Suare off all open positions at designated time"""
-    # user = get_upstox_user()
-    print("RAJU")
+    today_date = get_local_time().date()
+    order_books = OrderBook.objects.filter(date=today_date)
+    for symbol in order_books:
+        cache_key = "_".join([symbol.symbol.lower(), "cached_ticker_data"])
+        cached_value = redis_cache.get(cache_key)
+        if cached_value != None:
+            context = {'transaction_type': cached_value["transaction_type"],
+                'symbol': cached_value["symbol"],
+                'order_type': 'MARKET',
+                'quantity': cached_value["quantity"],
+                'price': 0,
+                'duarion_type': 'DAY',
+                'product_type': 'INTRADAY'
+            }
+            context["transaction_type"] = "BUY" if cached_value["transaction_type"] == "SELL" else "SELL"
+            ExitOrder().delay(context, True)
+            slack_message_sender.delay(text="{0} Auto Square of Open Order".format(cached_value["symbol"], ), channel="#random")
+    return True
     
