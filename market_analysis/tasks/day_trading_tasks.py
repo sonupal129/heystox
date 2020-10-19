@@ -3,8 +3,6 @@ from .notification_tasks import slack_message_sender
 from market_analysis.models import (StrategyTimestamp, SortedStocksList, Symbol, UserProfile, Candle, SortedStockDashboardReport)
 from .trading import *
 from market_analysis.imports import *
-
-
 from .strategies.intraday_entry_strategies import *
 from .upstox_events_handlers import start_upstox_websocket
 # CODE STARTS BELOW
@@ -152,7 +150,7 @@ def todays_movement_stocks_add_on_sideways():
     return "Function Not Called"
 
 @celery_app.task(queue="shower")
-def start_websocket(run_in_background=True):
+def start_websocket(run_in_background=False):
     start_upstox_websocket(run_in_background)
     return "Socket Started"
 

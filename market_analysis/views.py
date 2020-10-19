@@ -1,7 +1,7 @@
 from market_analysis.imports import *
 from market_analysis.models import UserProfile, MasterContract, SortedStocksList, Symbol, StrategyTimestamp, SortedStockDashboardReport, DeployedStrategies
 from market_analysis.filters import SymbolFilters, SortedStocksFilter
-from market_analysis.tasks.trading import get_cached_liquid_stocks, get_liquid_stocks
+from market_analysis.tasks.trading import get_cached_liquid_stocks, get_liquid_stocks, get_upstox_user
 from market_analysis.view_mixins import BasePermissionMixin
 from .forms import UserLoginRegisterForm, BacktestForm, StrategyDeployForm
 from .mixins import *
@@ -25,7 +25,22 @@ class UpstoxLogin(BasePermissionMixin, View):
             login_url = user_profile.get_authentication_url()
             return redirect(login_url)
         else:
-            return(HttpResponse("Requested User UserProfile Not Created or Not Subscribed for Api's"))
+            return HttpResponse("Requested User UserProfile Not Created or Not Subscribed for Api's")
+
+
+class UpstoxLogoutView(BasePermissionMixin, View):
+    http_method_names = ["get"]
+
+    def get(self, request):
+        email = "sonupal129@gmail.com"
+        upstox_user = get_upstox_user(email=email)
+        if upstox_user:
+            upstox_user.logout()
+            cache_key = "_".join([str(get_local_time().date()), email, "local_upstox_user"])
+            cache.delete(cache_key)
+            return HttpResponse("User Logout successfully")
+        return HttpResponse("User not found/logged in")
+
 
 
 class UpstoxLoginComplete(BasePermissionMixin, View):

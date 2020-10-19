@@ -28,7 +28,7 @@ def event_handler_on_error(message, error):
 
 def event_handler_on_disconnection(message):
     slack_message_sender.delay(text="Websocket Disconnected, Connecting Again")
-    start_upstox_websocket(True)
+    start_upstox_websocket(False)
     return "Start Websocket Again"
 
 
@@ -37,7 +37,6 @@ restart_counter = 0
 def start_upstox_websocket(run_in_background=True):
     global restart_counter
     if restart_counter < 5 or restart_counter > 30:
-        sleep(3)
         user = UserProfile.objects.get(user__email="sonupal129@gmail.com").get_upstox_user() 
         user.set_on_quote_update(event_handler_on_quote_update)
         user.set_on_trade_update(event_handler_on_trade_update)
