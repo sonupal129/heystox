@@ -318,8 +318,8 @@ def auto_square_off_all_positions():
     """Suare off all open positions at designated time"""
     today_date = get_local_time().date()
     order_books = OrderBook.objects.filter(date=today_date)
-    for symbol in order_books:
-        cache_key = "_".join([symbol.symbol.lower(), "cached_ticker_data"])
+    for book in order_books:
+        cache_key = "_".join([book.symbol.symbol.lower(), "cached_ticker_data"])
         cached_value = redis_cache.get(cache_key)
         if cached_value != None:
             context = {'transaction_type': cached_value["transaction_type"],

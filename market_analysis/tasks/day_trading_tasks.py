@@ -150,7 +150,7 @@ def todays_movement_stocks_add_on_sideways():
     return "Function Not Called"
 
 @celery_app.task(queue="shower")
-def start_websocket(run_in_background=False):
+def start_websocket(run_in_background=True):
     start_upstox_websocket(run_in_background)
     return "Socket Started"
 
