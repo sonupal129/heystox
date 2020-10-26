@@ -86,9 +86,8 @@ def call_realtime_entry_strategies(sender, **kwargs):
 
 @receiver(update_profit_loss)
 def update_sorted_stocks_dashboard_pl(sender, **kwargs):
-    today_date = get_local_time().date()
     try:
-        dashboard = SortedStockDashboardReport.objects.get(name=kwargs["symbol"], created_at__date=today_date, entry_type=kwargs["entry_type"], target_price=kwargs["target_price"], stoploss_price=kwargs["stoploss_price"])
+        dashboard = SortedStockDashboardReport.objects.get(id=kwargs["report_id"])
         dashboard.exit_price = kwargs["exit_price"]
         dashboard.exit_time = get_local_time().now()
         if dashboard.entry_type == 'BUY':

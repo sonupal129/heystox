@@ -57,12 +57,11 @@ class GlobalExitStrategy(BaseExitStrategy):
                     target_stoploss_hit = True
                     context["order_type"] = "MARKET"
             
-            if target_stoploss_hit:
+            if target_stoploss_hit: 
                 if not redis_cache.get(stoploss_target_cache_key):
                     ExitOrder().delay(context, True)
                     slack_message_sender.delay(text="{0} Hit Order Sent for trade {1}".format(order_hit, symbol_name), channel="#random")
                     redis_cache.set(stoploss_target_cache_key, True)
-                    update_profit_loss.send(sender=self.__class__, symbol=symbol_name.lower(), entry_type=transaction_type, exit_price=ltp, target_price=target_price, stoploss_price=stoploss)
                     return True
     
     def run(self, stock_name, backtest=False, backtesting_candles_data=None):
@@ -167,7 +166,6 @@ def stoploss_saver(symbol_name:str):
             'product_type': 'INTRADAY'
         }
         if not redis_cache.get(auto_exit_cache_key):
-            update_profit_loss.send(sender=self.__class__, symbol=symbol_name.lower(), entry_type=transaction_type, exit_price=ltp, target_price=cached_value["target_price"], stoploss_price=cached_value["stoploss"])
             ExitOrder().delay(context, True) # send order request with market order
             slack_message_sender.delay(text="Auto Exit Order Sent for {0}".format(symbol_name), channel="#random")
             redis_cache.set(auto_exit_cache_key)

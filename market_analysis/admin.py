@@ -87,6 +87,7 @@ class SortedStockDashboardReportAdmin(ExportMixin ,admin.ModelAdmin):
     resource_class = SortedStockDashboardReportResource
     list_display = ["name", "entry_type", "entry_price", "entry_time"]
     search_fields = ["name"]
+    date_hierarchy = 'entry_time'
 
 class OrderInline(admin.TabularInline):
     model = Order

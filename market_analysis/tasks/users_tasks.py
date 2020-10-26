@@ -33,9 +33,10 @@ def stop_trading_on_profit_loss():
 
 @celery_app.task(queue="low_priority", ignore_result=True)
 def authenticate_users_in_morning():
-    for user_profile in UserProfile.objects.filter(for_trade=True):
-        message = "Login URL for " + user_profile.user.get_full_name() + ": " + user_profile.get_authentication_url()
-        slack_message_sender.delay(text=message)
+    # for user_profile in UserProfile.objects.filter(for_trade=True):
+    #     message = "Login URL for " + user_profile.user.get_full_name() + ": " + user_profile.get_authentication_url()
+    #     slack_message_sender.delay(text=message)
+    slack_message_sender.delay(text="Authenticate user for fresh day start")
 
 @celery_app.task(queue="low_priority", autoretry_for=(HTTPError,), retry_kwargs={'max_retries': 2, 'countdown': 10}, max_retries=10, ignore_result=True)
 def login_upstox_user(email):
