@@ -196,7 +196,7 @@ class ExitOrder(BaseOrderTask):
     def run(self, order_details:dict, ignore_max_trade_quantity:bool=False, **kwargs):
         super(ExitOrder, self).run(order_details, ignore_max_trade_quantity, **kwargs)
         symbol = Symbol.objects.get(symbol__iexact=order_details.get("symbol"))
-        transaction_type = order_details.get("transaction_type", None)
+        transaction_type = "BUY" if order_details.get("transaction_type", None) == "SELL" else "SELL"
         quantity = order_details.get("quantity", None)
         price = symbol.get_stock_live_price("ltp") if order_details.get("price", None) == 0 else order_details.get("price", None)
         try:

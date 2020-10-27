@@ -158,6 +158,19 @@ class RangeReversalStrategySignalTask(GlobalSignalTask):
 
     def prepare_orderdata(self, timestamp):
         data = super(RangeReversalStrategySignalTask, self).prepare_orderdata(timestamp)
+        nifty_50 = Symbol.objects.get(symbol="nifty_50")
+        # nifty_50_movement = nifty_50.get_nifty_movement(bull_point=30, bear_point=-30)
+        nifty_50_movement = "SIDEWAYS"
+        entry_type = data["entry_type"]
+        if entry_type == "SELL" and nifty_50_movement in ["BUY", "SIDEWAYS"]:
+            today_date = get_local_time().date()
+            cache_key = "_".join([data["name"], "range_reversal_strategy", "cached_high_low_data", str(today_date)])
+            cached_value = redis_cache.get(cache_key)
+            trigger_side = cached_value["trigger_side"]
+            price_date = cached_value["low_price_date"] if trigger_side == "LOW" else cached_value["high_price_date"]
+            last_trading_date = today_date - timedelta(days=nifty_50.get_last_trading_day_count(today_date))
+            if price_date.date() == last_trading_date:
+                data["entry_type"] = "BUY"
         return data
 
 celery_app.tasks.register(RangeReversalStrategySignalTask)

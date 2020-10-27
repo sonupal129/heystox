@@ -262,7 +262,7 @@ class Symbol(BaseModel):
             "OPEN": "open_price",
             "LOW": "low_price"
         }
-        side = "__max" if kwargs.get("side", "highest") == "highest" else "__min"
+        side = "max" if kwargs.get("side", "highest") == "highest" else "min"
         if date_obj == None:
             date_obj = get_local_time().date()
         
@@ -274,16 +274,16 @@ class Symbol(BaseModel):
         cache_key = "_".join([str(date_obj), self.symbol, price_type, str(days), side])
         cached_value = redis_cache.get(cache_key)
         if cached_value != None:
-            return cached_value
+            return cached_value if kwargs.get("full_object") else cached_value.get(price_type_fields[price_type])
         candles = self.get_stock_data(days=days, end_date=date_obj)
         if days == 0:
             candles = candles.filter(date__date=date_obj)
-        if side == "__max":
-            output = candles.aggregate(Max(price_type_fields[price_type])).get(price_type_fields[price_type]+side)
+        if side == "max":
+            output = max(candles.values(price_type_fields[price_type], "date"), key=lambda o : o.get(price_type_fields[price_type]))
         else:
-            output = candles.aggregate(Min(price_type_fields[price_type])).get(price_type_fields[price_type]+side)
+            output = min(candles.values(price_type_fields[price_type], "date"), key=lambda o : o.get(price_type_fields[price_type]))
         redis_cache.set(cache_key, output, 300)
-        return output
+        return output if kwargs.get("full_object") else output.get(price_type_fields[price_type])
         
         
 
