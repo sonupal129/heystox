@@ -159,8 +159,7 @@ class RangeReversalStrategySignalTask(GlobalSignalTask):
     def prepare_orderdata(self, timestamp):
         data = super(RangeReversalStrategySignalTask, self).prepare_orderdata(timestamp)
         nifty_50 = Symbol.objects.get(symbol="nifty_50")
-        # nifty_50_movement = nifty_50.get_nifty_movement(bull_point=30, bear_point=-30)
-        nifty_50_movement = "SIDEWAYS"
+        nifty_50_movement = nifty_50.get_nifty_movement(bull_point=30, bear_point=-30)
         entry_type = data["entry_type"]
         if entry_type == "SELL" and nifty_50_movement in ["BUY", "SIDEWAYS"]:
             today_date = get_local_time().date()
