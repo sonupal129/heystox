@@ -194,7 +194,6 @@ class ExitOrder(BaseOrderTask):
     name = "place_market_exit_order"
     
     def run(self, order_details:dict, ignore_max_trade_quantity:bool=False, **kwargs):
-        super(ExitOrder, self).run(order_details, ignore_max_trade_quantity, **kwargs)
         symbol = Symbol.objects.get(symbol__iexact=order_details.get("symbol"))
         transaction_type = "BUY" if order_details.get("transaction_type", None) == "SELL" else "SELL"
         quantity = order_details.get("quantity", None)
@@ -204,6 +203,7 @@ class ExitOrder(BaseOrderTask):
             update_profit_loss.send(sender=self.__class__, report_id=stock_report.id, exit_price=price)
         except:
             pass
+        super(ExitOrder, self).run(order_details, ignore_max_trade_quantity, **kwargs)
 
 celery_app.tasks.register(ExitOrder)
 
