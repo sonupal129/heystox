@@ -41,12 +41,12 @@ class BaseOrderTask(celery_app.Task):
             return abs(qty)
         raise AttributeError("Unable to fetch user balance")
 
-    def stock_stoploss_price(self, price, entry_type):
-        sl_price = get_stock_stoploss_price(price, entry_type)
+    def stock_stoploss_price(self, price, entry_type, stoploss_percent=None):
+        sl_price = get_stock_stoploss_price(price, entry_type, stoploss_percent)
         return sl_price
 
-    def stock_target_price(self, price, entry_type):
-        tg_price = get_stock_target_price(price, entry_type)
+    def stock_target_price(self, price, entry_type, target_percent=None):
+        tg_price = get_stock_target_price(price, entry_type, target_percent)
         return tg_price
 
     def stoploss_saver_price(self, price, entry_type):
