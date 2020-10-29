@@ -52,17 +52,17 @@ class RangeReversalStrategy(BaseEntryStrategy):
                         if entry_type == "BUY":                            
                             if trigger_side == "HIGH" and ticker_ltp_price > levelup_high_price:
                                 entry_found = True
-                                entry_price = levelup_high_price
+                                entry_price = high_price
                             elif trigger_side == "LOW" and ticker_ltp_price > leveldown_high_price:
                                 entry_found = True
-                                entry_price = leveldown_high_price
+                                entry_price = low_price
                         elif entry_type == "SELL":
                             if trigger_side == "HIGH" and ticker_ltp_price < levelup_low_price:
                                 entry_found = True
-                                entry_price = levelup_low_price
+                                entry_price = high_price
                             elif trigger_side == "LOW" and ticker_ltp_price < leveldown_low_price:
                                 entry_found = True
-                                entry_price = leveldown_low_price
+                                entry_price = low_price
                         if entry_found:
                             cached_value["entry_found"] = True
                             cached_value["signal_time"] = today_date.now()
