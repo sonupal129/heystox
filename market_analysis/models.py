@@ -311,7 +311,7 @@ class Symbol(BaseModel):
                 trading_day = self.get_last_trading_day_count(date_obj=date_obj)
                 previous_day_closing_price = self.get_day_closing_price(date_obj=date_obj-timedelta(trading_day))
             else:
-                day_closing_price = self.get_stock_live_data().iloc[-1].close_price    
+                day_closing_price = self.get_stock_live_price("close")
                 previous_day_closing_price = self.get_last_day_closing_price()
             variation = float(day_closing_price) - previous_day_closing_price
             return variation

@@ -197,7 +197,7 @@ class ExitOrder(BaseOrderTask):
         symbol = Symbol.objects.get(symbol__iexact=order_details.get("symbol"))
         transaction_type = "BUY" if order_details.get("transaction_type", None) == "SELL" else "SELL"
         quantity = order_details.get("quantity", None)
-        price = symbol.get_stock_live_price("ltp") if order_details.get("price", None) == 0 else order_details.get("price", None)
+        price = symbol.get_stock_live_price("close") if order_details.get("price", None) == 0 else order_details.get("price", None)
         try:
             stock_report = SortedStockDashboardReport.objects.get(name=order_details.get("symbol"), entry_time__date=get_local_time().date(), entry_type=transaction_type, quantity=int(quantity))
             update_profit_loss.send(sender=self.__class__, report_id=stock_report.id, exit_price=price)

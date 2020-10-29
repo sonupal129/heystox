@@ -67,9 +67,9 @@ class BaseSignalTask(celery_app.Task):
         entry_available = False
         
         if is_time_between_range(timestamp.timestamp, 20):
-            last_traded_price = sorted_stock.symbol.get_stock_live_price(price_type="ltp")
+            last_traded_price = sorted_stock.symbol.get_stock_live_price(price_type="close")
             while last_traded_price == None:
-                last_traded_price = sorted_stock.symbol.get_stock_live_price(price_type="ltp")
+                last_traded_price = sorted_stock.symbol.get_stock_live_price(price_type="close")
             
             if timestamp.entry_price:
                 if sorted_stock.entry_type == "BUY" and timestamp.entry_price > last_traded_price:
