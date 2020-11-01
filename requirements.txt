@@ -15,7 +15,7 @@ cffi==1.14.0
 chardet==3.0.4
 colorama==0.4.1
 coverage==5.0.1
-cryptography==2.8
+cryptography==3.2
 cycler==0.10.0
 decorator==4.4.0
 defusedxml==0.6.0
