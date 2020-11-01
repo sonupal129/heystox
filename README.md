@@ -4,6 +4,8 @@
 
 Hi!, Myself Sonu Pal python django developer and author of this app **Heystox**. is a equity/future trading software for intraday and week teading. I build with technologies like python,django,celery,redis and database is PSQL.
 
+This app works with upstox api and trade automatically in sharemarket with help of upstox api. It has many built in features like backtesting, strategy building, order placing, stoploss, placeing orders on strategies like macd, stochastic rsi, adx etc.. with this is has realtime time trading feature as well where it stream data using websocket and place orders.
+
 
 # Setup - DEV
 
