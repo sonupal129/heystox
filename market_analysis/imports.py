@@ -161,7 +161,7 @@ def is_time_between_range(obj_time, last_minutes):
     return False
 
 
-def get_stock_stoploss_price(price, entry_type, stoploss_percent:int=None):
+def get_stock_stoploss_price(price, entry_type, stoploss_percent:float=None):
     if stoploss_percent is None:
         stoploss_percent = settings.DEFAULT_STOPLOSS
     if price < 100:
@@ -177,7 +177,7 @@ def get_stock_stoploss_price(price, entry_type, stoploss_percent:int=None):
     return roundup(price + stoploss if entry_type == "SELL" else price - stoploss)
 
 
-def get_stock_target_price(price, entry_type, target_percent:int=None):
+def get_stock_target_price(price, entry_type, target_percent:float=None):
     if target_percent is None:
         target_percent = settings.DEFAULT_TARGET
     if price < 100:
