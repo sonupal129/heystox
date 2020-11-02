@@ -41,7 +41,7 @@ class RangeReversalStrategy(BaseEntryStrategy):
                         cached_value["trigger_price"] = ticker_low_price
                         redis_cache.set(cache_key, cached_value, 9*60*60)
                 else:
-                    after_trigger_time = trigger_time + timedelta(minutes=random.randrange(9,13))
+                    after_trigger_time = trigger_time + timedelta(minutes=13)
                     trigger_side = cached_value["trigger_side"]
                     if today_date.now() >= after_trigger_time:
                         entry_found = False
