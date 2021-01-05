@@ -30,12 +30,12 @@ class RangeReversalStrategy(BaseEntryStrategy):
                 ticker_ltp_price = data["ltp"]
                 trigger_time = cached_value.get("trigger_time", None)
                 if not trigger_time:
-                    if ticker_high_price >= high_trigger_price:
+                    if ticker_high_price >= high_price:
                         cached_value["trigger_time"] = today_date.now()
                         cached_value["trigger_side"] = "HIGH"
                         cached_value["trigger_price"]  = ticker_high_price
                         redis_cache.set(cache_key, cached_value, 9*60*60)
-                    elif ticker_low_price <= low_trigger_price:
+                    elif ticker_low_price <= low_price:
                         cached_value["trigger_time"] = today_date.now()
                         cached_value["trigger_side"] = "LOW"
                         cached_value["trigger_price"] = ticker_low_price
